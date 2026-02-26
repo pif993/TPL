@@ -376,7 +376,7 @@ apply_all(){
   #
   # For lightweight/dev-only deployments without Vault/Keycloak:
   #   ./init.sh dev-install
-  mod_apply 10_traefik 20_vault 30_web_gui 35_ux_linear 40_api_base 45_api_engine_host 60_auth_keycloak 80_language_engine 90_log_engine 95_communication_engine 96_security_hardening 97_encryption 100_ai_log_analysis 101_system_monitoring_ai 102_user_management 103_router_manager 104_template_manager 105_version_manager 106_resilience 107_self_diagnosis
+  mod_apply 10_traefik 20_vault 30_web_gui 35_ux_linear 40_api_base 45_api_engine_host 60_auth_keycloak 80_language_engine 90_log_engine 95_communication_engine 96_security_hardening 97_encryption 100_ai_log_analysis 101_system_monitoring_ai 102_user_management 103_router_manager 104_template_manager 105_version_manager 106_resilience 107_self_diagnosis 108_ota_update
   echo ""
   echo "╔══════════════════════════════════════════════════════════════╗"
   echo "║  INSTALLAZIONE COMPLETA — MASSIMA SICUREZZA                ║"
@@ -398,7 +398,7 @@ apply_lite(){
   # Uses local auth (Argon2id + file-based users) without Vault or Keycloak.
   # Suitable for development, testing, or air-gapped environments.
   # ⚠  NOT recommended for production — use apply_all() instead.
-  mod_apply 10_traefik 30_web_gui 35_ux_linear 40_api_base 45_api_engine_host 50_auth_local 80_language_engine 90_log_engine 95_communication_engine 96_security_hardening 97_encryption 100_ai_log_analysis 101_system_monitoring_ai 102_user_management 103_router_manager 104_template_manager 105_version_manager 106_resilience 107_self_diagnosis
+  mod_apply 10_traefik 30_web_gui 35_ux_linear 40_api_base 45_api_engine_host 50_auth_local 80_language_engine 90_log_engine 95_communication_engine 96_security_hardening 97_encryption 100_ai_log_analysis 101_system_monitoring_ai 102_user_management 103_router_manager 104_template_manager 105_version_manager 106_resilience 107_self_diagnosis 108_ota_update
   echo ""
   echo "╔══════════════════════════════════════════════════════════════╗"
   echo "║  DEV-INSTALL — Modalità locale (sicurezza ridotta)         ║"
