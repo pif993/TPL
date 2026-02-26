@@ -4322,3 +4322,568 @@ body.tpl-compact * { transition: none !important; }
 @media (max-width: 575.98px) {
   .ws-status-grid { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   OTA Update Center
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --ota-primary: #6366f1;
+  --ota-success: #22c55e;
+  --ota-warn: #f59e0b;
+  --ota-danger: #ef4444;
+  --ota-info: #06b6d4;
+  --ota-bg: rgba(99, 102, 241, .04);
+  --ota-border: rgba(99, 102, 241, .15);
+  --ota-card-bg: rgba(255, 255, 255, .04);
+}
+
+/* Status bar */
+.ota-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .75rem 1rem;
+  border-radius: .6rem;
+  background: var(--ota-bg);
+  border: 1px solid var(--ota-border);
+  margin-bottom: .75rem;
+  flex-wrap: wrap;
+}
+.ota-version-current, .ota-version-latest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .15rem;
+}
+.ota-ver-label {
+  font-size: .6rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ov-text-faint, #94a3b8);
+}
+.ota-ver-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--ota-primary);
+  letter-spacing: -.02em;
+}
+.ota-ver-new {
+  color: var(--ota-success);
+  animation: ota-pulse 2s ease-in-out infinite;
+}
+@keyframes ota-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .6; }
+}
+.ota-arrow {
+  font-size: 1.4rem;
+  color: var(--ota-success);
+  animation: ota-arrow-bounce 1.5s ease-in-out infinite;
+}
+@keyframes ota-arrow-bounce {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(5px); }
+}
+.ota-check-info {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .15rem;
+}
+.ota-info-text {
+  font-size: .68rem;
+  color: var(--ov-text-faint, #94a3b8);
+}
+.ota-rate-limit {
+  font-size: .6rem;
+  color: var(--ov-text-faint, #94a3b8);
+  opacity: .7;
+}
+.ota-rate-warn { color: var(--ota-warn); opacity: 1; font-weight: 600; }
+
+/* Status badge */
+.ota-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .6rem;
+  border-radius: 2rem;
+  font-size: .68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ota-badge-ok {
+  background: rgba(34, 197, 94, .12);
+  color: var(--ota-success);
+}
+.ota-badge-update {
+  background: rgba(99, 102, 241, .12);
+  color: var(--ota-primary);
+  animation: ota-badge-glow 2s ease-in-out infinite;
+}
+@keyframes ota-badge-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, .3); }
+  50% { box-shadow: 0 0 8px 2px rgba(99, 102, 241, .15); }
+}
+.ota-badge-checking {
+  background: rgba(6, 182, 212, .12);
+  color: var(--ota-info);
+}
+.ota-badge-error {
+  background: rgba(239, 68, 68, .12);
+  color: var(--ota-danger);
+}
+
+/* Spin animation */
+.ota-spin {
+  animation: ota-spin-anim .8s linear infinite;
+}
+@keyframes ota-spin-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Notification bar */
+.ota-notification {
+  padding: .6rem .8rem;
+  border-radius: .5rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, .08), rgba(139, 92, 246, .08));
+  border: 1px solid var(--ota-border);
+  margin-bottom: .75rem;
+}
+.ota-notif-ok {
+  background: rgba(34, 197, 94, .06);
+  border-color: rgba(34, 197, 94, .15);
+}
+.ota-notif-body {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.ota-notif-icon {
+  font-size: 1.3rem;
+  color: var(--ota-primary);
+}
+.ota-notif-ok .ota-notif-icon { color: var(--ota-success); }
+.ota-notif-text {
+  flex: 1;
+  font-size: .82rem;
+}
+.ota-notif-tags {
+  display: flex;
+  gap: .3rem;
+  flex-wrap: wrap;
+  margin-top: .25rem;
+}
+.ota-tag {
+  display: inline-block;
+  padding: .1rem .45rem;
+  border-radius: .3rem;
+  background: rgba(99, 102, 241, .12);
+  color: var(--ota-primary);
+  font-size: .68rem;
+  font-weight: 600;
+}
+.ota-tag-dismissed {
+  opacity: .4;
+  text-decoration: line-through;
+}
+
+/* Release list */
+.ota-releases-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .6rem;
+}
+.ota-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: .15rem .5rem;
+  border-radius: 2rem;
+  background: rgba(99, 102, 241, .1);
+  color: var(--ota-primary);
+  font-size: .65rem;
+  font-weight: 600;
+}
+.ota-releases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: .6rem;
+}
+
+/* Release card */
+.ota-release-card {
+  padding: .7rem .85rem;
+  border-radius: .5rem;
+  border: 1px solid rgba(0, 0, 0, .06);
+  background: var(--ota-card-bg);
+  transition: border-color .2s, box-shadow .2s, transform .15s;
+  cursor: default;
+}
+.ota-release-card:hover {
+  border-color: var(--ota-border);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, .08);
+  transform: translateY(-1px);
+}
+.ota-rel-current {
+  border-color: rgba(13, 110, 253, .25);
+  background: rgba(13, 110, 253, .03);
+}
+.ota-rel-newer {
+  border-color: rgba(34, 197, 94, .2);
+  background: rgba(34, 197, 94, .03);
+}
+.ota-rel-prepared {
+  border-left: 3px solid var(--ota-info);
+}
+.ota-rel-header {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-wrap: wrap;
+  margin-bottom: .3rem;
+}
+.ota-rel-tag {
+  font-weight: 700;
+  font-size: .9rem;
+  color: var(--ota-primary);
+}
+.ota-rel-name {
+  font-size: .78rem;
+  color: var(--ov-text, #334155);
+  margin-bottom: .3rem;
+  font-weight: 500;
+}
+.ota-rel-meta {
+  display: flex;
+  gap: .8rem;
+  font-size: .65rem;
+  color: var(--ov-text-faint, #94a3b8);
+  margin-bottom: .3rem;
+}
+.ota-rel-meta i { margin-right: .2rem; }
+.ota-rel-body {
+  font-size: .7rem;
+  color: var(--ov-text-faint, #94a3b8);
+  line-height: 1.45;
+  margin-bottom: .4rem;
+  padding: .3rem .4rem;
+  background: rgba(0, 0, 0, .02);
+  border-radius: .3rem;
+  max-height: 3.5rem;
+  overflow: hidden;
+}
+.ota-rel-actions {
+  display: flex;
+  gap: .4rem;
+  margin-top: .3rem;
+}
+
+/* Release detail */
+.ota-detail-header {
+  margin-bottom: 1rem;
+}
+.ota-detail-header h5 {
+  margin-top: .5rem;
+  font-weight: 700;
+  color: var(--ota-primary);
+}
+.ota-detail-badges {
+  display: flex;
+  gap: .3rem;
+  flex-wrap: wrap;
+  margin-top: .3rem;
+}
+.ota-detail-section {
+  margin-bottom: 1rem;
+  padding: .6rem .75rem;
+  border-radius: .5rem;
+  background: var(--ota-card-bg);
+  border: 1px solid rgba(0, 0, 0, .04);
+}
+.ota-detail-section h6 {
+  font-size: .78rem;
+  font-weight: 700;
+  margin-bottom: .5rem;
+  color: var(--ov-text, #334155);
+}
+.ota-detail-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: .72rem;
+  color: var(--ov-text-faint, #94a3b8);
+  margin-bottom: .75rem;
+}
+.ota-detail-meta a {
+  color: var(--ota-primary);
+  text-decoration: none;
+}
+.ota-detail-meta a:hover { text-decoration: underline; }
+
+/* Release notes */
+.ota-release-notes {
+  font-size: .78rem;
+  line-height: 1.65;
+  color: var(--ov-text, #334155);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.ota-release-notes code {
+  background: rgba(99, 102, 241, .08);
+  padding: .1rem .3rem;
+  border-radius: .2rem;
+  font-size: .72rem;
+}
+
+/* Commits list */
+.ota-commits-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+.ota-commit-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .25rem .4rem;
+  border-radius: .3rem;
+  font-size: .72rem;
+}
+.ota-commit-item:nth-child(even) { background: rgba(0, 0, 0, .015); }
+.ota-commit-sha {
+  flex-shrink: 0;
+  font-size: .65rem;
+  padding: .1rem .35rem;
+  border-radius: .25rem;
+  background: rgba(99, 102, 241, .08);
+  color: var(--ota-primary);
+  font-family: monospace;
+}
+.ota-commit-msg {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ov-text, #334155);
+}
+.ota-commit-author {
+  flex-shrink: 0;
+  color: var(--ov-text-faint, #94a3b8);
+  font-size: .65rem;
+}
+
+/* Files list */
+.ota-files-summary {
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ota-primary);
+  padding: .3rem 0;
+}
+.ota-files-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: .3rem;
+}
+.ota-file-item {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .2rem .35rem;
+  font-size: .7rem;
+  border-radius: .25rem;
+}
+.ota-file-item:nth-child(even) { background: rgba(0, 0, 0, .015); }
+.ota-file-name {
+  flex: 1;
+  font-family: monospace;
+  font-size: .65rem;
+  word-break: break-all;
+  color: var(--ov-text, #334155);
+}
+.ota-file-stat {
+  flex-shrink: 0;
+  font-size: .6rem;
+  font-family: monospace;
+  color: var(--ov-text-faint, #94a3b8);
+}
+
+/* Pre-flight checks */
+.ota-preflight {
+  border-radius: .4rem;
+  overflow: hidden;
+}
+.ota-pf-pass { border: 1px solid rgba(34, 197, 94, .2); }
+.ota-pf-warn { border: 1px solid rgba(245, 158, 11, .3); }
+.ota-pf-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem .5rem;
+  font-size: .75rem;
+}
+.ota-pf-item:nth-child(even) { background: rgba(0, 0, 0, .015); }
+
+/* Install guide */
+.ota-install-guide {
+  background: linear-gradient(135deg, rgba(99, 102, 241, .04), rgba(139, 92, 246, .03));
+  border: 1px solid var(--ota-border);
+}
+.ota-steps {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+.ota-step {
+  display: flex;
+  gap: .6rem;
+  padding: .5rem;
+  border-radius: .4rem;
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid rgba(0, 0, 0, .04);
+  transition: box-shadow .2s;
+}
+.ota-step:hover {
+  box-shadow: 0 1px 4px rgba(99, 102, 241, .08);
+}
+.ota-step[data-risk="high"] { border-left: 3px solid var(--ota-danger); }
+.ota-step[data-risk="medium"] { border-left: 3px solid var(--ota-warn); }
+.ota-step[data-risk="low"] { border-left: 3px solid var(--ota-success); }
+.ota-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ota-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: .75rem;
+  flex-shrink: 0;
+}
+.ota-step-body { flex: 1; }
+.ota-step-title {
+  font-weight: 700;
+  font-size: .8rem;
+  color: var(--ov-text, #334155);
+  margin-bottom: .15rem;
+}
+.ota-step-desc {
+  font-size: .7rem;
+  color: var(--ov-text-faint, #94a3b8);
+  margin-bottom: .3rem;
+}
+.ota-step-cmd {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .3rem .5rem;
+  border-radius: .3rem;
+  background: rgba(0, 0, 0, .05);
+  font-size: .68rem;
+  overflow-x: auto;
+}
+.ota-step-cmd code {
+  flex: 1;
+  font-family: 'Fira Code', monospace;
+  font-size: .65rem;
+  color: var(--ov-text, #334155);
+  word-break: break-all;
+}
+.ota-copy-btn {
+  padding: .1rem .3rem;
+  color: var(--ota-primary);
+  flex-shrink: 0;
+}
+
+/* Progress */
+.ota-progress {
+  margin-bottom: .75rem;
+}
+.ota-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, .06);
+  overflow: hidden;
+  margin-bottom: .4rem;
+}
+.ota-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ota-primary);
+  transition: width .4s ease;
+}
+.ota-progress-indeterminate {
+  width: 30%;
+  animation: ota-progress-slide 1.5s ease-in-out infinite;
+}
+@keyframes ota-progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.ota-progress-text {
+  font-size: .78rem;
+  color: var(--ov-text, #334155);
+}
+
+/* Detail actions */
+.ota-detail-actions {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  padding-top: .5rem;
+  border-top: 1px solid rgba(0, 0, 0, .06);
+  margin-top: .5rem;
+}
+
+/* Rollback info */
+.ota-rollback-info {
+  padding: .5rem .6rem;
+  border-radius: .4rem;
+  background: rgba(239, 68, 68, .04);
+  border: 1px solid rgba(239, 68, 68, .12);
+}
+
+/* Config grid */
+.ota-config-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .4rem .8rem;
+  align-items: center;
+}
+.ota-cfg-label {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--ov-text, #334155);
+}
+.ota-cfg-input {
+  max-width: 100px;
+}
+
+/* Sidebar badge */
+.ota-sidebar-badge {
+  position: absolute;
+  top: 1px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ota-primary);
+  color: #fff;
+  font-size: .5rem;
+  animation: ota-badge-glow 2s ease-in-out infinite;
+  z-index: 10;
+}
+
+/* Responsive */
+@media (max-width: 767.98px) {
+  .ota-status-bar { flex-direction: column; align-items: flex-start; }
+  .ota-check-info { margin-left: 0; align-items: flex-start; }
+  .ota-releases-grid { grid-template-columns: 1fr; }
+  .ota-config-grid { grid-template-columns: 1fr; }
+}

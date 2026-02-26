@@ -573,18 +573,50 @@
                   </div>
                 </div>
               </div>
-              <!-- OTA / Local Update -->
+              <!-- ═══ OTA Update Center ═══ -->
               <div class="row g-3 mt-1">
-                <div class="col-12 col-md-6">
-                  <div class="ov-panel">
-                    <div class="ov-panel-head"><span><i class="bi bi-cloud-download"></i> Aggiornamento OTA</span></div>
-                    <div class="ov-panel-body">
-                      <p class="small text-muted mb-2">Controlla e scarica aggiornamenti dal repository remoto.</p>
-                      <button class="btn btn-outline-primary btn-sm" id="mcOtaCheckBtn" type="button"><i class="bi bi-search"></i> Verifica aggiornamenti</button>
-                      <div id="mcOtaResult" class="mt-2"></div>
+                <div class="col-12">
+                  <div class="ov-panel ota-update-center">
+                    <div class="ov-panel-head">
+                      <span><i class="bi bi-cloud-arrow-down-fill"></i> Centro Aggiornamenti OTA</span>
+                      <span class="d-flex align-items-center gap-2">
+                        <span class="ota-status-badge" id="otaStatusBadge"><i class="bi bi-circle-fill"></i> —</span>
+                        <button class="btn btn-outline-primary btn-sm" id="mcOtaCheckBtn" type="button" aria-label="Verifica aggiornamenti"><i class="bi bi-arrow-clockwise"></i> Verifica</button>
+                      </span>
+                    </div>
+                    <div class="ov-panel-body" id="otaCenter">
+                      <!-- OTA Status Bar -->
+                      <div class="ota-status-bar" id="otaStatusBar">
+                        <div class="ota-version-current">
+                          <span class="ota-ver-label">Versione corrente</span>
+                          <span class="ota-ver-value" id="otaCurrentVer">—</span>
+                        </div>
+                        <div class="ota-arrow" id="otaArrow" style="display:none">
+                          <i class="bi bi-arrow-right-circle-fill"></i>
+                        </div>
+                        <div class="ota-version-latest" id="otaLatestBox" style="display:none">
+                          <span class="ota-ver-label">Ultima disponibile</span>
+                          <span class="ota-ver-value ota-ver-new" id="otaLatestVer">—</span>
+                        </div>
+                        <div class="ota-check-info">
+                          <span class="ota-info-text" id="otaCheckInfo">Ultimo controllo: mai</span>
+                          <span class="ota-rate-limit" id="otaRateLimit" title="Richieste GitHub API rimanenti"></span>
+                        </div>
+                      </div>
+                      <!-- OTA Notification -->
+                      <div id="otaNotification" class="ota-notification d-none"></div>
+                      <!-- Release List -->
+                      <div id="otaReleaseList" class="ota-release-list d-none"></div>
+                      <!-- Release Detail / Install Wizard -->
+                      <div id="otaReleaseDetail" class="ota-release-detail d-none"></div>
+                      <!-- Progress -->
+                      <div id="otaProgress" class="ota-progress d-none"></div>
                     </div>
                   </div>
                 </div>
+              </div>
+              <!-- Local Upload + Config -->
+              <div class="row g-3 mt-1">
                 <div class="col-12 col-md-6">
                   <div class="ov-panel">
                     <div class="ov-panel-head"><span><i class="bi bi-upload"></i> Aggiornamento Locale</span></div>
@@ -595,6 +627,23 @@
                         <button class="btn btn-outline-success btn-sm" id="mcLocalUploadBtn" type="button"><i class="bi bi-upload"></i> Carica</button>
                       </div>
                       <div id="mcLocalResult" class="mt-2"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-gear-wide-connected"></i> Configurazione OTA</span></div>
+                    <div class="ov-panel-body">
+                      <div class="ota-config-grid">
+                        <label class="ota-cfg-label">Auto-check</label>
+                        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="otaCfgAutoCheck" checked></div>
+                        <label class="ota-cfg-label">Intervallo (min)</label>
+                        <input type="number" class="form-control form-control-sm ota-cfg-input" id="otaCfgInterval" value="60" min="15" max="1440">
+                        <label class="ota-cfg-label">Pre-release</label>
+                        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="otaCfgPreRelease"></div>
+                      </div>
+                      <button class="btn btn-outline-primary btn-sm mt-2" id="otaCfgSaveBtn" type="button"><i class="bi bi-check-lg"></i> Salva configurazione</button>
+                      <span id="otaCfgResult" class="ms-2 small"></span>
                     </div>
                   </div>
                 </div>
