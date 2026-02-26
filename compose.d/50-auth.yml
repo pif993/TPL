@@ -1,0 +1,13 @@
+# ── FORTRESS AUTH MODE (v3.0) ──────────────────────────────────
+# Ed25519 asymmetric JWT · Refresh-token rotation · Credential vault
+services:
+  api:
+    environment:
+      AUTH_MODE: local
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-900}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-604800}
+      MAX_CONCURRENT_SESSIONS: ${MAX_CONCURRENT_SESSIONS:-5}
+      PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-14}
+      PASSWORD_MIN_ENTROPY: ${PASSWORD_MIN_ENTROPY:-3.0}
+      PASSWORD_MAX_AGE_DAYS: ${PASSWORD_MAX_AGE_DAYS:-90}
+      BREACH_CHECK_ENABLED: ${BREACH_CHECK_ENABLED:-true}

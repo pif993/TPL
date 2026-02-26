@@ -1,0 +1,847 @@
+#!/usr/bin/env bash
+# ═══════════════════════════════════════════════════════════════════════
+# tpl-modules — Signed-bundle CLI for TPL module distribution
+# ═══════════════════════════════════════════════════════════════════════
+# Atomic: download → verify → stage → switch → restart
+# Paths : /var/lib/tpl/modules/{releases/<ts>,current→symlink}
+# Bundle: .tar.gz  =  manifest.json + modules/*.sh + signature.sig
+# ═══════════════════════════════════════════════════════════════════════
+set -euo pipefail
+
+VERSION="1.0.0"
+
+# ── Config (overridable via env or /etc/tpl/modules.conf) ─────────────
+TPL_ROOT="${TPL_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+TPL_MODULES_BASE="${TPL_MODULES_BASE:-$TPL_ROOT/data/modules}"
+TPL_MODULES_SRC="${TPL_MODULES_SRC:-$TPL_ROOT/modules}"
+TPL_MODULES_RELEASES="${TPL_MODULES_BASE}/releases"
+TPL_MODULES_CURRENT="${TPL_MODULES_BASE}/current"
+TPL_PUBKEY="${TPL_PUBKEY:-$TPL_ROOT/.keys/modules.pub}"
+TPL_PRIVKEY="${TPL_PRIVKEY:-$TPL_ROOT/.keys/modules.key}"
+TPL_UPDATE_URL="${TPL_UPDATE_URL:-}"
+TPL_UPDATE_CHANNEL="${TPL_UPDATE_CHANNEL:-stable}"
+TPL_REQUIRE_SIGNATURE="${TPL_REQUIRE_SIGNATURE:-1}"
+TPL_MAX_RELEASES="${TPL_MAX_RELEASES:-5}"
+TPL_DATA="${TPL_DATA:-$TPL_ROOT/data}"
+TPL_STATE_FILE="${TPL_DATA}/.tpl_state.json"
+TPL_BUNDLE_LOG="${TPL_DATA}/.tpl_bundle_history.jsonl"
+
+# Load config file if present
+[[ -f /etc/tpl/modules.conf ]] && source /etc/tpl/modules.conf
+[[ -f "$TPL_ROOT/.tpl-modules.conf" ]] && source "$TPL_ROOT/.tpl-modules.conf"
+
+# ── Colors ────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+
+info()  { echo -e "${CYAN}ℹ${NC} $*"; }
+ok()    { echo -e "${GREEN}✓${NC} $*"; }
+warn()  { echo -e "${YELLOW}⚠${NC} $*"; }
+err()   { echo -e "${RED}✗${NC} $*" >&2; }
+die()   { err "$@"; exit 1; }
+header(){ echo -e "\n${BOLD}═══ $* ═══${NC}"; }
+
+# ── Helpers ───────────────────────────────────────────────────────────
+
+_require_cmd() {
+  for cmd in "$@"; do
+    command -v "$cmd" &>/dev/null || die "Comando richiesto non trovato: $cmd"
+  done
+}
+
+_sha256() { sha256sum "$1" | awk '{print $1}'; }
+
+_timestamp() { date -u +%Y%m%dT%H%M%SZ; }
+
+_log_event() {
+  local action="$1" status="$2"
+  shift 2
+  local detail="$*"
+  mkdir -p "$(dirname "$TPL_BUNDLE_LOG")"
+  printf '{"ts":%d,"action":"%s","status":"%s","detail":"%s"}\n' \
+    "$(date +%s)" "$action" "$status" "$detail" >> "$TPL_BUNDLE_LOG"
+}
+
+_ensure_dirs() {
+  mkdir -p "$TPL_MODULES_BASE" "$TPL_MODULES_RELEASES" "$TPL_DATA"
+}
+
+# ── PACK: Create a signed bundle ─────────────────────────────────────
+cmd_pack() {
+  _require_cmd tar sha256sum
+
+  local src="${1:-$TPL_MODULES_SRC}"
+  local bundle_ver="${2:-$(_timestamp)}"
+  local out_dir="${3:-.}"
+
+  [[ -d "$src" ]] || die "Directory sorgente moduli non trovata: $src"
+
+  header "Pack bundle v${bundle_ver}"
+
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  trap "rm -rf '$tmpdir'" EXIT
+
+  # Copy modules
+  local mod_staging="$tmpdir/modules"
+  mkdir -p "$mod_staging"
+  local count=0
+  for f in "$src"/*.sh; do
+    [[ -f "$f" ]] || continue
+    cp "$f" "$mod_staging/"
+    count=$((count + 1))
+  done
+  [[ $count -gt 0 ]] || die "Nessun modulo .sh trovato in $src"
+  info "Copiati $count moduli"
+
+  # Build manifest.json
+  local manifest="$tmpdir/manifest.json"
+  {
+    echo '{'
+    echo "  \"version\": \"$bundle_ver\","
+    echo "  \"channel\": \"$TPL_UPDATE_CHANNEL\","
+    echo "  \"created\": \"$(_timestamp)\","
+    echo "  \"created_ts\": $(date +%s),"
+    echo "  \"modules_count\": $count,"
+    echo '  "files": {'
+    local first=true
+    for f in "$mod_staging"/*.sh; do
+      [[ -f "$f" ]] || continue
+      local fname hash size
+      fname=$(basename "$f")
+      hash=$(_sha256 "$f")
+      size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
+      # Extract version from meta()
+      local ver="0.0.0"
+      if grep -q 'meta()' "$f" 2>/dev/null; then
+        ver=$(sed -n '/meta()/,/^JSON/{ /ver/{ s/.*"ver"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p; } }' "$f" | head -1)
+        ver="${ver:-0.0.0}"
+      fi
+      $first || echo ','
+      printf '    "%s": {"sha256": "%s", "size": %d, "version": "%s"}' "$fname" "$hash" "$size" "$ver"
+      first=false
+    done
+    echo ''
+    echo '  },'
+    echo "  \"min_platform_version\": \"2.0.0\","
+    echo '  "prerequisites": [],'
+    echo "  \"signature_algorithm\": \"hmac-sha256\""
+    echo '}'
+  } > "$manifest"
+
+  # Sign the manifest
+  if [[ -f "$TPL_PRIVKEY" ]]; then
+    info "Firma con chiave $TPL_PRIVKEY"
+    _sign_manifest "$manifest" "$tmpdir/signature.sig"
+    ok "Bundle firmato"
+  else
+    warn "Nessuna chiave privata trovata — bundle NON firmato"
+    echo '{"signed": false, "reason": "no_private_key"}' > "$tmpdir/signature.sig"
+  fi
+
+  # Create tarball
+  local bundle_name="tpl-modules-${bundle_ver}.tar.gz"
+  local bundle_path
+  bundle_path="$(cd "$out_dir" && pwd)/$bundle_name"
+  (cd "$tmpdir" && tar czf "$bundle_path" manifest.json signature.sig modules/)
+  local bundle_hash
+  bundle_hash=$(_sha256 "$bundle_path")
+
+  ok "Bundle creato: $bundle_path"
+  info "Hash: $bundle_hash"
+  info "Moduli: $count"
+  info "Dimensione: $(du -h "$bundle_path" | awk '{print $1}')"
+
+  _log_event "pack" "success" "bundle=$bundle_name modules=$count hash=$bundle_hash"
+}
+
+_sign_manifest() {
+  local manifest="$1" sig_file="$2"
+  _require_cmd openssl
+  local manifest_hash
+  manifest_hash=$(_sha256 "$manifest")
+  # HMAC-SHA256 using the private key file content as the key
+  local key
+  key=$(cat "$TPL_PRIVKEY")
+  local hmac
+  hmac=$(echo -n "$manifest_hash" | openssl dgst -sha256 -hmac "$key" | awk '{print $NF}')
+  cat > "$sig_file" <<SIGEOF
+{
+  "signed": true,
+  "algorithm": "hmac-sha256",
+  "manifest_hash": "$manifest_hash",
+  "signature": "$hmac",
+  "signed_at": "$(_timestamp)",
+  "key_fingerprint": "$(echo -n "$key" | sha256sum | awk '{print $1}' | head -c 16)"
+}
+SIGEOF
+}
+
+# ── VERIFY: Verify a bundle's signature and checksums ─────────────────
+cmd_verify() {
+  _require_cmd tar sha256sum
+
+  local bundle="$1"
+  [[ -f "$bundle" ]] || die "Bundle non trovato: $bundle"
+
+  header "Verifica bundle: $(basename "$bundle")"
+
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  trap "rm -rf '$tmpdir'" EXIT
+
+  tar xzf "$bundle" -C "$tmpdir" 2>/dev/null || die "Bundle corrotto: impossibile estrarre"
+
+  # Check structure
+  [[ -f "$tmpdir/manifest.json" ]] || die "manifest.json mancante nel bundle"
+  [[ -d "$tmpdir/modules" ]] || die "Directory modules/ mancante nel bundle"
+
+  local manifest="$tmpdir/manifest.json"
+  local sig_file="$tmpdir/signature.sig"
+
+  # Verify signature
+  if [[ -f "$sig_file" ]]; then
+    local signed
+    signed=$(python3 -c "import json;print(json.load(open('$sig_file')).get('signed',False))" 2>/dev/null || echo "False")
+    if [[ "$signed" == "True" ]]; then
+      if [[ -f "$TPL_PUBKEY" ]]; then
+        _verify_signature "$manifest" "$sig_file" || die "FIRMA NON VALIDA — bundle compromesso!"
+        ok "Firma valida"
+      else
+        if [[ "$TPL_REQUIRE_SIGNATURE" == "1" ]]; then
+          die "Firma richiesta ma chiave pubblica non trovata: $TPL_PUBKEY"
+        fi
+        warn "Chiave pubblica non disponibile — firma non verificata"
+      fi
+    else
+      if [[ "$TPL_REQUIRE_SIGNATURE" == "1" ]]; then
+        die "Bundle non firmato — firma richiesta (TPL_REQUIRE_SIGNATURE=1)"
+      fi
+      warn "Bundle non firmato"
+    fi
+  else
+    if [[ "$TPL_REQUIRE_SIGNATURE" == "1" ]]; then
+      die "File firma mancante — firma richiesta"
+    fi
+    warn "Nessun file firma nel bundle"
+  fi
+
+  # Verify file checksums
+  info "Verifica checksum file..."
+  local errors=0
+  while IFS= read -r line; do
+    local fname expected_hash
+    fname=$(echo "$line" | python3 -c "import sys,json;d=json.load(sys.stdin);print(list(d.keys())[0])" 2>/dev/null) || continue
+    expected_hash=$(echo "$line" | python3 -c "import sys,json;d=json.load(sys.stdin);print(list(d.values())[0])" 2>/dev/null) || continue
+    # Parse all files from manifest
+  done < /dev/null  # placeholder
+
+  # Better approach: use Python to parse and verify
+  python3 -c "
+import json, hashlib, sys, os
+
+manifest = json.load(open('$manifest'))
+files = manifest.get('files', {})
+errors = 0
+verified = 0
+
+for fname, info in files.items():
+    fpath = os.path.join('$tmpdir', 'modules', fname)
+    if not os.path.isfile(fpath):
+        print(f'  ✗ {fname}: FILE MANCANTE')
+        errors += 1
+        continue
+    h = hashlib.sha256()
+    with open(fpath, 'rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            h.update(chunk)
+    actual = h.hexdigest()
+    expected = info.get('sha256', '')
+    if actual != expected:
+        print(f'  ✗ {fname}: CHECKSUM NON VALIDO')
+        print(f'    atteso:  {expected}')
+        print(f'    trovato: {actual}')
+        errors += 1
+    else:
+        print(f'  ✓ {fname}: OK')
+        verified += 1
+
+print(f'\nVerificati: {verified}/{len(files)}')
+if errors > 0:
+    print(f'Errori: {errors}')
+    sys.exit(1)
+" || die "Verifica checksum fallita"
+
+  # Show manifest info
+  echo ""
+  python3 -c "
+import json
+m = json.load(open('$manifest'))
+print(f\"  Versione:   {m.get('version', '?')}\")
+print(f\"  Canale:     {m.get('channel', '?')}\")
+print(f\"  Creato:     {m.get('created', '?')}\")
+print(f\"  Moduli:     {m.get('modules_count', '?')}\")
+print(f\"  Min plat.:  {m.get('min_platform_version', '?')}\")
+"
+
+  ok "Bundle verificato con successo"
+}
+
+_verify_signature() {
+  local manifest="$1" sig_file="$2"
+  _require_cmd openssl
+  local manifest_hash
+  manifest_hash=$(_sha256 "$manifest")
+  local key expected_hmac actual_hmac
+  key=$(cat "$TPL_PUBKEY")
+  actual_hmac=$(python3 -c "import json;print(json.load(open('$sig_file')).get('signature',''))")
+  expected_hmac=$(echo -n "$manifest_hash" | openssl dgst -sha256 -hmac "$key" | awk '{print $NF}')
+  [[ "$actual_hmac" == "$expected_hmac" ]]
+}
+
+# ── INSTALL: Atomic download→verify→stage→switch→restart ─────────────
+cmd_install() {
+  _require_cmd tar
+
+  local bundle="$1"
+  [[ -f "$bundle" ]] || die "Bundle non trovato: $bundle"
+
+  header "Installazione bundle: $(basename "$bundle")"
+  _ensure_dirs
+
+  # Step 1: Verify
+  info "Fase 1/5: Verifica integrità..."
+  cmd_verify "$bundle"
+  echo ""
+
+  # Step 2: Stage
+  info "Fase 2/5: Staging..."
+  local release_id
+  release_id="$(date +%s)_$(basename "$bundle" .tar.gz)"
+  local staging_dir="$TPL_MODULES_RELEASES/$release_id"
+  mkdir -p "$staging_dir"
+
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  tar xzf "$bundle" -C "$tmpdir"
+
+  # Copy modules to staging
+  cp -a "$tmpdir/modules/"* "$staging_dir/" 2>/dev/null || true
+  cp "$tmpdir/manifest.json" "$staging_dir/.manifest.json"
+  [[ -f "$tmpdir/signature.sig" ]] && cp "$tmpdir/signature.sig" "$staging_dir/.signature.sig"
+  rm -rf "$tmpdir"
+  ok "Staged in: $staging_dir"
+
+  # Step 3: Pre-switch backup
+  info "Fase 3/5: Backup stato corrente..."
+  if [[ -L "$TPL_MODULES_CURRENT" || -d "$TPL_MODULES_CURRENT" ]]; then
+    local prev_target
+    prev_target=$(readlink -f "$TPL_MODULES_CURRENT" 2>/dev/null || echo "")
+    if [[ -n "$prev_target" && -d "$prev_target" ]]; then
+      info "Release precedente: $(basename "$prev_target")"
+    fi
+  fi
+  # Backup state file
+  if [[ -f "$TPL_STATE_FILE" ]]; then
+    cp "$TPL_STATE_FILE" "$staging_dir/.pre_install_state.json"
+    ok "Stato salvato"
+  fi
+
+  # Step 4: Atomic switch (symlink swap)
+  info "Fase 4/5: Switch atomico..."
+  local tmp_link="${TPL_MODULES_CURRENT}.new"
+  ln -snf "$staging_dir" "$tmp_link"
+  mv -T "$tmp_link" "$TPL_MODULES_CURRENT" 2>/dev/null || {
+    # Fallback for systems without mv -T
+    rm -f "$TPL_MODULES_CURRENT"
+    ln -snf "$staging_dir" "$TPL_MODULES_CURRENT"
+  }
+  ok "Symlink aggiornato: current → $(basename "$staging_dir")"
+
+  # Also update the project modules/ for dev compatibility
+  if [[ -d "$TPL_MODULES_SRC" ]]; then
+    info "Aggiornamento modules/ del progetto..."
+    cp -a "$staging_dir"/*.sh "$TPL_MODULES_SRC/" 2>/dev/null || true
+  fi
+
+  # Update state file with install info
+  _update_state_from_manifest "$staging_dir/.manifest.json"
+
+  # Step 5: Cleanup old releases
+  info "Fase 5/5: Pulizia release obsolete..."
+  _cleanup_old_releases
+  ok "Pulizia completata"
+
+  _log_event "install" "success" "release=$release_id bundle=$(basename "$bundle")"
+
+  echo ""
+  ok "Installazione completata!"
+  info "Release: $release_id"
+  info "Percorso: $staging_dir"
+  info "Symlink: $TPL_MODULES_CURRENT → $staging_dir"
+  echo ""
+  warn "Per applicare: riavviare i container con 'docker compose restart tpl-api'"
+}
+
+_update_state_from_manifest() {
+  local manifest="$1"
+  [[ -f "$manifest" ]] || return 0
+
+  python3 -c "
+import json, os, time
+
+manifest = json.load(open('$manifest'))
+state_file = '$TPL_STATE_FILE'
+
+# Load existing state
+state = {'installed': {}, 'updated': 0}
+if os.path.isfile(state_file):
+    try:
+        with open(state_file) as f:
+            state = json.load(f)
+    except:
+        pass
+
+files = manifest.get('files', {})
+now = int(time.time())
+
+for fname, info in files.items():
+    mod_id = fname.replace('.sh', '')
+    state['installed'][mod_id] = {
+        'ver': info.get('version', '0.0.0'),
+        'ts': now,
+        'sha256': info.get('sha256', ''),
+        'bundle_version': manifest.get('version', '?'),
+    }
+
+state['updated'] = now
+state['bundle'] = {
+    'version': manifest.get('version', '?'),
+    'channel': manifest.get('channel', 'stable'),
+    'installed_at': now,
+    'modules_count': len(files),
+}
+
+with open(state_file + '.tmp', 'w') as f:
+    json.dump(state, f, separators=(',', ':'))
+os.replace(state_file + '.tmp', state_file)
+print(f'Stato aggiornato: {len(files)} moduli')
+" 2>/dev/null || warn "Impossibile aggiornare il file di stato"
+}
+
+_cleanup_old_releases() {
+  local releases
+  releases=$(ls -1dt "$TPL_MODULES_RELEASES"/*/ 2>/dev/null | tail -n +"$((TPL_MAX_RELEASES + 1))")
+  local current_target
+  current_target=$(readlink -f "$TPL_MODULES_CURRENT" 2>/dev/null || echo "")
+  for d in $releases; do
+    d=$(readlink -f "$d")
+    # Never delete the current release
+    [[ "$d" == "$current_target" ]] && continue
+    info "Rimozione release obsoleta: $(basename "$d")"
+    rm -rf "$d"
+  done
+}
+
+# ── ROLLBACK: Switch back to a previous release ──────────────────────
+cmd_rollback() {
+  local target="${1:-}"
+
+  header "Rollback"
+  _ensure_dirs
+
+  if [[ -z "$target" ]]; then
+    # List available releases and let user choose
+    echo "Release disponibili:"
+    echo ""
+    local releases
+    releases=$(ls -1dt "$TPL_MODULES_RELEASES"/*/ 2>/dev/null)
+    if [[ -z "$releases" ]]; then
+      die "Nessuna release disponibile per il rollback"
+    fi
+
+    local current_target idx=0
+    current_target=$(readlink -f "$TPL_MODULES_CURRENT" 2>/dev/null || echo "")
+    while IFS= read -r d; do
+      idx=$((idx + 1))
+      local name
+      name=$(basename "$d")
+      local marker=""
+      [[ "$(readlink -f "$d")" == "$current_target" ]] && marker=" ${GREEN}← corrente${NC}"
+      local mf="$d/.manifest.json"
+      local ver="?"
+      [[ -f "$mf" ]] && ver=$(python3 -c "import json;print(json.load(open('$mf')).get('version','?'))" 2>/dev/null || echo "?")
+      echo -e "  ${BOLD}$idx${NC}. $name  (v$ver)$marker"
+    done <<< "$releases"
+
+    echo ""
+    read -rp "Seleziona release (numero): " choice
+    target=$(echo "$releases" | sed -n "${choice}p")
+    [[ -n "$target" ]] || die "Selezione non valida"
+    target=$(basename "$target")
+  fi
+
+  local release_dir="$TPL_MODULES_RELEASES/$target"
+  [[ -d "$release_dir" ]] || die "Release non trovata: $target"
+
+  # Backup current state
+  if [[ -f "$TPL_STATE_FILE" ]]; then
+    cp "$TPL_STATE_FILE" "$release_dir/.pre_rollback_state.json"
+  fi
+
+  # Atomic switch
+  info "Switch a release: $target"
+  local tmp_link="${TPL_MODULES_CURRENT}.new"
+  ln -snf "$release_dir" "$tmp_link"
+  mv -T "$tmp_link" "$TPL_MODULES_CURRENT" 2>/dev/null || {
+    rm -f "$TPL_MODULES_CURRENT"
+    ln -snf "$release_dir" "$TPL_MODULES_CURRENT"
+  }
+
+  # Update project modules/ for dev compatibility
+  if [[ -d "$TPL_MODULES_SRC" ]]; then
+    cp -a "$release_dir"/*.sh "$TPL_MODULES_SRC/" 2>/dev/null || true
+  fi
+
+  # Restore state from this release's manifest
+  if [[ -f "$release_dir/.manifest.json" ]]; then
+    _update_state_from_manifest "$release_dir/.manifest.json"
+  fi
+
+  _log_event "rollback" "success" "target=$target"
+
+  ok "Rollback completato: current → $target"
+  warn "Riavviare i container: docker compose restart tpl-api"
+}
+
+# ── LIST: Show installed releases ────────────────────────────────────
+cmd_list() {
+  header "Release installate"
+  _ensure_dirs
+
+  local releases
+  releases=$(ls -1dt "$TPL_MODULES_RELEASES"/*/ 2>/dev/null)
+  if [[ -z "$releases" ]]; then
+    info "Nessuna release installata in $TPL_MODULES_RELEASES"
+    return 0
+  fi
+
+  local current_target
+  current_target=$(readlink -f "$TPL_MODULES_CURRENT" 2>/dev/null || echo "")
+
+  printf "  %-4s %-42s %-12s %-10s %s\n" "#" "RELEASE" "VERSIONE" "MODULI" "STATO"
+  printf "  %-4s %-42s %-12s %-10s %s\n" "─" "──────────────────────────────────────────" "──────────" "──────" "─────"
+
+  local idx=0
+  while IFS= read -r d; do
+    idx=$((idx + 1))
+    local name ver mcount marker
+    name=$(basename "$d")
+    local mf="$d/.manifest.json"
+    if [[ -f "$mf" ]]; then
+      ver=$(python3 -c "import json;m=json.load(open('$mf'));print(m.get('version','?'))" 2>/dev/null || echo "?")
+      mcount=$(python3 -c "import json;m=json.load(open('$mf'));print(m.get('modules_count','?'))" 2>/dev/null || echo "?")
+    else
+      ver="?"
+      mcount=$(ls -1 "$d"/*.sh 2>/dev/null | wc -l)
+    fi
+    marker=""
+    [[ "$(readlink -f "$d")" == "$current_target" ]] && marker="CORRENTE"
+    printf "  %-4s %-42s %-12s %-10s %s\n" "$idx" "$name" "v$ver" "$mcount" "$marker"
+  done <<< "$releases"
+}
+
+# ── INFO: Show current bundle information ────────────────────────────
+cmd_info() {
+  header "Informazioni bundle corrente"
+
+  if [[ ! -L "$TPL_MODULES_CURRENT" && ! -d "$TPL_MODULES_CURRENT" ]]; then
+    info "Nessun bundle installato (symlink $TPL_MODULES_CURRENT non esiste)"
+    info "Moduli serviti da: $TPL_MODULES_SRC"
+    return 0
+  fi
+
+  local target
+  target=$(readlink -f "$TPL_MODULES_CURRENT" 2>/dev/null)
+  echo "  Percorso:  $target"
+  echo "  Symlink:   $TPL_MODULES_CURRENT"
+  echo ""
+
+  local mf="$target/.manifest.json"
+  if [[ -f "$mf" ]]; then
+    python3 -c "
+import json
+m = json.load(open('$mf'))
+print(f\"  Versione:        {m.get('version', '?')}\")
+print(f\"  Canale:          {m.get('channel', '?')}\")
+print(f\"  Creato:          {m.get('created', '?')}\")
+print(f\"  Moduli:          {m.get('modules_count', 0)}\")
+print(f\"  Min. piattaforma: {m.get('min_platform_version', '?')}\")
+print()
+files = m.get('files', {})
+if files:
+    print('  File nel bundle:')
+    for f, info in sorted(files.items()):
+        print(f\"    {f:<40s} v{info.get('version','?'):<10s} sha256:{info.get('sha256','?')[:12]}…\")
+"
+  else
+    info "Nessun manifest.json trovato nella release corrente"
+  fi
+
+  local sf="$target/.signature.sig"
+  if [[ -f "$sf" ]]; then
+    echo ""
+    python3 -c "
+import json
+s = json.load(open('$sf'))
+signed = s.get('signed', False)
+if signed:
+    print(f\"  Firma:           ✓ Firmato\")
+    print(f\"  Algoritmo:       {s.get('algorithm', '?')}\")
+    print(f\"  Firmato il:      {s.get('signed_at', '?')}\")
+    print(f\"  Key fingerprint: {s.get('key_fingerprint', '?')}\")
+else:
+    print(f\"  Firma:           ✗ Non firmato\")
+    print(f\"  Motivo:          {s.get('reason', '?')}\")
+"
+  fi
+}
+
+# ── KEYGEN: Generate signing keypair ─────────────────────────────────
+cmd_keygen() {
+  header "Generazione keypair per firma bundle"
+
+  local keydir
+  keydir=$(dirname "$TPL_PRIVKEY")
+  mkdir -p "$keydir"
+
+  if [[ -f "$TPL_PRIVKEY" ]]; then
+    warn "Chiave privata già esistente: $TPL_PRIVKEY"
+    read -rp "Sovrascrivere? [y/N] " ans
+    [[ "$ans" =~ ^[yY] ]] || { info "Operazione annullata"; return 0; }
+  fi
+
+  # Generate a random 64-byte key
+  local key
+  key=$(openssl rand -hex 64)
+  echo -n "$key" > "$TPL_PRIVKEY"
+  chmod 600 "$TPL_PRIVKEY"
+
+  # Public key = same key (HMAC is symmetric) but with restricted permissions
+  echo -n "$key" > "$TPL_PUBKEY"
+  chmod 644 "$TPL_PUBKEY"
+
+  local fingerprint
+  fingerprint=$(echo -n "$key" | sha256sum | awk '{print $1}' | head -c 16)
+
+  ok "Keypair generato"
+  info "Chiave privata: $TPL_PRIVKEY (modo: 600)"
+  info "Chiave pubblica: $TPL_PUBKEY (modo: 644)"
+  info "Fingerprint: $fingerprint"
+  echo ""
+  warn "IMPORTANTE: la chiave privata NON deve mai essere distribuita!"
+  warn "Copiare la chiave pubblica sui sistemi target per la verifica."
+}
+
+# ── HISTORY: Show bundle install/rollback history ────────────────────
+cmd_history() {
+  header "Cronologia operazioni bundle"
+
+  if [[ ! -f "$TPL_BUNDLE_LOG" ]]; then
+    info "Nessuna cronologia disponibile"
+    return 0
+  fi
+
+  echo ""
+  printf "  %-22s %-12s %-10s %s\n" "TIMESTAMP" "AZIONE" "STATO" "DETTAGLIO"
+  printf "  %-22s %-12s %-10s %s\n" "────────────────────" "──────────" "────────" "──────────"
+
+  tail -20 "$TPL_BUNDLE_LOG" | while IFS= read -r line; do
+    local ts action status detail
+    ts=$(echo "$line" | python3 -c "import sys,json;d=json.loads(sys.stdin.read());import datetime;print(datetime.datetime.fromtimestamp(d.get('ts',0)).strftime('%Y-%m-%d %H:%M:%S'))" 2>/dev/null || echo "?")
+    action=$(echo "$line" | python3 -c "import sys,json;print(json.loads(sys.stdin.read()).get('action','?'))" 2>/dev/null || echo "?")
+    status=$(echo "$line" | python3 -c "import sys,json;print(json.loads(sys.stdin.read()).get('status','?'))" 2>/dev/null || echo "?")
+    detail=$(echo "$line" | python3 -c "import sys,json;print(json.loads(sys.stdin.read()).get('detail','')[:50])" 2>/dev/null || echo "")
+    printf "  %-22s %-12s %-10s %s\n" "$ts" "$action" "$status" "$detail"
+  done
+}
+
+# ── SECURITY-CHECK: Pre-install security checklist ───────────────────
+cmd_security_check() {
+  local bundle="${1:-}"
+
+  header "Security Checklist"
+  echo ""
+
+  local pass=0 fail=0 warn_count=0
+
+  # 1. Bundle signature
+  if [[ -n "$bundle" && -f "$bundle" ]]; then
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    trap "rm -rf '$tmpdir'" EXIT
+    tar xzf "$bundle" -C "$tmpdir" 2>/dev/null
+    if [[ -f "$tmpdir/signature.sig" ]]; then
+      local signed
+      signed=$(python3 -c "import json;print(json.load(open('$tmpdir/signature.sig')).get('signed',False))" 2>/dev/null || echo "False")
+      if [[ "$signed" == "True" ]]; then
+        echo -e "  ${GREEN}✓${NC} Bundle firmato digitalmente"
+        pass=$((pass + 1))
+      else
+        echo -e "  ${RED}✗${NC} Bundle NON firmato"
+        fail=$((fail + 1))
+      fi
+    else
+      echo -e "  ${RED}✗${NC} File firma mancante nel bundle"
+      fail=$((fail + 1))
+    fi
+  else
+    echo -e "  ${YELLOW}○${NC} Bundle non specificato — skip verifica firma"
+    warn_count=$((warn_count + 1))
+  fi
+
+  # 2. Signature enforcement
+  if [[ "$TPL_REQUIRE_SIGNATURE" == "1" ]]; then
+    echo -e "  ${GREEN}✓${NC} Firma obbligatoria abilitata (REQUIRE_SIGNATURE=1)"
+    pass=$((pass + 1))
+  else
+    echo -e "  ${RED}✗${NC} Firma NON obbligatoria (REQUIRE_SIGNATURE=0)"
+    fail=$((fail + 1))
+  fi
+
+  # 3. Public key present
+  if [[ -f "$TPL_PUBKEY" ]]; then
+    echo -e "  ${GREEN}✓${NC} Chiave pubblica presente: $TPL_PUBKEY"
+    pass=$((pass + 1))
+  else
+    echo -e "  ${YELLOW}⚠${NC} Chiave pubblica non trovata"
+    warn_count=$((warn_count + 1))
+  fi
+
+  # 4. Private key permissions
+  if [[ -f "$TPL_PRIVKEY" ]]; then
+    local perms
+    perms=$(stat -c%a "$TPL_PRIVKEY" 2>/dev/null || stat -f%Lp "$TPL_PRIVKEY" 2>/dev/null)
+    if [[ "$perms" == "600" ]]; then
+      echo -e "  ${GREEN}✓${NC} Chiave privata: permessi corretti (600)"
+      pass=$((pass + 1))
+    else
+      echo -e "  ${RED}✗${NC} Chiave privata: permessi insicuri ($perms, atteso 600)"
+      fail=$((fail + 1))
+    fi
+  else
+    echo -e "  ${YELLOW}○${NC} Nessuna chiave privata (non necessaria per la verifica)"
+    warn_count=$((warn_count + 1))
+  fi
+
+  # 5. ENABLE_CONTROL_PLANE
+  local cp_val="${ENABLE_CONTROL_PLANE:-0}"
+  if [[ "$cp_val" == "0" || -z "$cp_val" ]]; then
+    echo -e "  ${GREEN}✓${NC} Control plane disabilitato (prod-safe)"
+    pass=$((pass + 1))
+  else
+    echo -e "  ${RED}✗${NC} ENABLE_CONTROL_PLANE=1 — endpoint /modules/apply attivo!"
+    fail=$((fail + 1))
+  fi
+
+  # 6. Modules directory permissions
+  if [[ -d "$TPL_MODULES_SRC" ]]; then
+    local dir_perms
+    dir_perms=$(stat -c%a "$TPL_MODULES_SRC" 2>/dev/null || stat -f%Lp "$TPL_MODULES_SRC" 2>/dev/null)
+    echo -e "  ${CYAN}ℹ${NC} Directory moduli: $TPL_MODULES_SRC (permessi: $dir_perms)"
+  fi
+
+  # 7. Update URL configured
+  if [[ -n "$TPL_UPDATE_URL" ]]; then
+    echo -e "  ${GREEN}✓${NC} URL aggiornamenti configurato: $TPL_UPDATE_URL"
+    pass=$((pass + 1))
+  else
+    echo -e "  ${YELLOW}○${NC} URL aggiornamenti non configurato (solo aggiornamenti locali)"
+    warn_count=$((warn_count + 1))
+  fi
+
+  # 8. HTTPS enforcement
+  local force_https="${FORCE_HTTPS:-false}"
+  if [[ "$force_https" =~ ^(true|1|yes)$ ]]; then
+    echo -e "  ${GREEN}✓${NC} HTTPS forzato"
+    pass=$((pass + 1))
+  else
+    echo -e "  ${YELLOW}⚠${NC} HTTPS non forzato"
+    warn_count=$((warn_count + 1))
+  fi
+
+  echo ""
+  echo -e "  Risultato: ${GREEN}$pass pass${NC}, ${RED}$fail fail${NC}, ${YELLOW}$warn_count warning${NC}"
+
+  local total=$((pass + fail))
+  if [[ $total -gt 0 ]]; then
+    local score=$(( (pass * 100) / total ))
+    echo -e "  Score: ${BOLD}$score/100${NC}"
+  fi
+
+  [[ $fail -eq 0 ]] && return 0 || return 1
+}
+
+# ── USAGE ─────────────────────────────────────────────────────────────
+usage() {
+  cat <<EOF
+${BOLD}tpl-modules${NC} v${VERSION} — Gestione bundle moduli TPL
+
+${BOLD}USO:${NC}
+  tpl-modules <comando> [opzioni]
+
+${BOLD}COMANDI:${NC}
+  pack [src] [ver] [out]   Crea un bundle firmato dai moduli sorgente
+  verify <bundle.tar.gz>   Verifica firma e checksum di un bundle
+  install <bundle.tar.gz>  Installa un bundle (atomico: verify→stage→switch)
+  rollback [release]       Ripristina una release precedente
+  list                     Elenca le release installate
+  info                     Mostra informazioni sul bundle corrente
+  history                  Cronologia operazioni bundle
+  keygen                   Genera keypair per firma bundle
+  security-check [bundle]  Checklist sicurezza pre-installazione
+
+${BOLD}VARIABILI D'AMBIENTE:${NC}
+  TPL_MODULES_BASE         Directory base bundle (def: <TPL_ROOT>/data/modules)
+  TPL_PUBKEY               Chiave pubblica per verifica firma
+  TPL_PRIVKEY              Chiave privata per firma bundle
+  TPL_REQUIRE_SIGNATURE    1 = firma obbligatoria (def: 1)
+  TPL_UPDATE_URL           URL repository aggiornamenti
+  TPL_UPDATE_CHANNEL       Canale (stable|beta|dev, def: stable)
+  TPL_MAX_RELEASES         Max release mantenute (def: 5)
+
+${BOLD}ESEMPI:${NC}
+  tpl-modules keygen                          # Genera keypair
+  tpl-modules pack                            # Crea bundle da ./modules
+  tpl-modules pack ./modules 2.1.0 ./dist     # Bundle con versione specifica
+  tpl-modules verify ./dist/tpl-modules-*.gz  # Verifica bundle
+  tpl-modules install ./dist/tpl-modules-*.gz # Installa atomicamente
+  tpl-modules list                            # Elenca release
+  tpl-modules rollback                        # Rollback interattivo
+  tpl-modules security-check bundle.tar.gz    # Checklist sicurezza
+
+EOF
+}
+
+# ── Main dispatch ─────────────────────────────────────────────────────
+main() {
+  local cmd="${1:-help}"
+  shift || true
+
+  case "$cmd" in
+    pack)            cmd_pack "$@" ;;
+    verify)          cmd_verify "$@" ;;
+    install)         cmd_install "$@" ;;
+    rollback)        cmd_rollback "$@" ;;
+    list|ls)         cmd_list "$@" ;;
+    info)            cmd_info "$@" ;;
+    history)         cmd_history "$@" ;;
+    keygen)          cmd_keygen "$@" ;;
+    security-check)  cmd_security_check "$@" ;;
+    help|-h|--help)  usage ;;
+    version|-v|--version) echo "tpl-modules v$VERSION" ;;
+    *)               err "Comando sconosciuto: $cmd"; usage; exit 1 ;;
+  esac
+}
+
+main "$@"

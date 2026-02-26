@@ -1,0 +1,72 @@
+http:
+  routers:
+    web:
+      rule: "PathPrefix(`/`)"
+      service: web
+      middlewares: [sec-headers]
+      priority: 1
+      entryPoints: [web]
+    api:
+      rule: "PathPrefix(`/api`)"
+      service: api
+      middlewares: [sa, rate-api, sec-headers]
+      priority: 9
+      entryPoints: [web]
+    api-admin:
+      rule: "PathPrefix(`/api/version`) || PathPrefix(`/api/modules`) || PathPrefix(`/api/users`) || PathPrefix(`/api/security`)"
+      service: api
+      middlewares: [sa, rate-admin, sec-headers]
+      priority: 11
+      entryPoints: [web]
+    kc:
+      rule: "PathPrefix(`/auth`)"
+      service: kc
+      middlewares: [rate-auth, sec-headers]
+      priority: 10
+      entryPoints: [web]
+  middlewares:
+    sa:
+      stripPrefix:
+        prefixes: ["/api"]
+    sk:
+      stripPrefix:
+        prefixes: ["/auth"]
+    rate-api:
+      rateLimit:
+        average: 60
+        burst: 30
+        period: "1m"
+    rate-admin:
+      rateLimit:
+        average: 60
+        burst: 30
+        period: "1m"
+    rate-auth:
+      rateLimit:
+        average: 10
+        burst: 5
+        period: "1m"
+    sec-headers:
+      headers:
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        customResponseHeaders:
+          Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+  services:
+    web:
+      loadBalancer:
+        servers:
+          - url: "http://web:80"
+    api:
+      loadBalancer:
+        servers:
+          - url: "http://api:8000"
+    kc:
+      loadBalancer:
+        servers:
+          - url: "http://keycloak:8080"

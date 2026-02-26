@@ -1,0 +1,28 @@
+services:
+  web:
+    image: nginx:alpine
+    volumes:
+      - ./infra/web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/web/security-headers.conf:/etc/nginx/conf.d/security-headers.conf:ro
+      - ./infra/web:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=16M
+      - /var/cache/nginx:size=32M
+      - /run:size=1M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - SETUID
+      - SETGID
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+          pids: 50

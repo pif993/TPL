@@ -1,0 +1,58 @@
+services:
+  api:
+    build: ./apps/api
+    # Run as non-root user (matches Dockerfile USER appuser → UID 999)
+    user: "999:999"
+    environment:
+      # ── Configuration ONLY — no secrets here ──────────────────────
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      AUTH_MODE: ${AUTH_MODE:-local}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-myapp-web}
+      ENABLE_CONTROL_PLANE: ${ENABLE_CONTROL_PLANE:-0}
+      BOOTSTRAP_MODE: ${BOOTSTRAP_MODE:-false}
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
+      FORCE_HTTPS: ${FORCE_HTTPS:-false}
+      LOGIN_WINDOW_SECONDS: ${LOGIN_WINDOW_SECONDS:-120}
+      LOGIN_MAX_ATTEMPTS: ${LOGIN_MAX_ATTEMPTS:-8}
+      JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-3600}
+      TPL_DATA_DIR: ${TPL_DATA_DIR:-/data}
+      TPL_SECRETS_DIR: /run/secrets
+      # ── Module distribution configuration ─────────────────────────
+      TPL_MODULES_BASE: ${TPL_MODULES_BASE:-/var/lib/tpl/modules}
+      TPL_REQUIRE_SIGNATURE: ${TPL_REQUIRE_SIGNATURE:-1}
+      TPL_UPDATE_CHANNEL: ${TPL_UPDATE_CHANNEL:-stable}
+      TPL_UPDATE_URL: ${TPL_UPDATE_URL:-}
+      TPL_MAX_RELEASES: ${TPL_MAX_RELEASES:-5}
+    volumes:
+      # State volume (API keys, users, audit logs)
+      - ${TPL_DATA_DIR_HOST:-./data}:/data
+      # Secrets: .secrets/ directory mounted read-only to /run/secrets
+      # In Vault mode, 21-vault-agent.yml overrides this with tmpfs.
+      - ${TPL_SECRETS_DIR_HOST:-./.secrets}:/run/secrets:ro
+      # Module scripts: /data/modules/current → /work/modules (read-only)
+      # Modules live on the data volume as artifacts, NOT in the repo.
+      # Update via: ./run.sh modules update (CLI, signed bundles)
+      - ${TPL_DATA_DIR_HOST:-./data}/modules/current:/work/modules:ro
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+          pids: 100
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+

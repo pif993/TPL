@@ -1,0 +1,47 @@
+services:
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: tpl-vault
+    command: ["server"]
+    environment:
+      VAULT_LOCAL_CONFIG: ""
+      VAULT_ADDR: "http://127.0.0.1:8200"
+    volumes:
+      - ./infra/vault/config.hcl:/vault/config/vault.hcl:ro
+      - vault_data:/vault/file
+      - vault_audit:/vault/audit
+    ports: []
+    restart: unless-stopped
+    # NOTE: Vault's entrypoint uses setcap(8) to grant IPC_LOCK to the binary.
+    # no-new-privileges blocks setcap → crash-loop. Vault manages its own
+    # privilege dropping (root → vault user) so this is acceptable.
+    cap_drop:
+      - ALL
+    cap_add:
+      - IPC_LOCK
+      - SETFCAP
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+          pids: 64
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - default
+
+volumes:
+  vault_data:
+    name: tpl_vault_data
+  vault_audit:
+    name: tpl_vault_audit

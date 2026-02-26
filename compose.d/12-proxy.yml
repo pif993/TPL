@@ -1,0 +1,34 @@
+# ── Proxy mode: behind an existing reverse proxy ─────────────────────
+# Usage: DOMAIN_MODE=proxy in .env (or --mode=proxy in install.sh)
+#
+# Replaces 10-traefik.yml: NO host port bindings. The external proxy
+# forwards traffic to Traefik's container port 80 via the Docker network.
+#
+# Your upstream proxy must:
+#   1. Terminate TLS
+#   2. Forward to http://<docker-host>:<traefik-container-port> or via Docker network
+#   3. Set X-Forwarded-For, X-Forwarded-Proto, X-Real-IP headers
+services:
+  traefik:
+    image: traefik:v3.2
+    command: ["--configFile=/etc/traefik/traefik.yml"]
+    expose:
+      - "80"
+    volumes:
+      - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ${TPL_LOG_DIR_HOST:-./data/logs}/traefik:/var/log/traefik
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=16M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+          pids: 50

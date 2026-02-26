@@ -1,0 +1,45 @@
+# Vault Agent sidecar — renders secrets from Vault to shared tmpfs.
+# Overrides the .secrets bind-mount in 40-api.yml with RAM-only tmpfs.
+services:
+  vault-agent:
+    image: hashicorp/vault:1.15
+    container_name: tpl-vault-agent
+    command: ["agent", "-config=/vault/agent/config.hcl"]
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+    volumes:
+      - ./infra/vault/agent-api.hcl:/vault/agent/config.hcl:ro
+      - ./.vault_approle:/vault/approle:ro
+      - vault_secrets:/run/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=16M
+    cap_drop:
+      - ALL
+    cap_add:
+      - IPC_LOCK
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+          pids: 32
+    networks:
+      - default
+
+  api:
+    volumes:
+      - vault_secrets:/run/secrets:ro
+    depends_on:
+      vault-agent:
+        condition: service_started
+    environment:
+      TPL_VAULT_MODE: vault
+
+volumes:
+  vault_secrets:
+    name: tpl_vault_secrets

@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TPL · Dashboard</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- AdminLTE 4 -->
+  <link href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta3/dist/css/adminlte.min.css" rel="stylesheet">
+  <link href="/styles.css" rel="stylesheet">
+</head>
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+  <div class="app-wrapper">
+
+    <!-- ── Top Navbar ─────────────────────────────────────────── -->
+    <nav class="app-header navbar navbar-expand bg-body">
+      <div class="container-fluid">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" id="sidebarToggle" href="#" role="button" aria-label="Toggle sidebar"><i class="bi bi-list"></i></a>
+          </li>
+          <li class="nav-item d-none d-md-block">
+            <a class="nav-link" href="#" id="reloadBtn"><i class="bi bi-arrow-clockwise"></i> <span data-i18n="btn.refresh_view">Refresh</span></a>
+          </li>
+        </ul>
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <span class="nav-link text-muted small" id="identityBox">loading…</span>
+          </li>
+          <li class="nav-item">
+            <select id="langSelect" class="form-select form-select-sm lang-select-w">
+              <option value="it">IT</option>
+              <option value="en">EN</option>
+            </select>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-danger" href="#" id="logoutBtn" role="button"><i class="bi bi-box-arrow-right"></i> <span data-i18n="btn.logout">Logout</span></a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- ── Sidebar (rendered by sidebar.js) ───────────────────── -->
+    <div id="sidebarMount"></div>
+
+    <!-- ── Main Content ───────────────────────────────────────── -->
+    <main class="app-main">
+      <div class="app-content-header">
+        <div class="container-fluid">
+          <div class="row">
+            <div class="col-sm-6"><h3 class="mb-0" id="contentTitle"><i class="bi bi-speedometer2 me-2"></i>Overview</h3></div>
+            <div class="col-sm-6">
+              <ol class="breadcrumb float-sm-end">
+                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item active" id="breadcrumbCurrent">Overview</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="app-content">
+        <div class="container-fluid">
+
+          <div id="feedback" class="alert alert-info d-none mt-3" role="alert"></div>
+
+          <!-- ═══ OVERVIEW ═══ -->
+          <section id="view-overview" class="dash-view mt-3">
+
+            <!-- ─ Welcome Hero ─ -->
+            <div class="ov-hero">
+              <div class="ov-hero-left">
+                <h2 class="ov-hero-title" id="ovGreeting">Benvenuto</h2>
+                <p class="ov-hero-sub" id="ovGreetingSub">Caricamento pannello di controllo…</p>
+              </div>
+              <div class="ov-hero-right">
+                <span class="ov-role-chip" id="ovRoleChip"><i class="bi bi-person-badge"></i> —</span>
+                <span class="ov-hero-clock" id="ovClock"></span>
+              </div>
+            </div>
+
+            <!-- ─ KPI Cards (admin) ─ -->
+            <div class="row g-3 mb-4 admin-only d-none" id="ovKpiRow">
+              <div class="col-6 col-xl-3">
+                <div class="ov-kpi" data-accent="success">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="ovKpiHealth">—</span><span class="ov-kpi-icon"><i class="bi bi-heart-pulse"></i></span></div>
+                  <div class="ov-kpi-label">Stato Sistema</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="ovKpiHealthBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-xl-3">
+                <div class="ov-kpi" data-accent="info">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="ovKpiServices">—</span><span class="ov-kpi-icon"><i class="bi bi-hdd-stack"></i></span></div>
+                  <div class="ov-kpi-label">Servizi Attivi</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="ovKpiServicesBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-xl-3">
+                <div class="ov-kpi" data-accent="warning">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="ovKpiThreats">—</span><span class="ov-kpi-icon"><i class="bi bi-shield-exclamation"></i></span></div>
+                  <div class="ov-kpi-label">Alert Sicurezza</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="ovKpiThreatsBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-xl-3">
+                <div class="ov-kpi" data-accent="primary">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="ovKpiUsers">—</span><span class="ov-kpi-icon"><i class="bi bi-people"></i></span></div>
+                  <div class="ov-kpi-label">Utenti Attivi</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="ovKpiUsersBar" style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─ Services Monitor + Security (admin) ─ -->
+            <div class="row g-3 mb-4 admin-only d-none">
+              <div class="col-12 col-lg-7">
+                <div class="ov-panel">
+                  <div class="ov-panel-head"><span><i class="bi bi-activity"></i> Monitoraggio Servizi</span><span class="ov-pill" id="ovServPill">…</span></div>
+                  <div class="ov-panel-body" id="ovServGrid"><div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div></div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-5">
+                <div class="ov-panel">
+                  <div class="ov-panel-head"><span><i class="bi bi-shield-lock"></i> Sicurezza</span></div>
+                  <div class="ov-panel-body" id="ovSecPanel"><div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─ AI Insights + Predictions (admin) ─ -->
+            <div class="row g-3 mb-4 admin-only d-none">
+              <div class="col-12 col-lg-6">
+                <div class="ov-panel">
+                  <div class="ov-panel-head"><span><i class="bi bi-robot"></i> Analisi Intelligente</span><span class="ov-pill" id="ovAiPill">…</span></div>
+                  <div class="ov-panel-body" id="ovAiPanel"><div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div></div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-6">
+                <div class="ov-panel">
+                  <div class="ov-panel-head"><span><i class="bi bi-graph-up-arrow"></i> Predizioni &amp; Raccomandazioni</span></div>
+                  <div class="ov-panel-body" id="ovPredPanel"><div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─ Quick Actions + Platform Info (all users) ─ -->
+            <div class="row g-3 mb-3">
+              <div class="col-12 col-lg-6">
+                <div class="ov-panel">
+                  <div class="ov-panel-head"><span><i class="bi bi-lightning-charge"></i> Azioni Rapide</span></div>
+                  <div class="ov-panel-body" id="ovQuickActions"></div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-6">
+                <div class="ov-panel">
+                  <div class="ov-panel-head"><span><i class="bi bi-info-circle"></i> Piattaforma</span></div>
+                  <div class="ov-panel-body" id="ovPlatformInfo"></div>
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ═══ WORKSPACE ═══ -->
+          <section id="view-workspace" class="dash-view d-none mt-3">
+            <div class="ov-hero">
+              <div class="ov-hero-left">
+                <h2 class="ov-hero-title"><i class="bi bi-collection me-2"></i>Workspace</h2>
+                <p class="ov-hero-sub">Strumenti, documentazione e risorse della piattaforma</p>
+              </div>
+              <div class="ov-hero-right">
+                <span class="ov-role-chip"><i class="bi bi-grid-3x3-gap"></i> Area di Lavoro</span>
+              </div>
+            </div>
+
+            <!-- Live System Status -->
+            <div class="ov-panel mb-3">
+              <div class="ov-panel-head"><span><i class="bi bi-activity"></i> Stato Sistema</span></div>
+              <div class="ov-panel-body" id="wsSystemStatus">
+                <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+              </div>
+            </div>
+
+            <div class="ov-panel">
+              <div class="ov-panel-head"><span><i class="bi bi-lightning-charge"></i> Accesso Rapido</span></div>
+              <div class="ov-panel-body">
+                <div class="ov-actions">
+                  <a class="ov-action-btn" href="/advanced"><i class="bi bi-file-earmark-code"></i> Documentazione API</a>
+                  <a class="ov-action-btn" href="#" onclick="event.preventDefault(); window.TPLDashboard && TPLDashboard.switchView('overview')"><i class="bi bi-speedometer2"></i> Overview</a>
+                  <a class="ov-action-btn" href="#" onclick="event.preventDefault(); window.TPLDashboard && TPLDashboard.switchView('myprofile')"><i class="bi bi-person-circle"></i> Il mio Profilo</a>
+                  <a class="ov-action-btn btn--admin admin-only d-none" href="/admin/modules"><i class="bi bi-puzzle"></i> Gestione Moduli</a>
+                  <a class="ov-action-btn btn--admin admin-only d-none" href="#" onclick="event.preventDefault(); window.TPLDashboard && TPLDashboard.switchView('users')"><i class="bi bi-people"></i> Gestione Utenti</a>
+                  <a class="ov-action-btn btn--admin admin-only d-none" href="#" onclick="event.preventDefault(); window.TPLDashboard && TPLDashboard.switchView('security')"><i class="bi bi-shield-lock"></i> Sicurezza</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Keyboard shortcuts hint -->
+            <div class="text-muted text-center mt-3 adv-info-text">
+              Premi <kbd>?</kbd> per le scorciatoie da tastiera · <kbd>Alt+1–9</kbd> per navigare tra le viste
+            </div>
+          </section>
+
+          <!-- ═══ IL MIO PROFILO ═══ -->
+          <section id="view-myprofile" class="dash-view d-none mt-3">
+
+            <!-- ─ Profile Hero ─ -->
+            <div class="ov-hero ov-hero--profile">
+              <div class="ov-avatar" id="mpAvatar"><i class="bi bi-person-fill"></i></div>
+              <div class="ov-hero-info">
+                <h2 class="ov-hero-name" id="mpHeroName">—</h2>
+                <div class="ov-hero-meta">
+                  <span class="ov-role-chip" id="mpHeroRole"><i class="bi bi-shield-check"></i> —</span>
+                  <span class="ov-status-dot" id="mpHeroDot"></span>
+                  <span class="ov-hero-status" id="mpHeroStatus">—</span>
+                </div>
+                <div class="ov-hero-sub-line" id="mpHeroSub"></div>
+              </div>
+              <div class="ov-hero-actions">
+                <button class="ov-hero-btn" id="mpExportBtn" type="button" title="Esporta profilo"><i class="bi bi-download"></i> Esporta</button>
+                <button class="ov-hero-btn ov-hero-btn--accent" id="mpChangePasswordBtn" type="button"><i class="bi bi-key"></i> Cambia Password</button>
+              </div>
+            </div>
+
+            <!-- ─ Completion + Quick Stats ─ -->
+            <div class="row g-3 mb-4">
+              <div class="col-12 col-lg-7">
+                <div class="ov-panel">
+                  <div class="ov-panel-head"><span><i class="bi bi-bar-chart-steps"></i> Completamento Profilo</span><span class="ov-pct" id="mpPct">0%</span></div>
+                  <div class="ov-panel-body">
+                    <div class="ov-progress-track"><div class="ov-progress-fill" id="mpProgressBar" style="width:0%"></div></div>
+                    <div class="ov-completion-grid" id="mpCompletionGrid"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-5">
+                <div class="ov-panel">
+                  <div class="ov-panel-head"><span><i class="bi bi-clock-history"></i> Attività Account</span></div>
+                  <div class="ov-panel-body" id="mpActivityPanel"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─ Feedback toast ─ -->
+            <div class="ov-toast d-none" id="mpFeedback"></div>
+
+            <!-- ─ Tab Navigation ─ -->
+            <div class="ov-tabs" id="mpTabs">
+              <button class="ov-tab active" data-ov-tab="personal"><i class="bi bi-person-vcard"></i> Anagrafica</button>
+              <button class="ov-tab" data-ov-tab="contact"><i class="bi bi-envelope"></i> Contatti</button>
+              <button class="ov-tab" data-ov-tab="address"><i class="bi bi-geo-alt"></i> Indirizzo</button>
+              <button class="ov-tab" data-ov-tab="notes"><i class="bi bi-journal-text"></i> Note</button>
+              <button class="ov-tab" data-ov-tab="security"><i class="bi bi-shield-lock"></i> Sicurezza</button>
+              <button class="ov-tab" data-ov-tab="prefs"><i class="bi bi-gear"></i> Preferenze</button>
+            </div>
+
+            <!-- ─ Tab Panels ─ -->
+            <div class="ov-panel mb-3">
+              <div class="ov-panel-body">
+
+                <!-- Tab: Anagrafica -->
+                <div class="ov-tab-panel" id="mpTabPersonal">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="ov-label" for="mpFirstName"><i class="bi bi-person me-1"></i>Nome</label>
+                      <input class="form-control" id="mpFirstName" placeholder="Il tuo nome" autocomplete="given-name">
+                      <div class="ov-field-err d-none" id="mpFirstNameErr"></div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="ov-label" for="mpLastName"><i class="bi bi-person me-1"></i>Cognome</label>
+                      <input class="form-control" id="mpLastName" placeholder="Il tuo cognome" autocomplete="family-name">
+                      <div class="ov-field-err d-none" id="mpLastNameErr"></div>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="ov-label" for="mpFiscalCode"><i class="bi bi-card-text me-1"></i>Codice Fiscale</label>
+                      <input class="form-control text-uppercase-input" id="mpFiscalCode" maxlength="16" placeholder="RSSMRA85M01H501Z">
+                      <div class="ov-field-err d-none" id="mpFiscalCodeErr"></div>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="ov-label" for="mpGender"><i class="bi bi-gender-ambiguous me-1"></i>Genere</label>
+                      <select class="form-select" id="mpGender"><option value="">Seleziona…</option><option value="M">Maschile</option><option value="F">Femminile</option><option value="X">Altro</option></select>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="ov-label" for="mpBirthDate"><i class="bi bi-calendar me-1"></i>Data di nascita</label>
+                      <input class="form-control" id="mpBirthDate" type="date">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="ov-label" for="mpBirthPlace"><i class="bi bi-geo me-1"></i>Luogo di nascita</label>
+                      <input class="form-control" id="mpBirthPlace" placeholder="Roma">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tab: Contatti -->
+                <div class="ov-tab-panel d-none" id="mpTabContact">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="ov-label" for="mpEmail"><i class="bi bi-envelope me-1"></i>Email</label>
+                      <input class="form-control" id="mpEmail" type="email" placeholder="nome@esempio.it" autocomplete="email">
+                      <div class="ov-field-err d-none" id="mpEmailErr"></div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="ov-label" for="mpPhone"><i class="bi bi-telephone me-1"></i>Telefono</label>
+                      <input class="form-control" id="mpPhone" placeholder="+39 xxx xxx xxxx" autocomplete="tel">
+                      <div class="ov-field-err d-none" id="mpPhoneErr"></div>
+                    </div>
+                  </div>
+                  <div class="ov-tab-hint mt-3"><i class="bi bi-info-circle"></i> I dati di contatto sono visibili solo a te e agli amministratori.</div>
+                </div>
+
+                <!-- Tab: Indirizzo -->
+                <div class="ov-tab-panel d-none" id="mpTabAddress">
+                  <div class="row g-3">
+                    <div class="col-md-5">
+                      <label class="ov-label" for="mpAddress"><i class="bi bi-house me-1"></i>Indirizzo</label>
+                      <input class="form-control" id="mpAddress" placeholder="Via Roma, 1" autocomplete="street-address">
+                    </div>
+                    <div class="col-md-3">
+                      <label class="ov-label" for="mpCity"><i class="bi bi-building me-1"></i>Città</label>
+                      <input class="form-control" id="mpCity" placeholder="Roma" autocomplete="address-level2">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="ov-label" for="mpProvince">Prov.</label>
+                      <input class="form-control text-uppercase-input" id="mpProvince" maxlength="2" placeholder="RM">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="ov-label" for="mpZipCode">CAP</label>
+                      <input class="form-control" id="mpZipCode" maxlength="5" placeholder="00100" autocomplete="postal-code">
+                      <div class="ov-field-err d-none" id="mpZipCodeErr"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tab: Note -->
+                <div class="ov-tab-panel d-none" id="mpTabNotes">
+                  <label class="ov-label" for="mpNotes"><i class="bi bi-journal-text me-1"></i>Note personali</label>
+                  <textarea class="form-control" id="mpNotes" rows="5" placeholder="Aggiungi annotazioni personali…"></textarea>
+                  <div class="ov-field-counter"><span id="mpNotesCount">0</span> / 500 caratteri</div>
+                  <div class="ov-tab-hint mt-2"><i class="bi bi-lock"></i> Le note sono visibili solo a te e agli amministratori.</div>
+                </div>
+
+                <!-- Tab: Sicurezza -->
+                <div class="ov-tab-panel d-none" id="mpTabSecurity">
+                  <div class="mp-sec-grid" id="mpSecurityPanel"></div>
+                </div>
+
+                <!-- Tab: Preferenze -->
+                <div class="ov-tab-panel d-none" id="mpTabPrefs">
+                  <div class="mp-prefs-grid" id="mpPrefsPanel"></div>
+                </div>
+
+              </div>
+
+              <!-- Save bar -->
+              <div class="ov-save-bar">
+                <button class="btn btn-primary" id="mpSaveProfileBtn" type="button"><i class="bi bi-check-lg me-1"></i> Salva modifiche</button>
+                <span class="ov-dirty-badge d-none" id="mpDirtyBadge"><i class="bi bi-pencil-fill"></i> Modifiche non salvate</span>
+                <span class="ov-save-hint" id="mpSaveHint"></span>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ═══ GESTIONE UTENTI ═══ -->
+          <section id="view-users" class="dash-view d-none admin-only mt-3">
+
+            <!-- Hero -->
+            <div class="ov-hero">
+              <div class="ov-hero-left">
+                <h2 class="ov-hero-title"><i class="bi bi-people me-2"></i>Gestione Utenti</h2>
+                <p class="ov-hero-sub">Amministra account, ruoli e permessi degli utenti</p>
+              </div>
+              <div class="ov-hero-right">
+                <button class="ov-hero-btn" id="showCreateUserBtn" type="button"><i class="bi bi-plus-lg"></i> Nuovo utente</button>
+              </div>
+            </div>
+
+            <!-- KPI Stats -->
+            <div class="row g-3 mb-4" id="userStatsRow">
+              <div class="col-6 col-xl-3">
+                <div class="ov-kpi" data-accent="primary">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="statTotalUsers">—</span><span class="ov-kpi-icon"><i class="bi bi-people-fill"></i></span></div>
+                  <div class="ov-kpi-label">Totale Utenti</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" style="width:100%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-xl-3">
+                <div class="ov-kpi" data-accent="success">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="statActiveUsers">—</span><span class="ov-kpi-icon"><i class="bi bi-check-circle"></i></span></div>
+                  <div class="ov-kpi-label">Attivi</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="umActiveBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-xl-3">
+                <div class="ov-kpi" data-accent="danger">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="statInactiveUsers">—</span><span class="ov-kpi-icon"><i class="bi bi-x-circle"></i></span></div>
+                  <div class="ov-kpi-label">Disattivati</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="umInactiveBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-xl-3">
+                <div class="ov-kpi" data-accent="warning">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="statMustChangePw">—</span><span class="ov-kpi-icon"><i class="bi bi-key"></i></span></div>
+                  <div class="ov-kpi-label">Cambio Password</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="umPwBar" style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filter Panel -->
+            <div class="ov-panel mb-3">
+              <div class="ov-panel-head"><span><i class="bi bi-funnel"></i> Filtri e Ricerca</span></div>
+              <div class="ov-panel-body">
+                <div class="ov-filter-row">
+                  <div class="ov-filter-group ov-filter-flex2">
+                    <label class="ov-filter-label">Cerca utente</label>
+                    <input class="form-control" id="userSearchInput" placeholder="nome, cognome, email, username…">
+                  </div>
+                  <div class="ov-filter-group ov-filter-flex1">
+                    <label class="ov-filter-label">Ruolo</label>
+                    <select class="form-select" id="userRoleFilter"><option value="">Tutti</option><option value="admin">admin</option><option value="user">user</option><option value="editor">editor</option><option value="viewer">viewer</option><option value="operator">operator</option><option value="auditor">auditor</option></select>
+                  </div>
+                  <div class="ov-filter-group ov-filter-flex1">
+                    <label class="ov-filter-label">Stato</label>
+                    <select class="form-select" id="userActiveFilter"><option value="">Tutti</option><option value="active">Attivi</option><option value="inactive">Disattivati</option></select>
+                  </div>
+                  <div class="ov-filter-end">
+                    <button class="ov-filter-btn ov-filter-btn--primary" id="userSearchBtn" type="button"><i class="bi bi-search"></i> Cerca</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Users Table -->
+            <div class="ov-panel">
+              <div class="ov-panel-head"><span><i class="bi bi-table"></i> Elenco Utenti</span><span class="ov-pill" id="umCountPill">—</span></div>
+              <div class="ov-panel-body p-0">
+                <div class="table-responsive">
+                  <table class="ov-table">
+                    <thead><tr><th>Username</th><th>Nome</th><th>Cognome</th><th>Email</th><th>Ruoli</th><th>Stato</th><th>Ultimo accesso</th><th>Azioni</th></tr></thead>
+                    <tbody id="usersTbody"><tr><td colspan="8"><div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div></td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ═══ MODULES ═══ -->
+          <section id="view-modules" class="dash-view d-none admin-only mt-3">
+
+            <!-- ─ Hero ─ -->
+            <div class="ov-hero">
+              <div class="ov-hero-left">
+                <h2 class="ov-hero-title"><i class="bi bi-cpu me-2"></i>Centro Controllo Moduli</h2>
+                <p class="ov-hero-sub">Gestione avanzata moduli, versioni, aggiornamenti, diagnosi e resilienza</p>
+              </div>
+              <div class="ov-hero-right">
+                <span class="ov-role-chip" id="modStatusChip"><i class="bi bi-boxes"></i> —</span>
+                <button class="ov-hero-btn" id="modRefreshBtn" type="button"><i class="bi bi-arrow-clockwise"></i> Aggiorna</button>
+              </div>
+            </div>
+
+            <!-- ─ Platform Info Bar ─ -->
+            <div class="mc-platform-bar" id="mcPlatformBar">
+              <div class="mc-plat-item"><i class="bi bi-code-square"></i><span class="mc-plat-label">Core</span><strong id="mcCoreVer">—</strong></div>
+              <div class="mc-plat-item"><i class="bi bi-tag"></i><span class="mc-plat-label">Codename</span><strong id="mcCodename">—</strong></div>
+              <div class="mc-plat-item"><i class="bi bi-boxes"></i><span class="mc-plat-label">Engine</span><strong id="mcEngineCount">—</strong></div>
+              <div class="mc-plat-item"><i class="bi bi-clock-history"></i><span class="mc-plat-label">Uptime</span><strong id="mcUptime">—</strong></div>
+              <div class="mc-plat-item"><i class="bi bi-heart-pulse"></i><span class="mc-plat-label">Salute</span><strong id="mcHealthGrade">—</strong></div>
+              <div class="mc-plat-item"><i class="bi bi-shield-check"></i><span class="mc-plat-label">Sicurezza</span><strong id="mcSecScore">—</strong></div>
+              <div class="mc-plat-item"><i class="bi bi-box-seam"></i><span class="mc-plat-label">Bundle</span><strong id="mcBundleMeta">—</strong></div>
+              <div class="mc-plat-item"><i class="bi bi-clipboard-check"></i><span class="mc-plat-label">Checklist</span><strong id="mcSecCheckScore">—</strong></div>
+            </div>
+
+            <!-- ─ KPI Stats ─ -->
+            <div class="row g-3 mb-4" id="moduleStatsRow">
+              <div class="col-6 col-lg-3">
+                <div class="ov-kpi" data-accent="info">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="modTotal">—</span><span class="ov-kpi-icon"><i class="bi bi-boxes"></i></span></div>
+                  <div class="ov-kpi-label">Totale Moduli</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="ov-kpi" data-accent="success">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="modInstalled">—</span><span class="ov-kpi-icon"><i class="bi bi-check-circle"></i></span></div>
+                  <div class="ov-kpi-label">Installati</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="modInstalledBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="ov-kpi" data-accent="warning">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="modAvailable">—</span><span class="ov-kpi-icon"><i class="bi bi-download"></i></span></div>
+                  <div class="ov-kpi-label">Disponibili</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="modAvailableBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="ov-kpi" data-accent="primary">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="modUpdated">—</span><span class="ov-kpi-icon"><i class="bi bi-clock-history"></i></span></div>
+                  <div class="ov-kpi-label">Ultimo Aggiornamento</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─ Tabs ─ -->
+            <div class="ov-tabs mb-3" id="mcTabs">
+              <button class="ov-tab active" data-mc-tab="modules"><i class="bi bi-puzzle"></i> Moduli</button>
+              <button class="ov-tab" data-mc-tab="version"><i class="bi bi-git"></i> Versione</button>
+              <button class="ov-tab" data-mc-tab="deps"><i class="bi bi-diagram-3"></i> Dipendenze</button>
+              <button class="ov-tab" data-mc-tab="diagnosis"><i class="bi bi-activity"></i> Diagnosi</button>
+              <button class="ov-tab" data-mc-tab="resilience"><i class="bi bi-heart-pulse"></i> Resilienza</button>
+            </div>
+
+            <!-- ═══ TAB: Moduli ═══ -->
+            <div class="ov-tab-panel" id="mcPanelModules">
+              <!-- Toolbar -->
+              <div class="mc-filter-bar mb-3">
+                <input type="text" class="form-control form-control-sm mc-search-w" id="mcModSearch" placeholder="Cerca modulo o descrizione…">
+                <select class="form-select form-select-sm mc-select-w" id="mcModFilter">
+                  <option value="all">Tutti</option>
+                  <option value="installed">Installati</option>
+                  <option value="available">Disponibili</option>
+                  <option value="update">Aggiornamento</option>
+                  <option value="engine">Con Engine</option>
+                </select>
+                <select class="form-select form-select-sm mc-select-w" id="mcModSort">
+                  <option value="priority">Priorità</option>
+                  <option value="name">Nome A-Z</option>
+                  <option value="name-desc">Nome Z-A</option>
+                  <option value="version">Versione</option>
+                  <option value="date">Data Install.</option>
+                  <option value="category">Categoria</option>
+                </select>
+                <label class="mc-toggle-label" title="Raggruppa per categoria">
+                  <input type="checkbox" id="mcModGroup"> <i class="bi bi-collection"></i> Raggruppa
+                </label>
+                <span class="ov-pill ov-pill--info" id="modCountPill">—</span>
+              </div>
+              <!-- Batch actions bar -->
+              <div class="mc-batch-bar d-none" id="mcBatchBar">
+                <span class="mc-batch-info"><i class="bi bi-check2-square"></i> <span id="mcBatchCount">0</span> selezionati</span>
+                <button class="btn btn-outline-primary btn-sm" id="mcBatchApplyBtn" type="button"><i class="bi bi-download"></i> Installa selezionati</button>
+                <button class="btn btn-outline-warning btn-sm" id="mcBatchUpdateBtn" type="button"><i class="bi bi-arrow-up-circle"></i> Aggiorna selezionati</button>
+                <button class="btn btn-outline-secondary btn-sm" id="mcBatchClearBtn" type="button"><i class="bi bi-x-circle"></i> Deseleziona</button>
+              </div>
+              <!-- Module Grid -->
+              <div id="modulesGrid">
+                <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+              </div>
+            </div>
+
+            <!-- ═══ TAB: Versione & Aggiornamenti ═══ -->
+            <div class="ov-tab-panel d-none" id="mcPanelVersion">
+              <div class="row g-3">
+                <!-- Core Version Ring -->
+                <div class="col-12 col-md-4">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-code-square"></i> Piattaforma</span></div>
+                    <div class="ov-panel-body text-center" id="mcVersionRing">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Engines List -->
+                <div class="col-12 col-md-8">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-gear"></i> Engine Caricati</span><span class="ov-pill" id="mcEngPill">—</span></div>
+                    <div class="ov-panel-body ov-scroll-md" id="mcEnginesList">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- OTA / Local Update -->
+              <div class="row g-3 mt-1">
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-cloud-download"></i> Aggiornamento OTA</span></div>
+                    <div class="ov-panel-body">
+                      <p class="small text-muted mb-2">Controlla e scarica aggiornamenti dal repository remoto.</p>
+                      <button class="btn btn-outline-primary btn-sm" id="mcOtaCheckBtn" type="button"><i class="bi bi-search"></i> Verifica aggiornamenti</button>
+                      <div id="mcOtaResult" class="mt-2"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-upload"></i> Aggiornamento Locale</span></div>
+                    <div class="ov-panel-body">
+                      <p class="small text-muted mb-2">Carica un file modulo <code>.sh</code> per aggiornamento manuale.</p>
+                      <div class="d-flex gap-2 align-items-center">
+                        <input type="file" class="form-control form-control-sm mc-search-w" id="mcLocalFile" accept=".sh">
+                        <button class="btn btn-outline-success btn-sm" id="mcLocalUploadBtn" type="button"><i class="bi bi-upload"></i> Carica</button>
+                      </div>
+                      <div id="mcLocalResult" class="mt-2"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Changelog + Rollback -->
+              <div class="row g-3 mt-1">
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-journal-text"></i> Changelog</span></div>
+                    <div class="ov-panel-body ov-scroll-sm" id="mcChangelog">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-arrow-counterclockwise"></i> Rollback Points</span><span class="ov-pill" id="mcRbPill">—</span></div>
+                    <div class="ov-panel-body ov-scroll-sm" id="mcRollbackList">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══ TAB: Dipendenze ═══ -->
+            <div class="ov-tab-panel d-none" id="mcPanelDeps">
+              <div class="ov-panel">
+                <div class="ov-panel-head"><span><i class="bi bi-diagram-3"></i> Grafo Dipendenze</span><span class="ov-pill" id="mcDepPill">—</span></div>
+                <div class="ov-panel-body" id="mcDepsGraph">
+                  <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                </div>
+              </div>
+              <div class="row g-3 mt-1">
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-exclamation-triangle"></i> Dipendenze Mancanti</span></div>
+                    <div class="ov-panel-body" id="mcMissingDeps"><div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div></div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-puzzle"></i> Engine Orfani</span></div>
+                    <div class="ov-panel-body" id="mcOrphanEngines"><div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══ TAB: Diagnosi ═══ -->
+            <div class="ov-tab-panel d-none" id="mcPanelDiagnosis">
+              <div class="row g-3">
+                <div class="col-12 col-md-4">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-speedometer2"></i> Score</span></div>
+                    <div class="ov-panel-body text-center" id="mcDiagRing">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-8">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-lightbulb"></i> Raccomandazioni</span><span class="ov-pill" id="mcRecsPill">—</span></div>
+                    <div class="ov-panel-body ov-scroll-md" id="mcRecommendations">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Root Causes + Engine Health -->
+              <div class="row g-3 mt-1">
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-bug"></i> Root Cause Analysis</span><span class="ov-pill" id="mcRootCausePill">—</span></div>
+                    <div class="ov-panel-body ov-scroll-sm" id="mcRootCauses">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-gear"></i> Salute Engine</span><span class="ov-pill" id="mcEngHealthPill">—</span></div>
+                    <div class="ov-panel-body ov-scroll-sm" id="mcEngineHealth">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Drift + Remediation -->
+              <div class="row g-3 mt-1">
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-file-diff"></i> Config Drift</span></div>
+                    <div class="ov-panel-body ov-scroll-sm" id="mcConfigDrift">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-wrench"></i> Remediation</span></div>
+                    <div class="ov-panel-body" id="mcRemediation">
+                      <div class="mc-remed-grid">
+                        <button class="mc-remed-btn" data-mc-remed="rotate_logs"><i class="bi bi-arrow-repeat"></i><span>Rotazione Log</span></button>
+                        <button class="mc-remed-btn" data-mc-remed="cleanup_old_data"><i class="bi bi-trash3"></i><span>Pulizia Dati</span></button>
+                        <button class="mc-remed-btn" data-mc-remed="verify_integrity"><i class="bi bi-shield-check"></i><span>Verifica Integrità</span></button>
+                        <button class="mc-remed-btn" data-mc-remed="rebuild_baseline"><i class="bi bi-bullseye"></i><span>Reset Baseline</span></button>
+                      </div>
+                      <div id="mcRemedResult" class="mt-2"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══ TAB: Resilienza ═══ -->
+            <div class="ov-tab-panel d-none" id="mcPanelResilience">
+              <div class="row g-3">
+                <div class="col-12 col-md-4">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-heart-pulse"></i> Resilience Score</span></div>
+                    <div class="ov-panel-body text-center" id="mcResRing">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-8">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-cpu"></i> Risorse Sistema</span><span class="ov-pill" id="mcResPill">—</span></div>
+                    <div class="ov-panel-body ov-scroll-md" id="mcResources">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Backup & Restore -->
+              <div class="row g-3 mt-1">
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head">
+                      <span><i class="bi bi-archive"></i> Backup</span>
+                      <button class="btn btn-outline-primary btn-sm" id="mcBackupBtn" type="button"><i class="bi bi-plus-circle"></i> Crea</button>
+                    </div>
+                    <div class="ov-panel-body ov-scroll-sm" id="mcBackupsList">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="ov-panel">
+                    <div class="ov-panel-head"><span><i class="bi bi-check2-all"></i> Health Status</span><span class="ov-pill" id="mcHealthPill">—</span></div>
+                    <div class="ov-panel-body ov-scroll-sm" id="mcHealthDetail">
+                      <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══ Module Detail Modal ═══ -->
+            <div class="ov-modal-overlay d-none" id="mcModDetailOverlay">
+              <div class="ov-modal ov-modal--sm">
+                <div class="ov-modal-head">
+                  <span><i class="bi bi-puzzle me-1"></i> Dettaglio Modulo</span>
+                  <button class="ov-modal-close" id="mcModDetailClose" type="button">&times;</button>
+                </div>
+                <div class="ov-modal-body" id="mcModDetailBody">
+                  <!-- populated by JS -->
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ═══ SECURITY ═══ -->
+          <section id="view-security" class="dash-view d-none admin-only mt-3">
+            <!-- ov-hero — Uniforme con le altre sezioni -->
+            <div class="ov-hero">
+              <div class="ov-hero-left">
+                <h2 class="ov-hero-title"><i class="bi bi-shield-lock-fill me-2"></i>Security Center</h2>
+                <p class="ov-hero-sub">Sistema di sicurezza estremo — WAF, IDS, Anti Brute-Force, Integrità File, Crittografia</p>
+              </div>
+              <div class="ov-hero-right">
+                <label class="ov-toggle-label" title="Auto-refresh ogni 15s">
+                  <input type="checkbox" id="secAutoRefresh" class="form-check-input me-1">
+                  <span class="small">Auto</span>
+                </label>
+                <button class="ov-hero-btn" id="secRefreshBtn" type="button"><i class="bi bi-arrow-clockwise"></i> Aggiorna</button>
+                <button class="ov-hero-btn" id="secScanBtn" type="button"><i class="bi bi-search"></i> Scansione</button>
+              </div>
+            </div>
+
+            <!-- Status Bar: Score + Badges + Threat Gauge -->
+            <div class="sec-status-bar">
+              <div class="sec-status-left">
+                <div class="sec-score-ring" id="secScoreRing"></div>
+                <div class="sec-badges-wrap" id="secHeroBadges">
+                  <span class="sec-badge sec-badge--ok"><i class="bi bi-check-circle-fill"></i> WAF</span>
+                  <span class="sec-badge sec-badge--ok"><i class="bi bi-check-circle-fill"></i> IDS</span>
+                  <span class="sec-badge sec-badge--ok"><i class="bi bi-check-circle-fill"></i> Anti-BF</span>
+                  <span class="sec-badge sec-badge--ok"><i class="bi bi-check-circle-fill"></i> Integrità</span>
+                  <span class="sec-badge sec-badge--ok"><i class="bi bi-check-circle-fill"></i> Crypto</span>
+                </div>
+              </div>
+              <div class="sec-status-right">
+                <div class="sec-threat-meter">
+                  <div class="sec-threat-label" id="secThreatLabel">Livello Minaccia</div>
+                  <div class="sec-threat-gauge" id="secThreatGauge"></div>
+                  <div class="sec-threat-level" id="secThreatLevel">—</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- KPI Row — 8 cards -->
+            <div class="row g-3 mb-3">
+              <div class="col-6 col-md-4 col-xl-3">
+                <div class="ov-kpi" data-accent="danger">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="secCritical">—</span><span class="ov-kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></span></div>
+                  <div class="ov-kpi-label">Critici</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="secCriticalBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-3">
+                <div class="ov-kpi" data-accent="warning">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="secHigh">—</span><span class="ov-kpi-icon"><i class="bi bi-shield-exclamation"></i></span></div>
+                  <div class="ov-kpi-label">Alti</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="secHighBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-3">
+                <div class="ov-kpi" data-accent="info">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="secToday">—</span><span class="ov-kpi-icon"><i class="bi bi-calendar-day"></i></span></div>
+                  <div class="ov-kpi-label">Alert Oggi</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="secTodayBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-3">
+                <div class="ov-kpi" data-accent="success">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="secGlobalStatus">—</span><span class="ov-kpi-icon"><i class="bi bi-shield-check"></i></span></div>
+                  <div class="ov-kpi-label">Stato Globale</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="secGlobalBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-3">
+                <div class="ov-kpi" data-accent="danger">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="secWafBlocked">—</span><span class="ov-kpi-icon"><i class="bi bi-bricks"></i></span></div>
+                  <div class="ov-kpi-label">WAF Blocked</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="secWafBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-3">
+                <div class="ov-kpi" data-accent="warning">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="secBfBlocks">—</span><span class="ov-kpi-icon"><i class="bi bi-person-slash"></i></span></div>
+                  <div class="ov-kpi-label">IP Bloccati</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="secBfBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-3">
+                <div class="ov-kpi" data-accent="primary">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="secIntegrity">—</span><span class="ov-kpi-icon"><i class="bi bi-file-earmark-lock2"></i></span></div>
+                  <div class="ov-kpi-label">Integrità File</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="secIntBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-3">
+                <div class="ov-kpi" data-accent="info">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="secCryptoOps">—</span><span class="ov-kpi-icon"><i class="bi bi-key-fill"></i></span></div>
+                  <div class="ov-kpi-label">Crypto Ops</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="secCryptoBar" style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Collapsible Section: WAF & Firewall -->
+            <div class="sec-section sec-section--open" id="secSecWaf">
+              <button class="sec-section-toggle" type="button" aria-expanded="true">
+                <i class="bi bi-chevron-down sec-section-chevron"></i>
+                <i class="bi bi-bricks me-2"></i>WAF & Firewall
+                <span class="ov-pill ms-auto" id="secWafPill">—</span>
+              </button>
+              <div class="sec-section-body">
+                <div class="row g-3">
+                  <div class="col-12 col-md-7">
+                    <div class="sec-card">
+                      <div class="sec-card-head"><i class="bi bi-shield-shaded me-1"></i> Regole di Protezione Attive</div>
+                      <div class="sec-card-body" id="secWafRulesPanel">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-5">
+                    <div class="sec-card">
+                      <div class="sec-card-head"><i class="bi bi-bar-chart-fill me-1"></i> Attacchi Bloccati</div>
+                      <div class="sec-card-body" id="secWafStatsPanel">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Collapsible Section: Threat Intelligence -->
+            <div class="sec-section sec-section--open" id="secSecThreats">
+              <button class="sec-section-toggle" type="button" aria-expanded="true">
+                <i class="bi bi-chevron-down sec-section-chevron"></i>
+                <i class="bi bi-radioactive me-2"></i>Threat Intelligence
+                <span class="ov-pill ms-auto" id="secThreatsPill">—</span>
+              </button>
+              <div class="sec-section-body">
+                <div class="row g-3">
+                  <div class="col-12 col-md-8">
+                    <div class="sec-card">
+                      <div class="sec-card-head"><i class="bi bi-graph-up me-1"></i> Timeline Minacce (24h)</div>
+                      <div class="sec-card-body" id="secTimelinePanel">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-4">
+                    <div class="sec-card">
+                      <div class="sec-card-head"><i class="bi bi-pie-chart-fill me-1"></i> Categorie Minacce</div>
+                      <div class="sec-card-body" id="secCategoriesPanel">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Collapsible Section: Brute Force & Rate Limiting -->
+            <div class="sec-section" id="secSecBf">
+              <button class="sec-section-toggle" type="button" aria-expanded="false">
+                <i class="bi bi-chevron-down sec-section-chevron"></i>
+                <i class="bi bi-person-slash me-2"></i>Anti Brute-Force & Rate Limiting
+                <span class="ov-pill ms-auto" id="secBfPill">—</span>
+              </button>
+              <div class="sec-section-body">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <div class="sec-card">
+                      <div class="sec-card-head"><i class="bi bi-lock-fill me-1"></i> IP Bloccati</div>
+                      <div class="sec-card-body">
+                        <div class="sec-filter-row" id="secBlockedFilterRow">
+                          <input type="text" class="sec-search-input" id="secBlockedSearch" placeholder="Filtra IP...">
+                        </div>
+                        <div id="secBlockedPanel">
+                          <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                        </div>
+                        <div class="sec-pager" id="secBlockedPager"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="sec-card">
+                      <div class="sec-card-head"><i class="bi bi-speedometer me-1"></i> Rate Limiting</div>
+                      <div class="sec-card-body" id="secRatePanel">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Collapsible Section: File Integrity -->
+            <div class="sec-section" id="secSecIntegrity">
+              <button class="sec-section-toggle" type="button" aria-expanded="false">
+                <i class="bi bi-chevron-down sec-section-chevron"></i>
+                <i class="bi bi-file-earmark-lock2 me-2"></i>Integrità File
+                <span class="ov-pill ms-auto" id="secIntegrityPill">—</span>
+              </button>
+              <div class="sec-section-body">
+                <div class="sec-card">
+                  <div class="sec-card-head"><i class="bi bi-hdd-rack me-1"></i> Stato Integrità Sistema</div>
+                  <div class="sec-card-body" id="secIntegrityPanel">
+                    <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Collapsible Section: Encryption Engine -->
+            <div class="sec-section" id="secSecCrypto">
+              <button class="sec-section-toggle" type="button" aria-expanded="false">
+                <i class="bi bi-chevron-down sec-section-chevron"></i>
+                <i class="bi bi-key-fill me-2"></i>Motore di Crittografia
+                <span class="ov-pill ms-auto" id="secCryptoPill">—</span>
+              </button>
+              <div class="sec-section-body">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <div class="sec-card">
+                      <div class="sec-card-head"><i class="bi bi-speedometer2 me-1"></i> Stato & Performance</div>
+                      <div class="sec-card-body" id="secCryptoStatusPanel">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="sec-card">
+                      <div class="sec-card-head"><i class="bi bi-tools me-1"></i> Strumenti Crypto</div>
+                      <div class="sec-card-body" id="secCryptoToolsPanel">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Collapsible Section: Alert Timeline -->
+            <div class="sec-section sec-section--open" id="secSecAlerts">
+              <button class="sec-section-toggle" type="button" aria-expanded="true">
+                <i class="bi bi-chevron-down sec-section-chevron"></i>
+                <i class="bi bi-bell-fill me-2"></i>Alert Recenti
+                <span class="ov-pill ms-auto" id="secAlertsPill">—</span>
+              </button>
+              <div class="sec-section-body">
+                <div class="sec-filter-row" id="secAlertFilters">
+                  <button class="sec-filter-btn sec-filter-btn--active" data-sev="all">Tutti</button>
+                  <button class="sec-filter-btn" data-sev="critical">Critici</button>
+                  <button class="sec-filter-btn" data-sev="high">Alti</button>
+                  <button class="sec-filter-btn" data-sev="medium">Medi</button>
+                  <button class="sec-filter-btn" data-sev="low">Bassi</button>
+                  <input type="text" class="sec-search-input ms-auto" id="secAlertSearch" placeholder="Cerca alert...">
+                </div>
+                <div id="secAlertsPanel">
+                  <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                </div>
+                <div class="sec-pager" id="secAlertsPager"></div>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ═══ AUDIT ═══ -->
+          <section id="view-audit" class="dash-view d-none admin-only mt-3">
+            <div class="ov-hero">
+              <div class="ov-hero-left">
+                <h2 class="ov-hero-title"><i class="bi bi-journal-text me-2"></i>Audit Log</h2>
+                <p class="ov-hero-sub">Registro attività e operazioni della piattaforma</p>
+              </div>
+              <div class="ov-hero-right">
+                <span class="ov-role-chip" id="auditStatusChip"><i class="bi bi-clock-history"></i> —</span>
+              </div>
+            </div>
+
+            <!-- KPI Row -->
+            <div class="row g-3 mb-4">
+              <div class="col-6 col-lg-4">
+                <div class="ov-kpi" data-accent="info">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="auditTotal">—</span><span class="ov-kpi-icon"><i class="bi bi-list-check"></i></span></div>
+                  <div class="ov-kpi-label">Eventi Registrati</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-4">
+                <div class="ov-kpi" data-accent="success">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="auditSuccess">—</span><span class="ov-kpi-icon"><i class="bi bi-check-circle"></i></span></div>
+                  <div class="ov-kpi-label">Operazioni Riuscite</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-4">
+                <div class="ov-kpi" data-accent="danger">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="auditFailed">—</span><span class="ov-kpi-icon"><i class="bi bi-x-circle"></i></span></div>
+                  <div class="ov-kpi-label">Operazioni Fallite</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Audit Timeline -->
+            <div class="ov-panel">
+              <div class="ov-panel-head"><span><i class="bi bi-clock-history"></i> Registro Attività</span><span class="ov-pill" id="auditCountPill">—</span></div>
+              <div class="ov-panel-body" id="auditTimeline">
+                <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ═══ ROUTES ═══ -->
+          <section id="view-routes" class="dash-view d-none admin-only mt-3">
+            <div class="ov-hero">
+              <div class="ov-hero-left">
+                <h2 class="ov-hero-title"><i class="bi bi-signpost-split me-2"></i>Route Control</h2>
+                <p class="ov-hero-sub">Sistema avanzato di monitoraggio rotte con self-healing e protezione anti-blackout</p>
+              </div>
+              <div class="ov-hero-right">
+                <label class="ov-toggle-label" title="Auto-refresh ogni 15s">
+                  <input type="checkbox" id="rtAutoRefresh" class="form-check-input me-1">
+                  <span class="small">Auto</span>
+                </label>
+                <button class="ov-hero-btn" id="refreshRoutesBtn" type="button"><i class="bi bi-arrow-clockwise"></i> Aggiorna</button>
+              </div>
+            </div>
+
+            <!-- KPI Row -->
+            <div class="row g-3 mb-3">
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="ov-kpi" data-accent="info">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="rtTotal">—</span><span class="ov-kpi-icon"><i class="bi bi-signpost-2"></i></span></div>
+                  <div class="ov-kpi-label">Rotte Totali</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="ov-kpi" data-accent="success">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="rtHealthy">—</span><span class="ov-kpi-icon"><i class="bi bi-heart-pulse"></i></span></div>
+                  <div class="ov-kpi-label">Rotte Sane</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="ov-kpi" data-accent="primary">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="rtLatency">—</span><span class="ov-kpi-icon"><i class="bi bi-speedometer2"></i></span></div>
+                  <div class="ov-kpi-label">Latenza Media</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="ov-kpi" data-accent="success">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="rtUptime">—</span><span class="ov-kpi-icon"><i class="bi bi-shield-check"></i></span></div>
+                  <div class="ov-kpi-label">Uptime</div>
+                  <div class="ov-kpi-bar"><div class="ov-kpi-bar-fill" id="rtUptimeBar" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="ov-kpi" data-accent="danger">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="rtAlerts">—</span><span class="ov-kpi-icon"><i class="bi bi-exclamation-diamond"></i></span></div>
+                  <div class="ov-kpi-label">Alert Attivi</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4 col-xl-2">
+                <div class="ov-kpi" data-accent="warning">
+                  <div class="ov-kpi-top"><span class="ov-kpi-value" id="rtHealing">—</span><span class="ov-kpi-icon"><i class="bi bi-bandaid"></i></span></div>
+                  <div class="ov-kpi-label">Self-Healing</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── § 1  Controllo Generale (open by default) ── -->
+            <div class="rt-section rt-section--open" id="rtSecGeneral">
+              <button class="rt-section-toggle" type="button" aria-expanded="true">
+                <i class="bi bi-chevron-down rt-section-chevron"></i>
+                <i class="bi bi-speedometer2 me-2"></i>Controllo Generale
+                <span class="ov-pill ov-pill--ok ms-auto" id="rtGeneralPill">OK</span>
+              </button>
+              <div class="rt-section-body">
+
+                <!-- ── Health Score Hero ── -->
+                <div class="rtcg-hero mb-2 position-relative">
+                  <div class="rtcg-hero-left" id="rtChartHealth">
+                    <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                  </div>
+                  <div class="rtcg-hero-divider"></div>
+                  <div class="rtcg-hero-right" id="rtChartErrors">
+                    <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                  </div>
+                  <!-- Restart Button (absolute, top-right corner of hero) -->
+                  <button class="rtcg-restart-btn" id="rtRestartBtn" title="Riavvia Route Control">
+                    <i class="bi bi-arrow-clockwise"></i>
+                  </button>
+                  <!-- Restart Overlay (hidden by default) -->
+                  <div class="rtcg-restart-overlay" id="rtRestartOverlay" style="display:none">
+                    <div class="rtcg-restart-content">
+                      <div class="rtcg-restart-icon" id="rtRestartIcon">
+                        <i class="bi bi-arrow-clockwise rtcg-restart-spin"></i>
+                      </div>
+                      <div class="rtcg-restart-title" id="rtRestartTitle">Riavvio Route Control</div>
+                      <div class="rtcg-restart-phase" id="rtRestartPhase">Inizializzazione...</div>
+                      <div class="rtcg-restart-bar-wrap">
+                        <div class="rtcg-restart-bar">
+                          <div class="rtcg-restart-bar-fill" id="rtRestartBarFill" style="width:0%"></div>
+                        </div>
+                        <span class="rtcg-restart-pct" id="rtRestartPct">0%</span>
+                      </div>
+                      <div class="rtcg-restart-phases" id="rtRestartPhases"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ── Analytics Charts ── -->
+                <div class="row g-3 mb-2">
+                  <div class="col-12 col-md-6">
+                    <div class="rtcg-card h-100">
+                      <div class="rtcg-card-head"><i class="bi bi-bar-chart-steps me-2"></i>Latenza per Gruppo API</div>
+                      <div class="rtcg-card-body" id="rtChartLatency">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="rtcg-card h-100">
+                      <div class="rtcg-card-head"><i class="bi bi-graph-up-arrow me-2"></i>Traffico per Gruppo API</div>
+                      <div class="rtcg-card-body" id="rtChartTraffic">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ── Live Monitoring ── -->
+                <div class="row g-3">
+                  <div class="col-12 col-md-5">
+                    <div class="rtcg-card rtcg-card--live h-100">
+                      <div class="rtcg-card-head"><span class="rtcg-pulse"></span><i class="bi bi-heart-pulse me-2"></i>Watchdog Live<span class="ov-pill ms-auto" id="rtWatchdogPill">—</span></div>
+                      <div class="rtcg-card-body" id="rtWatchdogPanel">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-7">
+                    <div class="rtcg-card h-100">
+                      <div class="rtcg-card-head"><i class="bi bi-activity me-2"></i>Riepilogo Sistema</div>
+                      <div class="rtcg-card-body" id="rtSysSummary">
+                        <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- ── § 2  Topologia di Rete ── -->
+            <div class="rt-section" id="rtSecTopology">
+              <button class="rt-section-toggle" type="button" aria-expanded="false">
+                <i class="bi bi-chevron-down rt-section-chevron"></i>
+                <i class="bi bi-diagram-3 me-2"></i>Topologia di Rete
+                <span class="ov-pill ms-auto" id="rtTopologyPill">—</span>
+              </button>
+              <div class="rt-section-body">
+                <div class="ov-panel">
+                  <div class="ov-panel-body" id="rtTopologyPanel">
+                    <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── § 3  Alert Criticità ── -->
+            <div class="rt-section" id="rtSecAlerts">
+              <button class="rt-section-toggle" type="button" aria-expanded="false">
+                <i class="bi bi-chevron-down rt-section-chevron"></i>
+                <i class="bi bi-exclamation-diamond me-2"></i>Alert Criticità
+                <span class="ov-pill" id="rtAlertsPill">0</span>
+              </button>
+              <div class="rt-section-body">
+                <div class="ov-panel">
+                  <div class="ov-panel-body" id="rtAlertsPanel">
+                    <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── § 4  Rotte API — Health Monitor ── -->
+            <div class="rt-section" id="rtSecRoutes">
+              <button class="rt-section-toggle" type="button" aria-expanded="false">
+                <i class="bi bi-chevron-down rt-section-chevron"></i>
+                <i class="bi bi-table me-2"></i>Rotte API — Health Monitor
+                <span class="ov-pill" id="rtRoutesCountPill">—</span>
+              </button>
+              <div class="rt-section-body">
+                <!-- Filters bar -->
+                <div class="rt-filters mb-3">
+                  <div class="rt-filter-group">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="rtFilterPath" class="rt-filter-input" placeholder="Filtra per rotta...">
+                  </div>
+                  <div class="rt-filter-group">
+                    <select id="rtFilterMethod" class="rt-filter-select">
+                      <option value="">Tutti i metodi</option>
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="DELETE">DELETE</option>
+                      <option value="PATCH">PATCH</option>
+                    </select>
+                  </div>
+                  <div class="rt-filter-group">
+                    <select id="rtFilterHealth" class="rt-filter-select">
+                      <option value="">Tutti gli stati</option>
+                      <option value="healthy">🟢 Healthy</option>
+                      <option value="degraded">🟡 Degraded</option>
+                      <option value="critical">🔴 Critical</option>
+                    </select>
+                  </div>
+                  <div class="rt-filter-group">
+                    <select id="rtFilterCB" class="rt-filter-select">
+                      <option value="">Tutti CB</option>
+                      <option value="closed">✅ Closed</option>
+                      <option value="open">🔴 Open</option>
+                      <option value="half-open">🟡 Half-Open</option>
+                    </select>
+                  </div>
+                  <button class="rt-filter-clear" id="rtFilterClear" type="button" title="Reset filtri"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div class="rt-filter-count" id="rtFilterCount"></div>
+                <div class="ov-panel">
+                  <div class="ov-panel-body p-0" id="rtRoutesTablePanel">
+                    <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── § 5  Self-Healing Log ── -->
+            <div class="rt-section" id="rtSecHeal">
+              <button class="rt-section-toggle" type="button" aria-expanded="false">
+                <i class="bi bi-chevron-down rt-section-chevron"></i>
+                <i class="bi bi-bandaid me-2"></i>Self-Healing Log
+                <span class="ov-pill" id="rtHealPill">0</span>
+              </button>
+              <div class="rt-section-body">
+                <div class="ov-panel">
+                  <div class="ov-panel-body" id="rtHealPanel">
+                    <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── § 6  Circuit Breakers ── -->
+            <div class="rt-section" id="rtSecCB">
+              <button class="rt-section-toggle" type="button" aria-expanded="false">
+                <i class="bi bi-chevron-down rt-section-chevron"></i>
+                <i class="bi bi-lightning me-2"></i>Circuit Breakers
+                <span class="ov-pill" id="rtCBPill">—</span>
+              </button>
+              <div class="rt-section-body">
+                <!-- CB filter -->
+                <div class="rt-filters mb-3">
+                  <div class="rt-filter-group">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="rtCBFilterPath" class="rt-filter-input" placeholder="Filtra circuit breaker...">
+                  </div>
+                  <div class="rt-filter-group">
+                    <select id="rtCBFilterState" class="rt-filter-select">
+                      <option value="">Tutti gli stati</option>
+                      <option value="closed">✅ Closed</option>
+                      <option value="open">🔴 Open</option>
+                      <option value="half-open">🟡 Half-Open</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="rtCircuitPanel">
+                  <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── § 7  Scorciatoie API ── -->
+            <div class="rt-section" id="rtSecShorthand">
+              <button class="rt-section-toggle" type="button" aria-expanded="false">
+                <i class="bi bi-chevron-down rt-section-chevron"></i>
+                <i class="bi bi-link-45deg me-2"></i>Scorciatoie API
+              </button>
+              <div class="rt-section-body">
+                <div class="ov-panel">
+                  <div class="ov-panel-body" id="rtShorthandPanel">
+                    <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ═══ AI CENTER ═══ -->
+          <section id="view-ai" class="dash-view d-none admin-only mt-3">
+
+            <!-- ═══ AI HEADER ═══ compact bar with status + actions -->
+            <div class="ai2-header">
+              <div class="ai2-header-left">
+                <i class="bi bi-robot ai2-logo"></i>
+                <div>
+                  <h2 class="ai2-title">AI Center</h2>
+                  <p class="ai2-sub">Analisi intelligente della piattaforma</p>
+                </div>
+              </div>
+              <div class="ai2-header-right">
+                <div class="ai2-status" id="ai2Status">
+                  <span class="ai2-dot" id="ai2Dot"></span>
+                  <span class="ai2-status-text" id="ai2StatusText">Caricamento…</span>
+                </div>
+                <button class="ai2-btn" id="ai2RefreshBtn" type="button" title="Aggiorna dati">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+                <label class="ai2-auto-label" title="Aggiornamento automatico ogni 30s">
+                  <input type="checkbox" id="ai2AutoRefresh" class="form-check-input">
+                  <span>Auto</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- ═══ KPI STRIP — 4 cards + health ring ═══ -->
+            <div class="ai2-kpi-row">
+              <!-- Health ring -->
+              <div class="ai2-health-card">
+                <svg viewBox="0 0 120 120" width="100" height="100" class="ai2-ring-svg">
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="10"/>
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="#6366f1" stroke-width="10"
+                          stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+                          transform="rotate(-90 60 60)" id="ai2Arc" class="ai2-arc"/>
+                </svg>
+                <div class="ai2-ring-center">
+                  <span class="ai2-ring-num" id="ai2Score">—</span>
+                  <span class="ai2-ring-label" id="ai2Grade"></span>
+                </div>
+                <div class="ai2-health-label">Salute Piattaforma</div>
+              </div>
+              <!-- KPI 1: Minacce -->
+              <div class="ai2-kpi ai2-kpi--red">
+                <div class="ai2-kpi-ico"><i class="bi bi-shield-exclamation"></i></div>
+                <div class="ai2-kpi-body">
+                  <div class="ai2-kpi-num" id="ai2Threats">—</div>
+                  <div class="ai2-kpi-lbl">Minacce</div>
+                </div>
+              </div>
+              <!-- KPI 2: Rischio -->
+              <div class="ai2-kpi ai2-kpi--purple">
+                <div class="ai2-kpi-ico"><i class="bi bi-speedometer2"></i></div>
+                <div class="ai2-kpi-body">
+                  <div class="ai2-kpi-num" id="ai2Risk">—</div>
+                  <div class="ai2-kpi-lbl">Rischio</div>
+                </div>
+              </div>
+              <!-- KPI 3: Alert -->
+              <div class="ai2-kpi ai2-kpi--amber">
+                <div class="ai2-kpi-ico"><i class="bi bi-bell-fill"></i></div>
+                <div class="ai2-kpi-body">
+                  <div class="ai2-kpi-num" id="ai2Alerts">—</div>
+                  <div class="ai2-kpi-lbl">Alert</div>
+                </div>
+              </div>
+              <!-- KPI 4: Anomalie -->
+              <div class="ai2-kpi ai2-kpi--teal">
+                <div class="ai2-kpi-ico"><i class="bi bi-graph-up-arrow"></i></div>
+                <div class="ai2-kpi-body">
+                  <div class="ai2-kpi-num" id="ai2Anomalies">—</div>
+                  <div class="ai2-kpi-lbl">Anomalie</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══ SUMMARY BANNER ═══ -->
+            <div class="ai2-summary" id="ai2Summary">
+              <i class="bi bi-cpu ai2-summary-ico"></i>
+              <span>Caricamento analisi AI…</span>
+            </div>
+
+            <!-- ═══ 3 MACRO-TABS ═══ -->
+            <nav class="ai2-tabs" id="ai2Tabs">
+              <button class="ai2-tab active" data-tab="security">
+                <i class="bi bi-shield-lock"></i> Sicurezza
+              </button>
+              <button class="ai2-tab" data-tab="ops">
+                <i class="bi bi-gear-wide-connected"></i> Operatività
+              </button>
+              <button class="ai2-tab" data-tab="advanced">
+                <i class="bi bi-stars"></i> AI Avanzata
+              </button>
+            </nav>
+
+            <!-- ═══ TAB: SICUREZZA ═══ -->
+            <div class="ai2-pane active" id="ai2Pane-security">
+              <div class="row g-3">
+                <!-- Minacce -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-shield-exclamation"></i>
+                      <span>Minacce Rilevate</span>
+                      <span class="ai2-badge ai2-badge--red" id="ai2ThreatBadge">0</span>
+                    </div>
+                    <div class="ai2-card-body ai2-scroll" id="ai2ThreatList">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Profilo di Rischio -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-bar-chart-line"></i>
+                      <span>Profilo di Rischio</span>
+                    </div>
+                    <div class="ai2-card-body" id="ai2RiskPanel">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Alert Intelligenti -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-bell"></i>
+                      <span>Alert Intelligenti</span>
+                      <span class="ai2-meta" id="ai2AlertMeta"></span>
+                    </div>
+                    <div class="ai2-card-body ai2-scroll" id="ai2AlertList">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Comportamento Utenti -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-people"></i>
+                      <span>Comportamento Utenti</span>
+                    </div>
+                    <div class="ai2-card-body ai2-scroll" id="ai2BehaviorList">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Raccomandazioni -->
+                <div class="col-12">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-lightbulb"></i>
+                      <span>Raccomandazioni AI</span>
+                    </div>
+                    <div class="ai2-card-body ai2-scroll" id="ai2RecsList">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══ TAB: OPERATIVITÀ ═══ -->
+            <div class="ai2-pane" id="ai2Pane-ops">
+              <div class="row g-3">
+                <!-- Risorse di Sistema -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-cpu"></i>
+                      <span>Risorse di Sistema</span>
+                    </div>
+                    <div class="ai2-card-body" id="ai2MonitorPanel">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Utilizzo Risorse -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-speedometer"></i>
+                      <span>Utilizzo Risorse</span>
+                    </div>
+                    <div class="ai2-card-body" id="ai2GaugesPanel">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Analisi Log AI -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Analisi Log AI</span>
+                    </div>
+                    <div class="ai2-card-body" id="ai2LogPanel">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Sorgenti Log -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-collection"></i>
+                      <span>Sorgenti Dati</span>
+                    </div>
+                    <div class="ai2-card-body" id="ai2LogSourcesPanel">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Diagnosi AI -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-search"></i>
+                      <span>Diagnosi AI</span>
+                    </div>
+                    <div class="ai2-card-body ai2-scroll" id="ai2DiagPanel">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Timeline Incidenti -->
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-clock-history"></i>
+                      <span>Timeline Incidenti</span>
+                    </div>
+                    <div class="ai2-card-body ai2-scroll" id="ai2TimelinePanel">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Previsione Capacità -->
+                <div class="col-12">
+                  <div class="ai2-card">
+                    <div class="ai2-card-head">
+                      <i class="bi bi-graph-up"></i>
+                      <span>Previsione Capacità</span>
+                    </div>
+                    <div class="ai2-card-body" id="ai2CapPanel">
+                      <div class="ai2-placeholder"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══ TAB: AI AVANZATA ═══ -->
+            <div class="ai2-pane" id="ai2Pane-advanced">
+              <!-- Run button -->
+              <div class="ai2-adv-launch">
+                <div class="ai2-adv-launch-text">
+                  <i class="bi bi-stars"></i>
+                  <div>
+                    <strong>Analisi Avanzata Completa</strong>
+                    <div class="small text-muted">Esegue 9 algoritmi: Markov, Bayesiano, Entropia, EWMA, Isolation, KNN, Correlazione, Decomposizione, Baseline</div>
+                  </div>
+                </div>
+                <button class="ai2-btn-run" id="ai2RunAdvBtn" type="button">
+                  <i class="bi bi-play-fill"></i> Esegui Analisi
+                </button>
+              </div>
+              <!-- Report complessivo -->
+              <div class="ai2-card mb-3">
+                <div class="ai2-card-head">
+                  <i class="bi bi-journal-check"></i>
+                  <span>Report Complessivo</span>
+                </div>
+                <div class="ai2-card-body" id="ai2AdvReport">
+                  <div class="ai2-empty"><i class="bi bi-stars"></i><span>Premi "Esegui Analisi" per avviare</span></div>
+                </div>
+              </div>
+              <!-- Algorithm cards — 2 columns -->
+              <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card"><div class="ai2-card-head"><i class="bi bi-diagram-3"></i><span>Catene di Markov</span></div>
+                  <div class="ai2-card-body ai2-scroll" id="ai2AdvMarkov"><div class="ai2-placeholder"></div></div></div>
+                </div>
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card"><div class="ai2-card-head"><i class="bi bi-pie-chart"></i><span>Stima Bayesiana</span></div>
+                  <div class="ai2-card-body ai2-scroll" id="ai2AdvBayes"><div class="ai2-placeholder"></div></div></div>
+                </div>
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card"><div class="ai2-card-head"><i class="bi bi-shuffle"></i><span>Analisi Entropia</span></div>
+                  <div class="ai2-card-body ai2-scroll" id="ai2AdvEntropy"><div class="ai2-placeholder"></div></div></div>
+                </div>
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card"><div class="ai2-card-head"><i class="bi bi-graph-up"></i><span>Controllo EWMA</span></div>
+                  <div class="ai2-card-body ai2-scroll" id="ai2AdvEwma"><div class="ai2-placeholder"></div></div></div>
+                </div>
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card"><div class="ai2-card-head"><i class="bi bi-bullseye"></i><span>Anomalie Isolation</span></div>
+                  <div class="ai2-card-body ai2-scroll" id="ai2AdvIsolation"><div class="ai2-placeholder"></div></div></div>
+                </div>
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card"><div class="ai2-card-head"><i class="bi bi-grid-3x3-gap"></i><span>Pattern KNN</span></div>
+                  <div class="ai2-card-body ai2-scroll" id="ai2AdvKnn"><div class="ai2-placeholder"></div></div></div>
+                </div>
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card"><div class="ai2-card-head"><i class="bi bi-bezier2"></i><span>Matrice Correlazione</span></div>
+                  <div class="ai2-card-body" id="ai2AdvCorr"><div class="ai2-placeholder"></div></div></div>
+                </div>
+                <div class="col-12 col-lg-6">
+                  <div class="ai2-card"><div class="ai2-card-head"><i class="bi bi-bar-chart-steps"></i><span>Decomposizione Serie</span></div>
+                  <div class="ai2-card-body" id="ai2AdvDecomp"><div class="ai2-placeholder"></div></div></div>
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+        </div>
+      </div>
+    </main>
+
+    <!-- ── Footer ─────────────────────────────────────────────── -->
+    <footer class="app-footer">
+      <div class="float-end d-none d-sm-inline">v3.0</div>
+      <strong>&copy; TPL Platform</strong>
+    </footer>
+
+  </div><!-- /.app-wrapper -->
+
+  <!-- ═══ MODALS ═══ -->
+
+  <!-- Modal: Crea/Modifica utente -->
+  <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title" id="userModalTitle">Nuovo utente</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="umEditMode" value="create">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Username *</label><input class="form-control" id="umUsername" placeholder="username" maxlength="64"></div>
+        <div class="col-md-6"><label class="form-label">Password *</label><input class="form-control" id="umPassword" type="password" placeholder="min 8, maiusc+minusc+num+spec"><small class="text-muted">Richiesto: maiuscola, minuscola, numero, carattere speciale</small></div>
+        <div class="col-12"><hr><h6>Anagrafica</h6></div>
+        <div class="col-md-4"><label class="form-label">Nome</label><input class="form-control" id="umFirstName" maxlength="100"></div>
+        <div class="col-md-4"><label class="form-label">Cognome</label><input class="form-control" id="umLastName" maxlength="100"></div>
+        <div class="col-md-4"><label class="form-label">Codice Fiscale</label><input class="form-control text-uppercase-input" id="umFiscalCode" maxlength="16" placeholder="16 caratteri alfanum."></div>
+        <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" id="umEmail" type="email"></div>
+        <div class="col-md-4"><label class="form-label">Telefono</label><input class="form-control" id="umPhone" maxlength="20"></div>
+        <div class="col-md-4"><label class="form-label">Genere</label><select class="form-select" id="umGender"><option value="">-</option><option value="M">M</option><option value="F">F</option><option value="X">X</option></select></div>
+        <div class="col-md-6"><label class="form-label">Data di nascita</label><input class="form-control" id="umBirthDate" type="date"></div>
+        <div class="col-md-6"><label class="form-label">Luogo di nascita</label><input class="form-control" id="umBirthPlace" maxlength="100"></div>
+        <div class="col-md-5"><label class="form-label">Indirizzo</label><input class="form-control" id="umAddress" maxlength="200"></div>
+        <div class="col-md-3"><label class="form-label">Città</label><input class="form-control" id="umCity" maxlength="100"></div>
+        <div class="col-md-2"><label class="form-label">Prov.</label><input class="form-control text-uppercase-input" id="umProvince" maxlength="2"></div>
+        <div class="col-md-2"><label class="form-label">CAP</label><input class="form-control" id="umZipCode" maxlength="5" placeholder="00000"></div>
+        <div class="col-12"><label class="form-label">Note</label><textarea class="form-control" id="umNotes" rows="2" maxlength="500"></textarea></div>
+        <div class="col-12"><hr><h6>Autorizzazioni</h6></div>
+        <div class="col-md-8">
+          <label class="form-label">Ruoli</label>
+          <div class="d-flex flex-wrap gap-2" id="umRolesCheckboxes">
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="user" id="umRole_user" checked><label class="form-check-label" for="umRole_user">user</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="admin" id="umRole_admin"><label class="form-check-label" for="umRole_admin">admin</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="editor" id="umRole_editor"><label class="form-check-label" for="umRole_editor">editor</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="viewer" id="umRole_viewer"><label class="form-check-label" for="umRole_viewer">viewer</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="operator" id="umRole_operator"><label class="form-check-label" for="umRole_operator">operator</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="auditor" id="umRole_auditor"><label class="form-check-label" for="umRole_auditor">auditor</label></div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Stato</label>
+          <select class="form-select" id="umActive"><option value="true">Attivo</option><option value="false">Disattivato</option></select>
+        </div>
+      </div>
+      <div class="alert alert-danger d-none mt-3" id="umError"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+      <button type="button" class="btn btn-primary" id="umSaveBtn"><i class="bi bi-check-lg me-1"></i> Salva</button>
+    </div>
+  </div></div></div>
+
+  <!-- Modal: Cambio password -->
+  <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title" id="pwModalTitle">Cambio Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="pwUsername" value="">
+      <input type="hidden" id="pwMode" value="self">
+      <div id="pwCurrentGroup"><label class="form-label">Password attuale</label><input class="form-control mb-2" id="pwCurrent" type="password"></div>
+      <label class="form-label">Nuova password</label><input class="form-control mb-2" id="pwNew" type="password" placeholder="min 8, maiusc+minusc+num+spec">
+      <label class="form-label">Conferma nuova password</label><input class="form-control mb-2" id="pwConfirm" type="password">
+      <div class="form-check mt-2" id="pwForceChangeGroup"><input class="form-check-input" type="checkbox" id="pwForceChange" checked><label class="form-check-label" for="pwForceChange">Richiedi cambio al prossimo accesso</label></div>
+      <div class="small text-muted mt-2">Requisiti: almeno 8 caratteri, 1 maiuscola, 1 minuscola, 1 numero, 1 carattere speciale (!@#$%...)</div>
+      <div class="alert alert-danger d-none mt-3" id="pwError"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+      <button type="button" class="btn btn-warning" id="pwSaveBtn"><i class="bi bi-key me-1"></i> Cambia Password</button>
+    </div>
+  </div></div></div>
+
+  <!-- Modal: Dettaglio utente -->
+  <div class="modal fade" id="userDetailModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Dettaglio utente</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="userDetailBody"><p>Caricamento…</p></div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button></div>
+  </div></div></div>
+
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/app.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/dashboard-router.js"></script>
+  <script src="/dashboard-system.js"></script>
+</body>
+</html>

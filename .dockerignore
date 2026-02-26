@@ -1,0 +1,35 @@
+# ── TPL .dockerignore ─────────────────────────────────────────────────
+# Prevents state, secrets, and build artifacts from entering Docker context
+.git
+.gitignore
+.env
+.env.bak*
+config.env
+.secrets/
+.vault_unseal_keys.json
+.vault_approle/
+*.vault-token
+.tpl_*
+.tpl_backups/
+.tpl_rollback_points/
+data/
+logs/
+dist/
+__pycache__/
+*.pyc
+node_modules/
+.next/
+*.bak
+infra/traefik/acme/
+infra/vault/data/
+README.md
+*.md
+scripts/
+compose.d/
+compose.yml
+bootstrap.sh
+go.sh
+run.sh
+init.sh
+install.sh
+modules/

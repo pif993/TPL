@@ -1,0 +1,28 @@
+services:
+  traefik:
+    image: traefik:v3.2
+    command: ["--configFile=/etc/traefik/traefik.yml"]
+    ports:
+      - "${TRAEFIK_BIND_IP:-0.0.0.0}:${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_BIND_IP:-0.0.0.0}:${TRAEFIK_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ${TPL_TLS_DIR:-./.secrets/tls}:/etc/traefik/tls:ro
+      - ${TPL_LOG_DIR_HOST:-./data/logs}/traefik:/var/log/traefik
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=16M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+          pids: 50

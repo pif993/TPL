@@ -1,0 +1,112 @@
+# ═══════════════════════════════════════════════════════════════════════
+#  TPL Platform — .gitignore
+#  Keep secrets, runtime state, and build artifacts out of version control
+# ═══════════════════════════════════════════════════════════════════════
+
+# ─── Secrets & Cryptographic Material — NEVER COMMIT ──────────────────
+.env
+.env.bak*
+.env.local
+.env.*.local
+config.env
+.secrets/
+.keys/
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+
+# ─── Vault — tokens, unseal keys, runtime data ───────────────────────
+.vault_unseal_keys.json
+.vault_approle/
+*.vault-token
+infra/vault/data/
+
+# ─── Runtime State & Data — regenerated at startup ───────────────────
+data/
+logs/
+.tpl_*
+.tpl_backups/
+.tpl_rollback_points/
+
+# ─── Traefik — ACME certificates & access logs ──────────────────────
+infra/traefik/acme/
+logs/traefik/
+
+# ─── Keycloak — exported realm & runtime data ───────────────────────
+infra/keycloak/data/
+
+# ─── Build Artifacts & Distribution ──────────────────────────────────
+dist/
+*.tar.gz
+*.zip
+
+# ─── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+*.whl
+.venv/
+venv/
+env/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+pip-log.txt
+
+# ─── Node / Frontend (future-proofing) ───────────────────────────────
+node_modules/
+.next/
+.nuxt/
+.output/
+.cache/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ─── Editor & IDE ───────────────────────────────────────────────────
+*.swp
+*.swo
+*~
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# ─── OS Artifacts ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+._*
+
+# ─── Backups & Temporary Files ──────────────────────────────────────
+*.bak
+*.tmp
+*.temp
+*.orig
+*.swp
+*.log
+*.pid
+
+# ─── Docker (local volumes / build cache) ───────────────────────────
+docker-compose.override.yml
+.docker/
+
+# ─── Misc ───────────────────────────────────────────────────────────
+.bootstrapped
+*.lock
+!requirements*.txt

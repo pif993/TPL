@@ -1,0 +1,41 @@
+entryPoints:
+  web:
+    address: ":80"
+    forwardedHeaders:
+      trustedIPs:
+        - "172.16.0.0/12"
+        - "10.0.0.0/8"
+        - "192.168.0.0/16"
+        - "127.0.0.0/8"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+    forwardedHeaders:
+      trustedIPs:
+        - "172.16.0.0/12"
+        - "10.0.0.0/8"
+        - "192.168.0.0/16"
+        - "127.0.0.0/8"
+providers:
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+# Security: disable API/dashboard in production
+api:
+  dashboard: false
+  insecure: false
+# Access logs for security auditing
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  bufferingSize: 100
+  fields:
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
+        X-Forwarded-For: keep

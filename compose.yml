@@ -1,0 +1,7 @@
+name: tpl
+networks:
+  default:
+    name: tpl_default
+volumes:
+  pg:
+    name: tpl_pg
