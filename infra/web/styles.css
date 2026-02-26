@@ -4887,3 +4887,45 @@ body.tpl-compact * { transition: none !important; }
   .ota-releases-grid { grid-template-columns: 1fr; }
   .ota-config-grid { grid-template-columns: 1fr; }
 }
+
+/* ── OTA Page: Host Commands ───────────────────────────────── */
+.ota-host-cmds {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+}
+
+.ota-host-cmd {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+  padding: .5rem .7rem;
+  border-radius: .5rem;
+  background: rgba(var(--bs-body-color-rgb, 0, 0, 0), .03);
+  border: 1px solid rgba(var(--bs-body-color-rgb, 0, 0, 0), .06);
+  transition: background .15s;
+}
+.ota-host-cmd:hover { background: rgba(var(--bs-body-color-rgb, 0, 0, 0), .06); }
+.ota-host-cmd code {
+  font-size: .78rem;
+  background: transparent;
+  color: var(--ota-primary);
+  font-weight: 600;
+  white-space: nowrap;
+  flex: 1 1 auto;
+}
+.ota-host-cmd .small {
+  flex: 0 0 100%;
+  margin-top: .15rem;
+  font-size: .68rem;
+  opacity: .7;
+}
+.ota-copy-host {
+  padding: .1rem .3rem;
+  color: var(--ota-primary);
+  opacity: .6;
+  transition: opacity .15s;
+}
+.ota-copy-host:hover { opacity: 1; }
+

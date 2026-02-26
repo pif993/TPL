@@ -29,6 +29,7 @@
     router_manager:   'bi-diagram-3',
     template_manager: 'bi-file-earmark-code',
     version_manager:  'bi-git',
+    ota_update:       'bi-cloud-arrow-down',
     resilience:       'bi-heart-pulse',
     self_diagnosis:   'bi-clipboard2-pulse',
     vault:            'bi-safe',
@@ -43,8 +44,8 @@
     security_hardening: 'Sicurezza', ai_log_analysis: 'AI',
     system_monitoring_ai: 'AI', user_management: 'Gestione',
     router_manager: 'Gestione', template_manager: 'Gestione',
-    version_manager: 'Gestione', resilience: 'Sistema',
-    self_diagnosis: 'Sistema',
+    version_manager: 'Gestione', ota_update: 'Gestione',
+    resilience: 'Sistema', self_diagnosis: 'Sistema',
   };
   const CAT_COLORS = {
     Infrastruttura: '#3b82f6', Interfaccia: '#8b5cf6', Core: '#ec4899',
