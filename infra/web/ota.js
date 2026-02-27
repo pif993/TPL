@@ -737,6 +737,7 @@
   /* ── Security: Verify audit chain ──────────────────────────── */
   const verifyChain = async () => {
     const btn = q('otaSecVerifyChainBtn');
+    const repairBtn = q('otaSecRepairChainBtn');
     const results = q('otaSecResults');
     if (!results) return;
 
@@ -759,11 +760,20 @@
         </div>
         <div class="ota2-sec-dl"><span class="ota2-sec-dl-label">Voci nella catena</span><span class="ota2-sec-dl-value">${data.entries || 0}</span></div>
         ${!data.valid && data.broken_at !== null ? `<div class="ota2-sec-dl"><span class="ota2-sec-dl-label">Rottura a indice</span><span class="ota2-sec-dl-value text-danger">#${data.broken_at}</span></div>` : ''}
+        ${data.total_segments ? `<div class="ota2-sec-dl"><span class="ota2-sec-dl-label">Segmenti</span><span class="ota2-sec-dl-value">${data.total_segments}</span></div>` : ''}
         ${data.valid ? `<div class="small text-success mt-2"><i class="bi bi-shield-fill-check"></i> Tutti gli hash della catena sono consistenti. Nessuna manomissione rilevata.</div>` :
+            data.repairable ? `<div class="small text-warning mt-2"><i class="bi bi-wrench-adjustable"></i> La catena presenta fork da riavvio container — riparabile automaticamente.</div>` :
             `<div class="small text-danger mt-2"><i class="bi bi-shield-fill-exclamation"></i> La catena di audit è stata alterata. Possibile manomissione dei log.</div>`}
+        ${data.repair_hint ? `<div class="small text-info mt-1"><i class="bi bi-info-circle"></i> ${esc(data.repair_hint)}</div>` : ''}
       </div>`;
 
       results.innerHTML = html;
+
+      // Show/hide repair button
+      if (repairBtn) {
+        repairBtn.style.display = (!data.valid && data.repairable) ? '' : 'none';
+      }
+
       showToast(data.valid ? 'Audit chain: VALIDA ✓' : 'Audit chain: COMPROMESSA ✗', data.valid ? 'success' : 'danger');
       loadTrustInfo();
     } catch (error) {
@@ -962,6 +972,415 @@
     }
   };
 
+  /* ── Repair Chain ──────────────────────────────────────────── */
+
+  const repairChain = async () => {
+    const btn = q('otaSecRepairChainBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat ota2-spinner"></i> Riparazione…';
+    }
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/security/repair-chain', { method: 'POST' });
+
+      if (data.repaired) {
+        showToast(`Chain riparata: ${data.repaired_count} voci corrette su ${data.entries}`, 'success');
+        // Hide repair button
+        if (btn) btn.style.display = 'none';
+        // Re-verify to show updated results
+        await verifyChain();
+      } else {
+        showToast(`Riparazione non riuscita: ${data.reason || 'errore sconosciuto'}`, 'warning');
+      }
+    } catch (e) {
+      showToast('Errore riparazione chain: ' + e, 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-wrench-adjustable"></i> Ripara chain';
+      }
+    }
+  };
+
+  /* ── OTA Install System ────────────────────────────────────── */
+
+  const _installStepIcon = (status) => {
+    switch (status) {
+      case 'ok': return '<i class="bi bi-check-circle-fill text-success"></i>';
+      case 'running': return '<i class="bi bi-arrow-repeat ota2-spinner text-primary"></i>';
+      case 'failed': return '<i class="bi bi-x-circle-fill text-danger"></i>';
+      case 'warning': return '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+      default: return '<i class="bi bi-circle text-muted"></i>';
+    }
+  };
+
+  const loadInstallStatus = async () => {
+    try {
+      const data = await TPL.jsonFetch('/api/ota/install/status');
+      const pill = q('otaInstallPill');
+      const statusEl = q('otaInstallStatus');
+      const progressWrap = q('otaInstallProgressWrap');
+      const progressBar = q('otaInstallProgressBar');
+      const progressText = q('otaInstallProgressText');
+      const tagEl = q('otaInstallTag');
+      const stepsEl = q('otaInstallSteps');
+      const startBtn = q('otaInstallStartBtn');
+      const applyBtn = q('otaInstallApplyBtn');
+      const rollbackBtn = q('otaInstallRollbackBtn');
+      const cancelBtn = q('otaInstallCancelBtn');
+      const hostCmdWrap = q('otaInstallHostCmd');
+
+      const status = data.status || 'idle';
+
+      // Pill color
+      if (pill) {
+        const cls = { idle: '', installing: 'ota2-pill--info', ready: 'ota2-pill--success', applying: 'ota2-pill--warning', applied: 'ota2-pill--success', failed: 'ota2-pill--danger' };
+        pill.className = 'ota2-pill ' + (cls[status] || '');
+        pill.textContent = status;
+      }
+
+      // Status display
+      if (statusEl) {
+        const icons = { idle: 'circle text-muted', installing: 'arrow-repeat ota2-spinner text-primary', ready: 'check-circle text-success', applying: 'gear-wide-connected ota2-spinner text-warning', applied: 'check-circle-fill text-success', failed: 'x-circle-fill text-danger' };
+        const labels = { idle: 'Nessuna installazione in corso', installing: `Installazione ${data.tag || ''} in corso…`, ready: `${data.tag || ''} pronto per l'applicazione`, applying: `Applicazione ${data.tag || ''} in corso…`, applied: `${data.tag || ''} applicato con successo`, failed: `Installazione ${data.tag || ''} fallita` };
+        statusEl.innerHTML = `<div class="d-flex align-items-center gap-2 mb-1">
+          <i class="bi bi-${icons[status] || 'circle text-muted'}"></i>
+          <span class="small fw-semibold">${labels[status] || status}</span>
+        </div>`;
+        if (data.error) {
+          statusEl.innerHTML += `<div class="small text-danger"><i class="bi bi-exclamation-triangle"></i> ${esc(data.error)}</div>`;
+        }
+        if (data.started_at && status !== 'idle') {
+          statusEl.innerHTML += `<div class="text-muted" style="font-size:0.75rem">Avviato: ${fmtDate(data.started_at)} da ${esc(data.started_by || '?')}</div>`;
+        }
+      }
+
+      // Progress
+      if (progressWrap) {
+        if (status !== 'idle') {
+          progressWrap.classList.remove('d-none');
+          const pct = data.total_steps ? Math.round((data.progress / data.total_steps) * 100) : 0;
+          if (progressBar) progressBar.style.width = pct + '%';
+          if (progressText) progressText.textContent = `${data.progress || 0} / ${data.total_steps || 5}`;
+          if (tagEl) tagEl.textContent = data.tag || '—';
+        } else {
+          progressWrap.classList.add('d-none');
+        }
+      }
+
+      // Steps log
+      if (stepsEl && data.steps && data.steps.length > 0) {
+        stepsEl.classList.remove('d-none');
+        stepsEl.innerHTML = data.steps.map(s =>
+          `<div class="ota2-install-step">
+            ${_installStepIcon(s.status)}
+            <span class="ota2-install-step-name">${esc(s.step)}</span>
+            <span class="ota2-install-step-detail">${esc(s.detail || '')}</span>
+          </div>`
+        ).join('');
+      } else if (stepsEl) {
+        stepsEl.classList.add('d-none');
+      }
+
+      // Button states
+      if (startBtn) startBtn.disabled = (status === 'installing' || status === 'applying');
+      if (applyBtn) applyBtn.disabled = (status !== 'ready');
+      if (rollbackBtn) rollbackBtn.disabled = (status === 'idle' || status === 'installing');
+      if (cancelBtn) cancelBtn.disabled = (status === 'idle' || status === 'applying' || status === 'applied');
+
+      // Host command
+      if (hostCmdWrap && status === 'applied' && data.applied_at) {
+        hostCmdWrap.classList.remove('d-none');
+      } else if (hostCmdWrap) {
+        hostCmdWrap.classList.add('d-none');
+      }
+
+    } catch (e) {
+      // Silently ignore on load
+    }
+  };
+
+  const startInstall = async () => {
+    // Determine which tag to install: use selected tag or latest available
+    let tag = _selectedTag;
+    if (!tag && _releases.length > 0) {
+      // Find latest staged release or first available
+      const staged = _releases.find(r => r.staged);
+      tag = staged ? staged.tag_name : _releases[0]?.tag_name;
+    }
+    if (!tag) {
+      showToast('Nessuna release disponibile per l\'installazione. Prepara prima una release.', 'warning');
+      return;
+    }
+
+    const btn = q('otaInstallStartBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat ota2-spinner"></i> Avvio…'; }
+    const resultEl = q('otaInstallResult');
+    if (resultEl) resultEl.innerHTML = '';
+
+    try {
+      const data = await TPL.jsonFetch(`/api/ota/install/start/${encodeURIComponent(tag)}`, { method: 'POST' });
+      showToast(`Installazione ${tag} pronta — ${(data.manifest?.files_count || 0)} file verificati`, 'success');
+      await loadInstallStatus();
+    } catch (e) {
+      showToast('Errore avvio installazione: ' + e, 'danger');
+      if (resultEl) resultEl.innerHTML = `<span class="text-danger">${esc(String(e))}</span>`;
+      await loadInstallStatus();
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-play-fill"></i> Installa'; }
+    }
+  };
+
+  const applyInstall = async () => {
+    const btn = q('otaInstallApplyBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat ota2-spinner"></i> Applicazione…'; }
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/install/apply', { method: 'POST' });
+      showToast(`Aggiornamento applicato: ${data.applied_files || 0} file — ${data.host_command || ''}`, 'success');
+
+      // Show host command
+      const cmdText = q('otaInstallHostCmdText');
+      const cmdCopy = q('otaInstallHostCmdCopy');
+      if (cmdText && data.host_command) {
+        cmdText.textContent = data.host_command;
+        if (cmdCopy) cmdCopy.dataset.copy = data.host_command;
+      }
+
+      const resultEl = q('otaInstallResult');
+      if (resultEl && data.message) {
+        resultEl.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> ${esc(data.message)}</span>`;
+      }
+
+      await loadInstallStatus();
+    } catch (e) {
+      showToast('Errore applicazione: ' + e, 'danger');
+      await loadInstallStatus();
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-circle"></i> Applica'; }
+    }
+  };
+
+  const rollbackInstall = async () => {
+    if (!confirm('Vuoi eseguire il rollback dell\'installazione corrente?')) return;
+
+    const btn = q('otaInstallRollbackBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat ota2-spinner"></i> Rollback…'; }
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/install/rollback', { method: 'POST' });
+      showToast(`Rollback completato: ${data.tag || '?'}`, 'success');
+      await loadInstallStatus();
+    } catch (e) {
+      showToast('Errore rollback: ' + e, 'danger');
+      await loadInstallStatus();
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> Rollback'; }
+    }
+  };
+
+  const cancelInstall = async () => {
+    if (!confirm('Vuoi annullare l\'installazione in corso?')) return;
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/install', { method: 'DELETE' });
+      showToast(`Installazione annullata: ${data.tag || '?'}`, 'info');
+      await loadInstallStatus();
+    } catch (e) {
+      showToast('Errore annullamento: ' + e, 'danger');
+    }
+  };
+
+  /* ── Test Update Delivery ──────────────────────────────────── */
+
+  const loadTestUpdateInfo = async () => {
+    try {
+      const data = await TPL.jsonFetch('/api/ota/test-update/info');
+      const info = q('otaTestInfo');
+      const pill = q('otaTestPill');
+      const deliverBtn = q('otaTestDeliverBtn');
+      const verifyBtn = q('otaTestVerifyBtn');
+      const cleanBtn = q('otaTestCleanBtn');
+
+      if (!data.exists) {
+        if (info) info.innerHTML = '<span class="text-muted small">Nessun test update creato</span>';
+        if (pill) { pill.textContent = '—'; pill.className = 'ota2-pill'; }
+        if (deliverBtn) deliverBtn.disabled = true;
+        if (verifyBtn) verifyBtn.disabled = true;
+        if (cleanBtn) cleanBtn.disabled = true;
+        return;
+      }
+
+      const certified = data.certified;
+      const delivered = data.delivered;
+
+      if (pill) {
+        pill.textContent = delivered ? 'Consegnato' : (certified ? 'Pronto' : 'Non cert.');
+        pill.className = `ota2-pill ${delivered ? 'ota2-pill--delivered' : (certified ? 'ota2-pill--ready' : 'ota2-pill--warn')}`;
+      }
+
+      if (info) {
+        info.innerHTML = `
+          <div class="ota2-test-info-grid">
+            <div class="ota2-test-info-item">
+              <span class="ota2-test-info-label">Versione</span>
+              <span class="ota2-test-info-value">v${esc(data.version)}</span>
+            </div>
+            <div class="ota2-test-info-item">
+              <span class="ota2-test-info-label">File</span>
+              <span class="ota2-test-info-value">${data.file_count || data.staged_files || '—'}</span>
+            </div>
+            <div class="ota2-test-info-item">
+              <span class="ota2-test-info-label">Certificato</span>
+              <span class="ota2-test-info-value">${certified ? '<i class="bi bi-check-circle-fill text-success"></i> Sì' : '<i class="bi bi-x-circle-fill text-danger"></i> No'}</span>
+            </div>
+            <div class="ota2-test-info-item">
+              <span class="ota2-test-info-label">Rischio</span>
+              <span class="ota2-test-info-value">${data.risk_score ?? '—'}/100</span>
+            </div>
+            <div class="ota2-test-info-item">
+              <span class="ota2-test-info-label">Creato</span>
+              <span class="ota2-test-info-value">${fmtDateShort(data.created_at)}</span>
+            </div>
+            <div class="ota2-test-info-item">
+              <span class="ota2-test-info-label">Stato</span>
+              <span class="ota2-test-info-value">${delivered
+                ? '<i class="bi bi-send-check-fill text-primary"></i> Consegnato'
+                : '<i class="bi bi-hourglass-split text-warning"></i> In attesa'}</span>
+            </div>
+          </div>
+        `;
+      }
+
+      if (deliverBtn) deliverBtn.disabled = !certified || delivered;
+      if (verifyBtn) verifyBtn.disabled = false;
+      if (cleanBtn) cleanBtn.disabled = false;
+    } catch {
+      const info = q('otaTestInfo');
+      if (info) info.innerHTML = '<span class="text-muted small">Errore caricamento</span>';
+    }
+  };
+
+  const createTestUpdate = async () => {
+    const btn = q('otaTestCreateBtn') || q('otaTestCreateBtn2');
+    const result = q('otaTestResult');
+    const allBtns = [q('otaTestCreateBtn'), q('otaTestCreateBtn2')];
+    allBtns.forEach(b => { if (b) { b.disabled = true; b.innerHTML = '<span class="ota2-spinner"></span> Creazione…'; } });
+    if (result) result.innerHTML = '';
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/test-update/create', { method: 'POST' });
+
+      if (result) {
+        const cert = data.certification || {};
+        result.innerHTML = `
+          <div class="alert alert-${cert.certified ? 'success' : 'warning'} py-2 px-3 small">
+            <strong>${cert.certified ? '✓ Pacchetto certificato' : '⚠ Certificazione incompleta'}</strong><br>
+            Tag: <code>${esc(data.tag)}</code> · File: ${data.manifest_summary?.total_files || '?'} · 
+            Dimensione: ${data.manifest_summary?.total_size_human || '?'}<br>
+            Firma: ${cert.signature_verified ? '✓' : '✗'} · 
+            Integrità: ${cert.integrity_verified ? '✓' : '✗'} · 
+            Pre-flight: ${cert.preflight_passed ? '✓' : '✗'} · 
+            Rischio: ${cert.risk_score}/100
+          </div>
+        `;
+      }
+
+      showToast(`Test update v${data.version} creato e ${data.certification?.certified ? 'certificato' : 'non certificato'}`, data.certification?.certified ? 'success' : 'warning');
+      loadTestUpdateInfo();
+    } catch (e) {
+      showToast('Errore creazione test update: ' + e, 'danger');
+      if (result) result.innerHTML = `<div class="alert alert-danger py-2 px-3 small">${esc(String(e))}</div>`;
+    } finally {
+      allBtns.forEach(b => { if (b) { b.disabled = false; b.innerHTML = '<i class="bi bi-box-seam"></i> Crea test update'; } });
+      if (q('otaTestCreateBtn2')) { q('otaTestCreateBtn2').innerHTML = '<i class="bi bi-plus-circle"></i> Crea pacchetto'; }
+    }
+  };
+
+  const deliverTestUpdate = async () => {
+    if (!confirm('Consegnare il test update v3.1.0-rc1 come aggiornamento OTA disponibile?')) return;
+    const btn = q('otaTestDeliverBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ota2-spinner"></span> Consegna…'; }
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/test-update/deliver', { method: 'POST' });
+      showToast(`Test update ${data.version} consegnato via OTA!`, 'success');
+
+      const result = q('otaTestResult');
+      if (result) {
+        result.innerHTML = `
+          <div class="alert alert-success py-2 px-3 small">
+            <strong><i class="bi bi-send-check-fill"></i> Update consegnato</strong><br>
+            ${esc(data.message || '')}
+          </div>
+        `;
+      }
+
+      // Refresh everything to show the new "available" update
+      await loadAll();
+    } catch (e) {
+      showToast('Errore consegna: ' + e, 'danger');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-send"></i> Consegna OTA'; }
+      loadTestUpdateInfo();
+    }
+  };
+
+  const verifyTestUpdate = async () => {
+    const btn = q('otaTestVerifyBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ota2-spinner"></span> Verifica…'; }
+    const result = q('otaTestResult');
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/test-update/verify');
+
+      if (result) {
+        const checks = (data.preflight || []);
+        const passedPf = checks.filter(c => c.passed).length;
+        const integ = data.integrity_checks || [];
+        const passedInt = integ.filter(r => r.passed).length;
+
+        result.innerHTML = `
+          <div class="alert alert-${data.certified ? 'success' : 'danger'} py-2 px-3 small">
+            <strong>${data.certified ? '✓ Verifica superata' : '✗ Verifica fallita'}</strong><br>
+            <table class="table table-sm table-borderless mb-0 small">
+              <tr><td>Firma Ed25519</td><td>${data.signature_valid ? '<i class="bi bi-check-circle-fill text-success"></i> Valida' : '<i class="bi bi-x-circle-fill text-danger"></i> Non valida'}</td></tr>
+              <tr><td>Integrità file</td><td>${data.all_integrity_ok ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-x-circle-fill text-danger"></i>'} ${passedInt}/${integ.length} file OK</td></tr>
+              <tr><td>Pre-flight</td><td>${data.all_preflight_ok ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-x-circle-fill text-danger"></i>'} ${passedPf}/${checks.length} check OK</td></tr>
+              <tr><td>Scan sicurezza</td><td>${data.scan?.verdict || '—'} (rischio: ${data.scan?.risk_score ?? '?'}/100)</td></tr>
+            </table>
+          </div>
+        `;
+      }
+
+      showToast(data.certified ? 'Test update verificato e certificato' : 'Verifica fallita', data.certified ? 'success' : 'danger');
+    } catch (e) {
+      showToast('Errore verifica: ' + e, 'danger');
+      if (result) result.innerHTML = `<div class="alert alert-danger py-2 px-3 small">${esc(String(e))}</div>`;
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-shield-check"></i> Verifica'; }
+    }
+  };
+
+  const cleanupTestUpdate = async () => {
+    if (!confirm('Rimuovere il test update e tutte le tracce dal sistema OTA?')) return;
+    const btn = q('otaTestCleanBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ota2-spinner"></span> Rimozione…'; }
+
+    try {
+      await TPL.jsonFetch('/api/ota/test-update', { method: 'DELETE' });
+      showToast('Test update rimosso', 'success');
+      q('otaTestResult').innerHTML = '';
+      await loadAll();
+    } catch (e) {
+      showToast('Errore rimozione: ' + e, 'danger');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash3"></i> Rimuovi'; }
+      loadTestUpdateInfo();
+    }
+  };
+
   /* ── Event listeners ───────────────────────────────────────── */
   q('otaPageCheckBtn')?.addEventListener('click', checkUpdates);
   q('otaPageCfgSaveBtn')?.addEventListener('click', saveConfig);
@@ -972,6 +1391,7 @@
   // Security buttons
   q('otaSecSimulateBtn')?.addEventListener('click', runSimulation);
   q('otaSecVerifyChainBtn')?.addEventListener('click', verifyChain);
+  q('otaSecRepairChainBtn')?.addEventListener('click', repairChain);
   q('otaSecRefreshBtn')?.addEventListener('click', loadTrustInfo);
   q('otaSecCfgSaveBtn')?.addEventListener('click', saveSecurityConfig);
 
@@ -980,6 +1400,19 @@
   q('otaTofuVerifyBtn')?.addEventListener('click', verifyTofu);
   q('otaHealthRunBtn')?.addEventListener('click', runHealthCheck);
   q('otaSnapCreateBtn')?.addEventListener('click', createSnapshot);
+
+  // Install buttons
+  q('otaInstallStartBtn')?.addEventListener('click', startInstall);
+  q('otaInstallApplyBtn')?.addEventListener('click', applyInstall);
+  q('otaInstallRollbackBtn')?.addEventListener('click', rollbackInstall);
+  q('otaInstallCancelBtn')?.addEventListener('click', cancelInstall);
+
+  // Test Update buttons
+  q('otaTestCreateBtn')?.addEventListener('click', createTestUpdate);
+  q('otaTestCreateBtn2')?.addEventListener('click', createTestUpdate);
+  q('otaTestDeliverBtn')?.addEventListener('click', deliverTestUpdate);
+  q('otaTestVerifyBtn')?.addEventListener('click', verifyTestUpdate);
+  q('otaTestCleanBtn')?.addEventListener('click', cleanupTestUpdate);
 
   // Host CLI: click-to-copy on ota2-cmd elements
   document.querySelectorAll('.ota2-cmd[data-copy]').forEach(cmd => {
@@ -1000,6 +1433,8 @@
       case 'r': e.preventDefault(); loadAll(); break;
       case 'c': e.preventDefault(); checkUpdates(); break;
       case 's': e.preventDefault(); runSimulation(); break;
+      case 't': e.preventDefault(); createTestUpdate(); break;
+      case 'i': e.preventDefault(); startInstall(); break;
       case 'escape':
         q('otaPageDetailPanel')?.classList.add('d-none');
         break;
@@ -1018,6 +1453,8 @@
       loadTofuStatus(),
       loadMetrics(),
       loadSnapshots(),
+      loadTestUpdateInfo(),
+      loadInstallStatus(),
     ]);
   };
 

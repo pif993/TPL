@@ -120,8 +120,15 @@
             <button class="ota2-action-btn" id="otaSecVerifyChainBtn" type="button">
               <i class="bi bi-link-45deg"></i> Verifica chain
             </button>
+            <button class="ota2-action-btn" id="otaSecRepairChainBtn" type="button" style="display:none">
+              <i class="bi bi-wrench-adjustable"></i> Ripara chain
+            </button>
             <button class="ota2-action-btn" id="otaSecRefreshBtn" type="button">
               <i class="bi bi-shield-check"></i> Trust info
+            </button>
+            <div class="ota2-action-sep"></div>
+            <button class="ota2-action-btn ota2-action-btn--test" id="otaTestCreateBtn" type="button">
+              <i class="bi bi-box-seam"></i> Crea test update
             </button>
           </div>
 
@@ -306,6 +313,95 @@
                 </div>
               </div>
 
+              <!-- OTA Install Wizard -->
+              <div class="ota2-card ota2-card--install">
+                <div class="ota2-card-head">
+                  <span class="ota2-card-title"><i class="bi bi-download"></i> Installazione OTA</span>
+                  <span class="ota2-pill" id="otaInstallPill">idle</span>
+                </div>
+                <div class="ota2-card-body">
+                  <p class="small text-muted mb-2">Pipeline di installazione automatica: preflight → verifica → backup → installa</p>
+
+                  <!-- Status display -->
+                  <div id="otaInstallStatus" class="ota2-install-status">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <i class="bi bi-circle text-muted"></i>
+                      <span class="small text-muted">Nessuna installazione in corso</span>
+                    </div>
+                  </div>
+
+                  <!-- Progress bar -->
+                  <div id="otaInstallProgressWrap" class="d-none mb-2">
+                    <div class="ota2-install-progress">
+                      <div class="ota2-install-progress-bar" id="otaInstallProgressBar" style="width:0%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                      <small class="text-muted" id="otaInstallProgressText">0 / 5</small>
+                      <small class="text-muted" id="otaInstallTag">—</small>
+                    </div>
+                  </div>
+
+                  <!-- Steps log -->
+                  <div id="otaInstallSteps" class="ota2-install-steps d-none"></div>
+
+                  <!-- Actions -->
+                  <div class="ota2-install-actions mt-2">
+                    <div class="d-flex gap-1 flex-wrap">
+                      <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--primary" id="otaInstallStartBtn" type="button">
+                        <i class="bi bi-play-fill"></i> Installa
+                      </button>
+                      <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--success" id="otaInstallApplyBtn" type="button" disabled>
+                        <i class="bi bi-check-circle"></i> Applica
+                      </button>
+                      <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--danger" id="otaInstallRollbackBtn" type="button" disabled>
+                        <i class="bi bi-arrow-counterclockwise"></i> Rollback
+                      </button>
+                      <button class="ota2-action-btn ota2-action-btn--sm" id="otaInstallCancelBtn" type="button" disabled>
+                        <i class="bi bi-x-circle"></i> Annulla
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Host command (shown after apply) -->
+                  <div id="otaInstallHostCmd" class="d-none mt-2">
+                    <div class="ota2-cmd" data-copy="" id="otaInstallHostCmdCopy">
+                      <code id="otaInstallHostCmdText">—</code><span>Esegui su host</span>
+                    </div>
+                  </div>
+
+                  <div id="otaInstallResult" class="mt-2 small"></div>
+                </div>
+              </div>
+
+              <!-- Test Update Delivery -->
+              <div class="ota2-card ota2-card--test">
+                <div class="ota2-card-head">
+                  <span class="ota2-card-title"><i class="bi bi-box-seam-fill"></i> Test Update OTA</span>
+                  <span class="ota2-pill" id="otaTestPill">—</span>
+                </div>
+                <div class="ota2-card-body">
+                  <p class="small text-muted mb-2">Crea e consegna un aggiornamento di test v3.1.0-rc1 attraverso la pipeline OTA completa</p>
+                  <div id="otaTestInfo">
+                    <span class="text-muted small">Nessun test update</span>
+                  </div>
+                  <div class="ota2-test-actions mt-2">
+                    <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--test" id="otaTestCreateBtn2" type="button">
+                      <i class="bi bi-plus-circle"></i> Crea pacchetto
+                    </button>
+                    <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--primary" id="otaTestDeliverBtn" type="button" disabled>
+                      <i class="bi bi-send"></i> Consegna OTA
+                    </button>
+                    <button class="ota2-action-btn ota2-action-btn--sm" id="otaTestVerifyBtn" type="button" disabled>
+                      <i class="bi bi-shield-check"></i> Verifica
+                    </button>
+                    <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--danger" id="otaTestCleanBtn" type="button" disabled>
+                      <i class="bi bi-trash3"></i> Rimuovi
+                    </button>
+                  </div>
+                  <div id="otaTestResult" class="mt-2 small"></div>
+                </div>
+              </div>
+
               <!-- Host Commands -->
               <div class="ota2-card">
                 <div class="ota2-card-head">
@@ -367,7 +463,7 @@
 
           <!-- Shortcuts -->
           <div class="ota2-shortcuts">
-            <kbd>R</kbd> aggiorna <kbd>C</kbd> controlla <kbd>S</kbd> simulazione <kbd>Esc</kbd> chiudi
+            <kbd>R</kbd> aggiorna <kbd>C</kbd> controlla <kbd>S</kbd> simulazione <kbd>T</kbd> test update <kbd>I</kbd> installa <kbd>Esc</kbd> chiudi
           </div>
 
         </div>
@@ -375,7 +471,7 @@
     </main>
 
     <footer class="app-footer">
-      <div class="float-end d-none d-sm-inline">v3.2</div>
+      <div class="float-end d-none d-sm-inline">v3.5</div>
       <strong>&copy; TPL Platform</strong>
     </footer>
 
@@ -395,6 +491,6 @@
       } catch { location.href = '/'; }
     })();
   </script>
-  <script src="/ota.js?v=3.3"></script>
+  <script src="/ota.js?v=3.5"></script>
 </body>
 </html>

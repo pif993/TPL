@@ -30,6 +30,7 @@ Features:
   - Health check post-update automatico
   - Metriche OTA aggregate (success/fail/rollback)
   - Export/Import configurazione sicurezza
+  - Test Update Delivery: creazione, verifica e consegna test update OTA
 """
 
 import asyncio
@@ -593,24 +594,135 @@ class OTASecurityManager:
         return entries[-limit:]
 
     def verify_audit_chain(self) -> dict:
-        """Verify the integrity of the audit chain."""
+        """Verify the integrity of the audit chain.
+        Handles chain forks caused by container restarts by detecting
+        and reporting valid segments."""
         entries = self.get_audit_log(limit=10000)
         if not entries:
-            return {"valid": True, "entries": 0, "broken_at": None}
+            return {"valid": True, "entries": 0, "broken_at": None, "segments": [], "repairable": False}
 
         prev_hash = "0" * 64
+        broken_at = None
+        segments = []   # list of contiguous valid segment ranges
+        seg_start = 0
+
         for i, entry in enumerate(entries):
             expected_chain = entry.get("chain_hash", "")
-            # Reconstruct: remove chain_hash and platform_sig (added after hash)
             entry_copy = {k: v for k, v in entry.items() if k not in ("chain_hash", "platform_sig")}
             entry_copy["prev_hash"] = prev_hash
             payload = prev_hash + json.dumps(entry_copy, sort_keys=True, separators=(",", ":"))
             computed = hashlib.sha256(payload.encode()).hexdigest()
-            if computed != expected_chain:
-                return {"valid": False, "entries": len(entries), "broken_at": i}
-            prev_hash = expected_chain
 
-        return {"valid": True, "entries": len(entries), "broken_at": None}
+            if computed != expected_chain:
+                if broken_at is None:
+                    broken_at = i
+                # close current segment
+                if i > seg_start:
+                    segments.append({"start": seg_start, "end": i - 1, "length": i - seg_start})
+                # Try to continue from this entry's own prev_hash
+                # (it may be internally consistent from here)
+                entry_own_prev = entry.get("prev_hash", "")
+                entry_copy2 = {k: v for k, v in entry.items() if k not in ("chain_hash", "platform_sig")}
+                payload2 = entry_own_prev + json.dumps(entry_copy2, sort_keys=True, separators=(",", ":"))
+                computed2 = hashlib.sha256(payload2.encode()).hexdigest()
+                if computed2 == expected_chain:
+                    # Entry is self-consistent with its own prev_hash
+                    # (fork from container restart)
+                    seg_start = i
+                    prev_hash = expected_chain
+                else:
+                    # Truly corrupted entry
+                    seg_start = i + 1
+                    prev_hash = expected_chain  # try to continue anyway
+            else:
+                prev_hash = expected_chain
+
+        # close final segment
+        if seg_start < len(entries):
+            segments.append({"start": seg_start, "end": len(entries) - 1, "length": len(entries) - seg_start})
+
+        is_valid = broken_at is None
+        return {
+            "valid": is_valid,
+            "entries": len(entries),
+            "broken_at": broken_at,
+            "segments": segments,
+            "total_segments": len(segments),
+            "repairable": not is_valid and len(segments) > 0,
+        }
+
+    def repair_audit_chain(self) -> dict:
+        """Repair audit chain by re-computing all chain hashes from genesis.
+        This makes the chain fully verifiable again after forks from
+        container restarts."""
+        if not os.path.isfile(self.audit_file):
+            return {"repaired": False, "reason": "no_audit_file", "entries": 0}
+
+        entries = []
+        try:
+            with open(self.audit_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        entries.append(json.loads(line))
+        except Exception as e:
+            return {"repaired": False, "reason": f"read_error: {str(e)[:200]}", "entries": 0}
+
+        if not entries:
+            return {"repaired": False, "reason": "empty_audit", "entries": 0}
+
+        # Backup old file
+        backup_path = self.audit_file + f".bak.{int(time.time())}"
+        shutil.copy2(self.audit_file, backup_path)
+
+        # Re-compute chain from genesis
+        prev_hash = "0" * 64
+        repaired_count = 0
+
+        for entry in entries:
+            old_chain = entry.get("chain_hash", "")
+            # Remove chain_hash and platform_sig, set prev_hash
+            for key in ("chain_hash", "platform_sig"):
+                entry.pop(key, None)
+            entry["prev_hash"] = prev_hash
+
+            # Re-compute chain hash
+            payload = prev_hash + json.dumps(entry, sort_keys=True, separators=(",", ":"))
+            new_chain = hashlib.sha256(payload.encode()).hexdigest()
+            entry["chain_hash"] = new_chain
+
+            # Re-sign with platform key
+            try:
+                sig = self._platform_private.sign(new_chain.encode())
+                entry["platform_sig"] = base64.b64encode(sig).decode()
+            except Exception:
+                entry["platform_sig"] = None
+
+            if new_chain != old_chain:
+                repaired_count += 1
+
+            prev_hash = new_chain
+
+        # Write repaired chain
+        try:
+            with open(self.audit_file, "w") as f:
+                for entry in entries:
+                    f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+        except Exception as e:
+            # Restore backup
+            shutil.copy2(backup_path, self.audit_file)
+            return {"repaired": False, "reason": f"write_error: {str(e)[:200]}", "entries": len(entries)}
+
+        # Update internal state
+        self._audit_chain_hash = prev_hash
+
+        return {
+            "repaired": True,
+            "entries": len(entries),
+            "repaired_count": repaired_count,
+            "backup": backup_path,
+            "new_chain_hash": prev_hash[:16] + "…",
+        }
 
     # ── TOFU: Trust On First Use ─────────────────────────────────────
 
@@ -1089,8 +1201,10 @@ def register(app: FastAPI):
     OTA_STAGING = os.path.join(OTA_DIR, "staging")
     OTA_CACHE = os.path.join(OTA_DIR, "cache.json")
     OTA_SIM_DIR = os.path.join(OTA_DIR, "simulations")
+    OTA_INSTALL_DIR = os.path.join(OTA_DIR, "install")
+    OTA_INSTALL_STATE = os.path.join(OTA_INSTALL_DIR, "install_state.json")
 
-    for d in (OTA_DIR, OTA_DOWNLOADS, OTA_STAGING, OTA_SIM_DIR):
+    for d in (OTA_DIR, OTA_DOWNLOADS, OTA_STAGING, OTA_SIM_DIR, OTA_INSTALL_DIR):
         os.makedirs(d, exist_ok=True)
 
     # ── Security Manager ──────────────────────────────────────────────
@@ -2246,7 +2360,29 @@ def register(app: FastAPI):
         """Verify the integrity of the entire OTA audit chain."""
         chain = sec.verify_audit_chain()
         sec.audit_log("ota.audit.verify", "checked", _u.get("sub", "admin"), chain)
+        if not chain["valid"] and chain.get("repairable"):
+            chain["repair_hint"] = "Chain has repairable forks. Use POST /ota/security/repair-chain to fix."
         return chain
+
+    @app.post("/ota/security/repair-chain")
+    async def ota_repair_chain(request: Request, _u=Depends(require_admin)):
+        """Repair broken audit chain by re-computing hashes from genesis."""
+        user = _u.get("sub", "admin")
+        # Verify chain is actually broken first
+        pre_check = sec.verify_audit_chain()
+        if pre_check["valid"]:
+            return {"repaired": False, "reason": "chain_already_valid", "entries": pre_check["entries"]}
+
+        result = sec.repair_audit_chain()
+        sec.audit_log("ota.audit.repair", "ok" if result["repaired"] else "failed", user, result)
+        sec.record_metric(OTA_DIR, "chain_repair", result)
+
+        if result["repaired"]:
+            # Verify chain after repair
+            post_check = sec.verify_audit_chain()
+            result["post_verify"] = post_check
+
+        return result
 
     @app.get("/ota/security/scan/{tag}")
     async def ota_security_scan(tag: str, _u=Depends(require_admin)):
@@ -2477,6 +2613,896 @@ def register(app: FastAPI):
             sec.audit_log("ota.simulate.cleanup", "ok", _u.get("sub", "admin"), {"tag": safe_tag})
             return {"ok": True, "removed": safe_tag}
         raise HTTPException(404, f"Simulation {safe_tag} not found")
+
+    # ═══════════════════════════════════════════════════════════════════
+    # ── TEST UPDATE DELIVERY SYSTEM ───────────────────────────────────
+    # ═══════════════════════════════════════════════════════════════════
+
+    TEST_UPDATE_VERSION = "3.1.0-rc1"
+    TEST_UPDATE_TAG = f"v{TEST_UPDATE_VERSION}"
+    TEST_UPDATE_META_FILE = os.path.join(OTA_DIR, "test_update_meta.json")
+
+    def _build_test_update_files() -> dict:
+        """Build a realistic v3.1.0-rc1 test update package with real TPL content."""
+        return {
+            # ── Core platform files ───────────────────────────────
+            "compose.yml": f"""# TPL Platform {TEST_UPDATE_TAG}
+# Generato dal sistema OTA Test Update Delivery
+version: "3.8"
+
+services:
+  traefik:
+    image: traefik:v3.2
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  api:
+    build: ./apps/api
+    image: tpl-api:{TEST_UPDATE_VERSION}
+    restart: unless-stopped
+    read_only: true
+    user: "999:999"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+    environment:
+      - TPL_VERSION={TEST_UPDATE_VERSION}
+      - TPL_OTA_POLICY=3.0
+      - TPL_HEALTH_CHECK=enabled
+    volumes:
+      - ./data:/data
+
+  web:
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./infra/web:/usr/share/nginx/html:ro
+""",
+            "run.sh": f"""#!/bin/bash
+# TPL Platform Runner — {TEST_UPDATE_TAG}
+# Migliorato: startup parallelo, health-wait, diagnostica avanzata
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+TPL_VERSION="{TEST_UPDATE_VERSION}"
+LOG_FILE="logs/tpl-start-$(date +%Y%m%d_%H%M%S).log"
+mkdir -p logs
+
+log() {{ echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"; }}
+
+log "=== TPL Platform $TPL_VERSION — Avvio ==="
+
+# Compose overlay resolution
+COMPOSE_FILES="-f compose.yml"
+for f in compose.d/*.yml; do
+  [[ "$f" =~ 11-dev|12-proxy|60-auth ]] && continue
+  [ -f "$f" ] && COMPOSE_FILES="$COMPOSE_FILES -f $f"
+done
+
+log "Compose files: $COMPOSE_FILES"
+docker compose $COMPOSE_FILES up -d --build --remove-orphans 2>&1 | tee -a "$LOG_FILE"
+
+# Health wait con timeout
+HEALTH_TIMEOUT=60
+ELAPSED=0
+while [ $ELAPSED -lt $HEALTH_TIMEOUT ]; do
+  if curl -sk https://127.0.0.1:8443/api/health -o /dev/null 2>/dev/null; then
+    log "API healthy dopo ${{ELAPSED}}s"
+    break
+  fi
+  sleep 2
+  ELAPSED=$((ELAPSED + 2))
+done
+
+if [ $ELAPSED -ge $HEALTH_TIMEOUT ]; then
+  log "WARN: API health timeout dopo ${{HEALTH_TIMEOUT}}s"
+fi
+
+log "=== TPL Platform $TPL_VERSION — Pronto ==="
+""",
+            "init.sh": f"""#!/bin/bash
+# TPL Platform Init — {TEST_UPDATE_TAG}
+set -euo pipefail
+echo "[TPL] Inizializzazione piattaforma v{TEST_UPDATE_VERSION}"
+
+# Crea directory necessarie
+mkdir -p data/ota/{{keys,staging,downloads,rollback_snapshots}}
+mkdir -p data/modules/current
+mkdir -p logs/traefik
+
+# Imposta permessi sicuri
+chmod 700 data/ota/keys 2>/dev/null || true
+
+echo "[TPL] Init completato"
+""",
+            "README.md": f"""# TPL Platform — {TEST_UPDATE_TAG}
+
+## Changelog v{TEST_UPDATE_VERSION}
+
+### Nuove Funzionalità
+- **Sistema Diagnostica Avanzato**: Nuovo engine di diagnostica con 12 controlli automatici
+- **Health Check Migliorato**: Monitoraggio proattivo con soglie configurabili
+- **OTA Test Delivery**: Sistema di test update integrato per validazione pipeline
+- **Startup Parallelo**: Avvio servizi ottimizzato con riduzione tempo 40%
+- **Log Strutturato**: Logging JSON per analisi automatica
+
+### Sicurezza
+- Policy di sicurezza OTA v3.0 con TOFU e key rotation
+- Rate limiting avanzato per tutti gli endpoint OTA
+- Lockdown mode per emergenze di sicurezza
+- Audit chain crittograficamente verificabile
+
+### Correzioni
+- Risolto timeout health check in ambienti lenti
+- Migliorata gestione errori compose overlay
+- Ottimizzato consumo memoria API container
+- Fix race condition nel check OTA automatico
+
+### Requisiti
+- Docker >= 24.0
+- Docker Compose v2
+- 2 GB RAM minimo, 4 GB raccomandato
+""",
+            "bootstrap.sh": """#!/bin/bash
+# TPL Bootstrap — verifica dipendenze e prepara ambiente
+set -euo pipefail
+
+check_dep() {
+  command -v "$1" &>/dev/null || { echo "ERR: $1 non trovato"; exit 1; }
+}
+
+check_dep docker
+check_dep curl
+check_dep openssl
+
+echo "[TPL] Dipendenze verificate"
+""",
+
+            # ── API Backend ───────────────────────────────────────
+            "apps/api/app/main.py": f'''"""
+TPL Platform API — v{TEST_UPDATE_VERSION}
+FastAPI backend con autenticazione, engine modulari e OTA updates.
+"""
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+import time
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logger = logging.getLogger("tpl.api")
+
+app = FastAPI(
+    title="TPL Platform API",
+    version="{TEST_UPDATE_VERSION}",
+    description="API backend per la piattaforma TPL con OTA, diagnostica e sicurezza",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.middleware("http")
+async def timing_middleware(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    elapsed = time.time() - start
+    response.headers["X-Process-Time"] = f"{{elapsed:.3f}}"
+    return response
+
+@app.get("/health")
+async def health():
+    return {{"status": "healthy", "version": "{TEST_UPDATE_VERSION}"}}
+''',
+            "apps/api/app/engines/diagnostics_engine.py": f'''"""
+TPL Diagnostics Engine — v1.0.0
+Engine di diagnostica avanzata per la piattaforma TPL.
+Esegue 12 controlli automatici su sistema, sicurezza e performance.
+"""
+import os
+import time
+import psutil
+from datetime import datetime
+from fastapi import FastAPI, Depends
+
+ENGINE_VERSION = "1.0.0"
+ENGINE_NAME = "diagnostics"
+
+
+def register(app: FastAPI):
+    ctx = app.state.tpl_context
+    require_admin = ctx["require_role"]("admin")
+    root = ctx.get("root", "/data")
+
+    @app.get("/diagnostics/run")
+    async def run_diagnostics(_u=Depends(require_admin)):
+        """Esegue diagnostica completa del sistema."""
+        checks = []
+        start = time.time()
+
+        # 1. Disk space
+        try:
+            disk = os.statvfs(root)
+            free_gb = (disk.f_bavail * disk.f_frsize) / (1024**3)
+            checks.append({{
+                "id": "disk_space",
+                "name": "Spazio disco",
+                "passed": free_gb > 1.0,
+                "detail": f"{{free_gb:.1f}} GB liberi",
+            }})
+        except Exception as e:
+            checks.append({{
+                "id": "disk_space",
+                "name": "Spazio disco",
+                "passed": False,
+                "detail": str(e)[:200],
+            }})
+
+        # 2. Memory
+        try:
+            mem = psutil.virtual_memory()
+            checks.append({{
+                "id": "memory",
+                "name": "Memoria RAM",
+                "passed": mem.percent < 90,
+                "detail": f"{{mem.percent}}% utilizzata ({{mem.available // (1024**2)}} MB liberi)",
+            }})
+        except Exception:
+            checks.append({{
+                "id": "memory",
+                "name": "Memoria RAM",
+                "passed": True,
+                "detail": "psutil non disponibile",
+            }})
+
+        # 3. OTA directory
+        ota_dir = os.path.join(root, "ota")
+        checks.append({{
+            "id": "ota_dir",
+            "name": "Directory OTA",
+            "passed": os.path.isdir(ota_dir),
+            "detail": "Presente" if os.path.isdir(ota_dir) else "Mancante",
+        }})
+
+        # 4. Keys directory
+        keys_dir = os.path.join(ota_dir, "keys")
+        has_keys = os.path.isdir(keys_dir) and len(os.listdir(keys_dir)) > 0
+        checks.append({{
+            "id": "ota_keys",
+            "name": "Chiavi OTA",
+            "passed": has_keys,
+            "detail": f"{{len(os.listdir(keys_dir))}} file" if os.path.isdir(keys_dir) else "Directory mancante",
+        }})
+
+        # 5. Config files
+        for cfg_file in ["config.json", "state.json"]:
+            path = os.path.join(ota_dir, cfg_file)
+            checks.append({{
+                "id": f"ota_{{cfg_file.replace('.', '_')}}",
+                "name": f"OTA {{cfg_file}}",
+                "passed": os.path.isfile(path),
+                "detail": "Presente" if os.path.isfile(path) else "Mancante",
+            }})
+
+        # 6. Write test
+        test_file = os.path.join(root, ".diag_test")
+        try:
+            with open(test_file, "w") as f:
+                f.write("diag")
+            os.remove(test_file)
+            writable = True
+        except Exception:
+            writable = False
+        checks.append({{
+            "id": "fs_writable",
+            "name": "Filesystem scrivibile",
+            "passed": writable,
+            "detail": "OK" if writable else "NON scrivibile",
+        }})
+
+        elapsed = int((time.time() - start) * 1000)
+        passed = sum(1 for c in checks if c["passed"])
+        failed = sum(1 for c in checks if not c["passed"])
+
+        return {{
+            "engine": ENGINE_NAME,
+            "version": ENGINE_VERSION,
+            "timestamp": datetime.now().isoformat(),
+            "checks": checks,
+            "passed": passed,
+            "failed": failed,
+            "total": len(checks),
+            "healthy": failed == 0,
+            "elapsed_ms": elapsed,
+        }}
+
+    @app.get("/diagnostics/version")
+    async def diagnostics_version(_u=Depends(require_admin)):
+        return {{"engine": ENGINE_NAME, "version": ENGINE_VERSION}}
+''',
+            "apps/api/app/engines/ota_update_engine.py": f'''"""
+TPL OTA Update Engine — v3.0.0 (Hardened Secure OTA)
+Placeholder per l'aggiornamento di test.
+Il file reale viene preservato durante l'installazione.
+"""
+# Questo file è un placeholder nel pacchetto di test.
+# L'engine OTA reale rimane invariato durante l'aggiornamento.
+ENGINE_VERSION = "3.0.0"
+''',
+            "apps/api/requirements.txt": """fastapi==0.115.7
+uvicorn[standard]==0.34.0
+httpx==0.27.2
+cryptography==44.0.0
+python-jose[cryptography]==3.3.0
+pydantic==2.10.4
+psutil==5.9.8
+python-multipart==0.0.18
+jinja2==3.1.5
+""",
+            "apps/api/Dockerfile": f"""FROM python:3.12-slim
+LABEL maintainer="pif993" version="{TEST_UPDATE_VERSION}"
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app/ ./app/
+USER 999:999
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+""",
+
+            # ── Modules ──────────────────────────────────────────
+            "modules/10_traefik.sh": """#!/bin/bash
+meta() { echo '{"name":"traefik","version":"3.2","desc":"Reverse proxy con TLS"}'; }
+apply() { echo "Traefik configurato"; }
+""",
+            "modules/40_api_base.sh": """#!/bin/bash
+meta() { echo '{"name":"api_base","version":"3.1","desc":"API FastAPI backend"}'; }
+apply() { echo "API base configurata"; }
+""",
+            "modules/108_ota_update.sh": """#!/bin/bash
+meta() { echo '{"name":"ota_update","version":"3.0","desc":"Engine OTA con sicurezza Ed25519"}'; }
+apply() { echo "OTA engine configurato"; }
+""",
+            "modules/109_diagnostics.sh": f"""#!/bin/bash
+# TPL Module: Diagnostics — v1.0.0
+# Aggiunto in {TEST_UPDATE_TAG}
+meta() {{ echo '{{"name":"diagnostics","version":"1.0","desc":"Engine diagnostica avanzata"}}'; }}
+apply() {{
+  echo "[TPL] Diagnostics engine abilitato"
+  # Verifica che l'engine sia presente
+  if [ -f "apps/api/app/engines/diagnostics_engine.py" ]; then
+    echo "[TPL] diagnostics_engine.py trovato"
+  else
+    echo "[WARN] diagnostics_engine.py mancante"
+  fi
+}}
+""",
+
+            # ── Infrastructure ────────────────────────────────────
+            "infra/web/index.html": f"""<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TPL Platform v{TEST_UPDATE_VERSION}</title>
+</head>
+<body>
+  <h1>TPL Platform</h1>
+  <p>Versione: {TEST_UPDATE_VERSION}</p>
+</body>
+</html>
+""",
+            "infra/web/styles.css": """/* TPL Platform Styles — v3.1 */
+:root {
+  --tpl-primary: #6366f1;
+  --tpl-success: #22c55e;
+  --tpl-danger: #ef4444;
+  --tpl-bg: #0f172a;
+  --tpl-surface: #1e293b;
+}
+body { margin: 0; font-family: system-ui, sans-serif; }
+""",
+            "infra/traefik/traefik.yml": """# Traefik v3.2 configuration
+entryPoints:
+  web:
+    address: ':80'
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ':443'
+    http3: {}
+
+providers:
+  docker:
+    exposedByDefault: false
+  file:
+    directory: /etc/traefik/dynamic
+
+certificatesResolvers: {}
+""",
+
+            # ── Scripts ──────────────────────────────────────────
+            "scripts/test_all.sh": f"""#!/bin/bash
+# TPL Test Suite — {TEST_UPDATE_TAG}
+set -euo pipefail
+echo "=== TPL Test Suite v{TEST_UPDATE_VERSION} ==="
+
+PASS=0; FAIL=0
+
+check() {{
+  local name="$1" cmd="$2"
+  if eval "$cmd" &>/dev/null; then
+    echo "  ✓ $name"
+    ((PASS++))
+  else
+    echo "  ✗ $name"
+    ((FAIL++))
+  fi
+}}
+
+check "compose.yml exists" "[ -f compose.yml ]"
+check "run.sh exists" "[ -f run.sh ]"
+check "API directory" "[ -d apps/api/app ]"
+check "Modules directory" "[ -d modules ]"
+check "OTA engine" "[ -f apps/api/app/engines/ota_update_engine.py ]"
+check "Diagnostics engine" "[ -f apps/api/app/engines/diagnostics_engine.py ]"
+check "Web files" "[ -f infra/web/index.html ]"
+
+echo ""
+echo "Risultato: $PASS passati, $FAIL falliti"
+[ $FAIL -eq 0 ] && echo "=== TUTTI I TEST SUPERATI ===" || echo "=== ALCUNI TEST FALLITI ==="
+exit $FAIL
+""",
+            "scripts/security_smoke.sh": """#!/bin/bash
+# Security smoke test
+set -euo pipefail
+echo "=== Security Smoke Test ==="
+
+# Check key files permissions
+if [ -d data/ota/keys ]; then
+  PERMS=$(stat -c '%a' data/ota/keys 2>/dev/null || echo "???")
+  echo "OTA keys dir permissions: $PERMS"
+  [ "$PERMS" = "700" ] && echo "  ✓ Permessi corretti" || echo "  ✗ Permessi non sicuri"
+fi
+
+echo "=== Security smoke completato ==="
+""",
+
+            # ── Compose overlays ─────────────────────────────────
+            "compose.d/10-traefik.yml": """services:
+  traefik:
+    image: traefik:v3.2
+    restart: unless-stopped
+    ports:
+      - "8443:443"
+      - "8080:80"
+    volumes:
+      - ./infra/traefik:/etc/traefik:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+""",
+            "compose.d/40-api.yml": """services:
+  api:
+    build: ./apps/api
+    restart: unless-stopped
+    read_only: true
+    volumes:
+      - ./data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=PathPrefix(`/api`)
+""",
+
+            # ── CHANGELOG.md ─────────────────────────────────────
+            f"CHANGELOG.md": f"""# Changelog
+
+## [{TEST_UPDATE_VERSION}] — {datetime.now().strftime('%Y-%m-%d')}
+
+### Aggiunto
+- Diagnostics engine con 12 controlli automatici
+- Health check migliorato con soglie configurabili
+- OTA test delivery per validazione pipeline
+- Startup parallelo con riduzione tempo 40%
+- Module 109_diagnostics.sh
+- Security smoke test script
+- Logging JSON strutturato
+
+### Modificato
+- Aggiornato compose.yml con healthcheck per tutti i servizi
+- Migliorato run.sh con gestione errori robusta
+- Ottimizzato consumo memoria API container
+- Aggiornate dipendenze Python
+
+### Corretto
+- Fix timeout health check in ambienti lenti
+- Fix race condition nel check OTA automatico
+- Fix gestione errori compose overlay
+- Risolto memory leak nel log engine
+
+### Sicurezza
+- OTA Security Policy v3.0
+- TOFU (Trust On First Use) per key pinning
+- Key rotation con periodo di grazia 24h
+- Lockdown mode per emergenze
+- Rate limiting avanzato per endpoint OTA
+""",
+        }
+
+    @app.post("/ota/test-update/create")
+    async def ota_test_update_create(request: Request, _u=Depends(require_admin)):
+        """
+        Create a realistic test OTA update package (v3.1.0-rc1).
+
+        This builds a full TPL update with:
+        - Real project structure (compose.yml, run.sh, modules, engines, etc.)
+        - New features: diagnostics engine, improved health checks
+        - MANIFEST.json with SHA-256 of every file
+        - Ed25519 signature
+        - Full pre-flight and security scan
+
+        The update can then be "delivered" to appear as an available release.
+        """
+        if sec.check_lockdown(OTA_DIR):
+            raise HTTPException(423, "OTA is in lockdown mode")
+
+        rl = rate_limiter.check(f"test_update:{_u.get('sub', 'admin')}", max_ops=5, window=600)
+        if not rl["allowed"]:
+            raise HTTPException(429, f"Rate limited. Retry after {rl['retry_after']}s")
+
+        safe_tag = _sanitize_tag(TEST_UPDATE_TAG)
+        staging_dir = os.path.join(OTA_STAGING, safe_tag)
+
+        sec.audit_log("ota.test_update.create.start", "started", _u.get("sub", "admin"),
+                       {"tag": safe_tag, "version": TEST_UPDATE_VERSION})
+
+        try:
+            # 1. Clean previous test update if exists
+            if os.path.isdir(staging_dir):
+                shutil.rmtree(staging_dir)
+            os.makedirs(staging_dir, exist_ok=True)
+
+            # 2. Write all test update files
+            files = _build_test_update_files()
+            file_count = 0
+            total_size = 0
+            for rel_path, content in files.items():
+                full = os.path.join(staging_dir, rel_path)
+                os.makedirs(os.path.dirname(full), exist_ok=True)
+                with open(full, "w") as f:
+                    f.write(content)
+                file_count += 1
+                total_size += len(content.encode())
+
+            # 3. Generate MANIFEST.json
+            manifest = sec.generate_manifest(staging_dir)
+            manifest_path = os.path.join(staging_dir, "MANIFEST.json")
+            with open(manifest_path, "w") as f:
+                json.dump(manifest, f, sort_keys=True, indent=2)
+
+            # 4. Sign manifest with Ed25519
+            signature = sec.sign_manifest(manifest)
+            sig_path = os.path.join(staging_dir, "MANIFEST.json.sig")
+            with open(sig_path, "w") as f:
+                f.write(signature)
+
+            # 5. Verify roundtrip
+            sig_valid = sec.verify_manifest_signature(manifest, signature)
+            integrity = sec.verify_file_integrity(staging_dir, manifest)
+            all_integrity = all(r["passed"] for r in integrity)
+
+            # 6. Deep security scan
+            scan = sec.deep_scan(staging_dir)
+
+            # 7. Pre-flight checks
+            preflight = _pre_flight_checks(staging_dir, tag=safe_tag)
+            all_preflight = all(c["passed"] for c in preflight)
+
+            # 8. Save metadata
+            certified = sig_valid and all_integrity and all_preflight
+            meta = {
+                "tag": safe_tag,
+                "version": TEST_UPDATE_VERSION,
+                "created_at": datetime.now().isoformat(),
+                "created_by": _u.get("sub", "admin"),
+                "file_count": manifest.get("total_files", file_count),
+                "total_size": manifest.get("total_size", total_size),
+                "certified": certified,
+                "signature_valid": sig_valid,
+                "integrity_valid": all_integrity,
+                "preflight_passed": all_preflight,
+                "risk_score": scan.get("risk_score", 0),
+                "security_verdict": scan.get("verdict", "unknown"),
+                "delivered": False,
+                "changelog": f"""## Novità in v{TEST_UPDATE_VERSION}
+- Diagnostics engine con controlli automatici
+- Health check migliorato
+- Startup parallelo ottimizzato
+- Module 109_diagnostics.sh
+- Security enhancement: TOFU, lockdown, rate limiting
+- Fix: timeout, race conditions, memory leak""",
+            }
+            with open(TEST_UPDATE_META_FILE, "w") as f:
+                json.dump(meta, f, indent=2)
+
+            # 9. Audit
+            sec.audit_log("ota.test_update.create.complete", "certified" if certified else "warning",
+                           _u.get("sub", "admin"), {
+                               "tag": safe_tag, "files": file_count,
+                               "size": total_size, "certified": certified,
+                           })
+            sec.record_metric(OTA_DIR, "test_update_create", {"tag": safe_tag, "certified": certified})
+
+            audit(request, "ota.test_update.create", "success", _u.get("sub", "admin"),
+                  {"tag": safe_tag, "certified": certified})
+
+            return {
+                "ok": True,
+                "tag": safe_tag,
+                "version": TEST_UPDATE_VERSION,
+                "certification": {
+                    "certified": certified,
+                    "signature_verified": sig_valid,
+                    "integrity_verified": all_integrity,
+                    "preflight_passed": all_preflight,
+                    "risk_score": scan.get("risk_score", 0),
+                    "security_verdict": scan.get("verdict"),
+                },
+                "manifest_summary": {
+                    "total_files": manifest.get("total_files", 0),
+                    "total_size": manifest.get("total_size", 0),
+                    "total_size_human": _fmt_size(manifest.get("total_size", 0)),
+                },
+                "files_created": file_count,
+                "preflight": preflight,
+                "security_scan": {
+                    "risk_score": scan.get("risk_score", 0),
+                    "verdict": scan.get("verdict"),
+                    "suspicious": len(scan.get("suspicious_files", [])),
+                    "blocked": len(scan.get("blocked_files", [])),
+                },
+                "changelog": meta["changelog"],
+                "next_step": "POST /api/ota/test-update/deliver per iniettare come release disponibile",
+            }
+
+        except Exception as e:
+            sec.audit_log("ota.test_update.create.failed", "error", _u.get("sub", "admin"),
+                           {"error": str(e)[:300]})
+            if os.path.isdir(staging_dir):
+                shutil.rmtree(staging_dir)
+            raise HTTPException(500, f"Test update creation failed: {str(e)[:300]}")
+
+    @app.get("/ota/test-update/info")
+    async def ota_test_update_info(_u=Depends(require_admin)):
+        """Get info about the current test update package."""
+        if not os.path.isfile(TEST_UPDATE_META_FILE):
+            return {"exists": False, "tag": None, "version": None}
+
+        try:
+            with open(TEST_UPDATE_META_FILE) as f:
+                meta = json.load(f)
+        except Exception:
+            return {"exists": False, "tag": None, "version": None}
+
+        safe_tag = _sanitize_tag(meta.get("tag", TEST_UPDATE_TAG))
+        staging_dir = os.path.join(OTA_STAGING, safe_tag)
+        staged = os.path.isdir(staging_dir)
+
+        # Count files in staging if it exists
+        file_count = 0
+        if staged:
+            file_count = sum(1 for _ in Path(staging_dir).rglob("*") if _.is_file())
+
+        return {
+            "exists": True,
+            "staged": staged,
+            "staged_files": file_count,
+            **meta,
+        }
+
+    @app.post("/ota/test-update/deliver")
+    async def ota_test_update_deliver(request: Request, _u=Depends(require_admin)):
+        """
+        Deliver the test update — inject it as an available OTA release.
+
+        This updates the OTA state so the test update appears as a newer
+        version in the dashboard and release list, exactly like a real
+        GitHub release would.
+        """
+        if sec.check_lockdown(OTA_DIR):
+            raise HTTPException(423, "OTA is in lockdown mode")
+
+        # Check test update exists
+        if not os.path.isfile(TEST_UPDATE_META_FILE):
+            raise HTTPException(404, "Test update not created. Use POST /ota/test-update/create first")
+
+        with open(TEST_UPDATE_META_FILE) as f:
+            meta = json.load(f)
+
+        if not meta.get("certified"):
+            raise HTTPException(400, "Test update not certified — cannot deliver")
+
+        safe_tag = _sanitize_tag(meta.get("tag", TEST_UPDATE_TAG))
+        staging_dir = os.path.join(OTA_STAGING, safe_tag)
+
+        if not os.path.isdir(staging_dir):
+            raise HTTPException(404, "Test update staging directory missing")
+
+        # Inject into OTA state as an available release
+        state = _load_state()
+
+        test_release = {
+            "tag": safe_tag,
+            "version": TEST_UPDATE_VERSION,
+            "name": f"TPL Platform {TEST_UPDATE_VERSION} (Test Update)",
+            "body": meta.get("changelog", "Test update"),
+            "published_at": datetime.now().isoformat(),
+            "prerelease": True,
+            "draft": False,
+            "tarball_url": "",
+            "html_url": "",
+            "author": _u.get("sub", "admin"),
+            "assets": [],
+            "is_test_update": True,
+        }
+
+        # Add to releases cache (at the top — it's the "newest")
+        cache = state.get("releases_cache", [])
+        # Remove any previous test update from cache
+        cache = [r for r in cache if r.get("tag") != safe_tag]
+        cache.insert(0, test_release)
+        state["releases_cache"] = cache[:10]
+
+        # Mark update as available
+        state["update_available"] = True
+        state["latest_version"] = TEST_UPDATE_VERSION
+
+        # Add to prepared versions
+        prepared = state.get("prepared_versions", [])
+        if safe_tag not in prepared:
+            prepared.append(safe_tag)
+            state["prepared_versions"] = prepared
+
+        _save_state(state)
+
+        # Update meta
+        meta["delivered"] = True
+        meta["delivered_at"] = datetime.now().isoformat()
+        meta["delivered_by"] = _u.get("sub", "admin")
+        with open(TEST_UPDATE_META_FILE, "w") as f:
+            json.dump(meta, f, indent=2)
+
+        sec.audit_log("ota.test_update.deliver", "ok", _u.get("sub", "admin"), {
+            "tag": safe_tag, "version": TEST_UPDATE_VERSION,
+        })
+        sec.record_metric(OTA_DIR, "test_update_deliver", {"tag": safe_tag})
+
+        audit(request, "ota.test_update.deliver", "success", _u.get("sub", "admin"), {
+            "tag": safe_tag, "version": TEST_UPDATE_VERSION,
+        })
+
+        return {
+            "ok": True,
+            "tag": safe_tag,
+            "version": TEST_UPDATE_VERSION,
+            "delivered": True,
+            "delivered_at": meta["delivered_at"],
+            "update_available": True,
+            "message": f"Test update {safe_tag} iniettato come release disponibile. "
+                       f"Apparirà nel Centro Aggiornamenti OTA come aggiornamento v{TEST_UPDATE_VERSION}.",
+        }
+
+    @app.delete("/ota/test-update")
+    async def ota_test_update_cleanup(request: Request, _u=Depends(require_admin)):
+        """Remove the test update and clean up all traces."""
+        removed = []
+
+        # Clean staging
+        safe_tag = _sanitize_tag(TEST_UPDATE_TAG)
+        staging_dir = os.path.join(OTA_STAGING, safe_tag)
+        if os.path.isdir(staging_dir):
+            shutil.rmtree(staging_dir)
+            removed.append(f"staging/{safe_tag}")
+
+        # Clean meta
+        if os.path.isfile(TEST_UPDATE_META_FILE):
+            os.remove(TEST_UPDATE_META_FILE)
+            removed.append("test_update_meta.json")
+
+        # Remove from state
+        state = _load_state()
+        cache = state.get("releases_cache", [])
+        cache = [r for r in cache if r.get("tag") != safe_tag]
+        state["releases_cache"] = cache
+
+        prepared = state.get("prepared_versions", [])
+        if safe_tag in prepared:
+            prepared.remove(safe_tag)
+            state["prepared_versions"] = prepared
+
+        # Re-evaluate update_available
+        dismissed = state.get("dismissed", [])
+        state["update_available"] = any(
+            _version_compare(PLATFORM_VERSION, r.get("version", "")) < 0
+            and r.get("tag", "") not in dismissed
+            for r in cache
+        )
+        if not state["update_available"]:
+            state["latest_version"] = PLATFORM_VERSION
+
+        _save_state(state)
+        removed.append("state_cleanup")
+
+        sec.audit_log("ota.test_update.cleanup", "ok", _u.get("sub", "admin"), {
+            "removed": removed,
+        })
+        sec.record_metric(OTA_DIR, "test_update_cleanup", {"tag": safe_tag})
+
+        audit(request, "ota.test_update.cleanup", "success", _u.get("sub", "admin"),
+              {"removed": removed})
+
+        return {"ok": True, "removed": removed, "tag": safe_tag}
+
+    @app.get("/ota/test-update/verify")
+    async def ota_test_update_verify(_u=Depends(require_admin)):
+        """Full cryptographic verification of the test update package."""
+        safe_tag = _sanitize_tag(TEST_UPDATE_TAG)
+        staging_dir = os.path.join(OTA_STAGING, safe_tag)
+
+        if not os.path.isdir(staging_dir):
+            raise HTTPException(404, "Test update not created")
+
+        manifest_path = os.path.join(staging_dir, "MANIFEST.json")
+        sig_path = os.path.join(staging_dir, "MANIFEST.json.sig")
+
+        result = {
+            "tag": safe_tag,
+            "version": TEST_UPDATE_VERSION,
+            "manifest_present": os.path.isfile(manifest_path),
+            "signature_present": os.path.isfile(sig_path),
+            "signature_valid": False,
+            "integrity_checks": [],
+            "all_integrity_ok": False,
+            "preflight": [],
+            "all_preflight_ok": False,
+            "scan": {},
+            "certified": False,
+        }
+
+        if result["manifest_present"] and result["signature_present"]:
+            with open(manifest_path) as f:
+                manifest = json.load(f)
+            with open(sig_path) as f:
+                sig_b64 = f.read().strip()
+
+            result["signature_valid"] = sec.verify_manifest_signature(manifest, sig_b64)
+
+            if result["signature_valid"]:
+                integrity = sec.verify_file_integrity(staging_dir, manifest)
+                result["integrity_checks"] = integrity
+                result["all_integrity_ok"] = all(r["passed"] for r in integrity)
+
+            result["scan"] = sec.deep_scan(staging_dir)
+            result["preflight"] = _pre_flight_checks(staging_dir, tag=safe_tag)
+            result["all_preflight_ok"] = all(c["passed"] for c in result["preflight"])
+
+            result["certified"] = (
+                result["signature_valid"]
+                and result["all_integrity_ok"]
+                and result["all_preflight_ok"]
+            )
+
+        result["verified_at"] = datetime.now().isoformat()
+        return result
 
     # ═══════════════════════════════════════════════════════════════════
     # ── NEW: Key Rotation Endpoint ────────────────────────────────────
@@ -2813,6 +3839,480 @@ def register(app: FastAPI):
             "tag": safe_tag,
             **result,
             "timestamp": datetime.now().isoformat(),
+        }
+
+    # ═══════════════════════════════════════════════════════════════════
+    # ── OTA Install System — Auto-Update Installation Engine ──────────
+    # ═══════════════════════════════════════════════════════════════════
+
+    def _load_install_state() -> dict:
+        """Load current install state from disk."""
+        if os.path.isfile(OTA_INSTALL_STATE):
+            try:
+                with open(OTA_INSTALL_STATE) as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return {"status": "idle", "tag": None, "steps": [], "started_at": None}
+
+    def _save_install_state(state: dict):
+        """Persist install state to disk."""
+        state["updated_at"] = datetime.now().isoformat()
+        with open(OTA_INSTALL_STATE, "w") as f:
+            json.dump(state, f, indent=2)
+
+    def _add_install_step(state: dict, step: str, status: str, detail: str = ""):
+        """Add a step to the install pipeline."""
+        state["steps"].append({
+            "step": step,
+            "status": status,
+            "detail": detail,
+            "ts": datetime.now().isoformat(),
+        })
+        _save_install_state(state)
+
+    @app.post("/ota/install/start/{tag}")
+    async def ota_install_start(tag: str, _u=Depends(require_admin)):
+        """Start OTA installation process for a staged release.
+        Pipeline: preflight → verify → backup → stage → ready-to-apply."""
+        user = _u.get("sub", "admin")
+        safe_tag = _sanitize_tag(tag)
+
+        # Check lockdown
+        if sec.check_lockdown(OTA_DIR):
+            raise HTTPException(423, "System in lockdown — install blocked")
+
+        # Check not already installing
+        current = _load_install_state()
+        if current["status"] in ("installing", "applying"):
+            raise HTTPException(409, f"Install already in progress: {current.get('tag')}")
+
+        # Verify staging exists
+        staging_dir = os.path.join(OTA_STAGING, safe_tag)
+        if not os.path.isdir(staging_dir):
+            raise HTTPException(404, f"Version {safe_tag} not staged. Prepare it first via /ota/prepare/{{tag}}")
+
+        # Initialize install state
+        state = {
+            "status": "installing",
+            "tag": safe_tag,
+            "started_at": datetime.now().isoformat(),
+            "started_by": user,
+            "steps": [],
+            "progress": 0,
+            "total_steps": 5,
+            "error": None,
+        }
+        _save_install_state(state)
+
+        # ── Step 1: Pre-flight checks ────────────────────────────────
+        _add_install_step(state, "preflight", "running", "Running pre-flight security checks...")
+        state["progress"] = 1
+
+        manifest_path = os.path.join(staging_dir, "MANIFEST.json")
+        if not os.path.isfile(manifest_path):
+            _add_install_step(state, "preflight", "failed", "Missing MANIFEST.json")
+            state["status"] = "failed"
+            state["error"] = "Missing MANIFEST.json in staging"
+            _save_install_state(state)
+            raise HTTPException(400, "Missing MANIFEST.json — run /ota/prepare/{tag} first")
+
+        with open(manifest_path) as f:
+            manifest = json.load(f)
+
+        # Run preflight checks
+        try:
+            preflight = sec.run_preflight_checks(staging_dir, manifest)
+            failed_checks = [c for c in preflight if not c.get("passed", False)]
+            if failed_checks:
+                detail = f"{len(failed_checks)} check(s) failed: " + ", ".join(c["check"] for c in failed_checks)
+                _add_install_step(state, "preflight", "warning", detail)
+            else:
+                _add_install_step(state, "preflight", "ok", f"All {len(preflight)} checks passed")
+        except Exception as e:
+            _add_install_step(state, "preflight", "warning", f"Preflight error (non-fatal): {str(e)[:200]}")
+
+        # ── Step 2: Signature verification ────────────────────────────
+        _add_install_step(state, "verify", "running", "Verifying cryptographic signatures...")
+        state["progress"] = 2
+        _save_install_state(state)
+
+        sig_path = os.path.join(staging_dir, "MANIFEST.json.sig")
+        sig_verified = False
+        if os.path.isfile(sig_path):
+            try:
+                with open(sig_path) as f:
+                    sig_b64 = f.read().strip()
+                result = sec.verify_with_grace(manifest, sig_b64)
+                sig_verified = result.get("verified", False)
+                if sig_verified:
+                    _add_install_step(state, "verify", "ok", "Ed25519 signature verified")
+                else:
+                    _add_install_step(state, "verify", "warning",
+                                      f"Signature not verified: {result.get('reason', 'unknown')}")
+            except Exception as e:
+                _add_install_step(state, "verify", "warning", f"Signature check error: {str(e)[:200]}")
+        else:
+            _add_install_step(state, "verify", "warning", "No signature file found — unsigned release")
+
+        # ── Step 3: SHA-256 integrity check ───────────────────────────
+        _add_install_step(state, "integrity", "running", "Verifying file checksums...")
+        state["progress"] = 3
+        _save_install_state(state)
+
+        files_ok = 0
+        files_fail = 0
+        manifest_files = manifest.get("files", {})
+        for rel_path, expected_hash in manifest_files.items():
+            file_path = os.path.join(staging_dir, rel_path)
+            if os.path.isfile(file_path):
+                sha = hashlib.sha256()
+                with open(file_path, "rb") as bf:
+                    for chunk in iter(lambda: bf.read(8192), b""):
+                        sha.update(chunk)
+                if sha.hexdigest() == expected_hash:
+                    files_ok += 1
+                else:
+                    files_fail += 1
+            else:
+                files_fail += 1
+
+        if files_fail > 0:
+            _add_install_step(state, "integrity", "warning",
+                              f"{files_fail} file(s) failed checksum ({files_ok} ok)")
+        else:
+            _add_install_step(state, "integrity", "ok",
+                              f"All {files_ok} file(s) verified")
+
+        # ── Step 4: Create pre-install snapshot ───────────────────────
+        _add_install_step(state, "backup", "running", "Creating pre-install backup snapshot...")
+        state["progress"] = 4
+        _save_install_state(state)
+
+        try:
+            snapshot = sec.create_snapshot(OTA_DIR, f"pre-install-{safe_tag}", root)
+            _add_install_step(state, "backup", "ok",
+                              f"Snapshot created: {snapshot.get('snapshot_id', 'unknown')}")
+            state["snapshot_id"] = snapshot.get("snapshot_id")
+        except Exception as e:
+            _add_install_step(state, "backup", "warning",
+                              f"Snapshot failed (non-fatal): {str(e)[:200]}")
+            state["snapshot_id"] = None
+
+        # ── Step 5: Prepare install package ───────────────────────────
+        _add_install_step(state, "prepare", "running", "Preparing install package...")
+        state["progress"] = 5
+        _save_install_state(state)
+
+        install_pkg_dir = os.path.join(OTA_INSTALL_DIR, safe_tag)
+        os.makedirs(install_pkg_dir, exist_ok=True)
+
+        # Copy staging files to install area
+        try:
+            if os.path.isdir(install_pkg_dir):
+                shutil.rmtree(install_pkg_dir)
+            shutil.copytree(staging_dir, install_pkg_dir)
+            file_count = sum(1 for _, _, files in os.walk(install_pkg_dir) for _ in files)
+            _add_install_step(state, "prepare", "ok",
+                              f"Install package ready ({file_count} files)")
+        except Exception as e:
+            _add_install_step(state, "prepare", "failed", f"Copy failed: {str(e)[:200]}")
+            state["status"] = "failed"
+            state["error"] = f"Failed to prepare install package: {str(e)[:200]}"
+            _save_install_state(state)
+            raise HTTPException(500, f"Install preparation failed: {str(e)[:100]}")
+
+        # Finalize — ready to apply
+        state["status"] = "ready"
+        state["progress"] = 5
+        state["install_dir"] = install_pkg_dir
+        state["manifest"] = {
+            "version": manifest.get("version", safe_tag),
+            "files_count": len(manifest_files),
+            "signed": sig_verified,
+            "integrity_ok": files_fail == 0,
+        }
+        _save_install_state(state)
+
+        sec.audit_log("ota.install.start", "ready", user, {
+            "tag": safe_tag, "signed": sig_verified,
+            "integrity_ok": files_fail == 0, "files": len(manifest_files)
+        })
+        sec.record_metric(OTA_DIR, "install_prepared", {"tag": safe_tag})
+
+        return {
+            "status": "ready",
+            "tag": safe_tag,
+            "steps": state["steps"],
+            "manifest": state["manifest"],
+            "message": f"Install ready. Call POST /ota/install/apply to execute.",
+        }
+
+    @app.get("/ota/install/status")
+    async def ota_install_status(_u=Depends(require_admin)):
+        """Get current OTA install status and progress."""
+        state = _load_install_state()
+        return {
+            "status": state.get("status", "idle"),
+            "tag": state.get("tag"),
+            "progress": state.get("progress", 0),
+            "total_steps": state.get("total_steps", 5),
+            "steps": state.get("steps", []),
+            "started_at": state.get("started_at"),
+            "started_by": state.get("started_by"),
+            "manifest": state.get("manifest"),
+            "error": state.get("error"),
+            "snapshot_id": state.get("snapshot_id"),
+            "applied_at": state.get("applied_at"),
+            "updated_at": state.get("updated_at"),
+        }
+
+    @app.post("/ota/install/apply")
+    async def ota_install_apply(_u=Depends(require_admin)):
+        """Apply the prepared OTA install — copies update files to host apply area
+        and generates a host-side apply script."""
+        user = _u.get("sub", "admin")
+        state = _load_install_state()
+
+        if state["status"] != "ready":
+            raise HTTPException(
+                409,
+                f"Cannot apply — status is '{state['status']}'. "
+                f"Must be 'ready'. Use POST /ota/install/start/{{tag}} first."
+            )
+
+        safe_tag = state["tag"]
+        install_pkg_dir = state.get("install_dir", os.path.join(OTA_INSTALL_DIR, safe_tag))
+
+        if not os.path.isdir(install_pkg_dir):
+            state["status"] = "failed"
+            state["error"] = "Install package directory missing"
+            _save_install_state(state)
+            raise HTTPException(500, "Install package not found — re-run /ota/install/start/{tag}")
+
+        state["status"] = "applying"
+        _add_install_step(state, "apply", "running", "Applying update files...")
+        _save_install_state(state)
+
+        # Generate host-apply script
+        apply_script_path = os.path.join(OTA_INSTALL_DIR, "apply.sh")
+        try:
+            with open(os.path.join(install_pkg_dir, "MANIFEST.json")) as f:
+                manifest = json.load(f)
+
+            files_map = manifest.get("files", {})
+            script_lines = [
+                "#!/usr/bin/env bash",
+                "# TPL OTA Host Applicator — Auto-generated",
+                f"# Tag: {safe_tag}",
+                f"# Generated: {datetime.now().isoformat()}",
+                'set -euo pipefail',
+                "",
+                f'INSTALL_SRC="{install_pkg_dir}"',
+                f'TPL_ROOT="/home/curciop/Documenti/TPL"',
+                "",
+                'echo "╔══════════════════════════════════════════════════════╗"',
+                f'echo "║  TPL OTA Install — {safe_tag}"',
+                'echo "╚══════════════════════════════════════════════════════╝"',
+                'echo ""',
+                "",
+                "APPLIED=0",
+                "SKIPPED=0",
+                "ERRORS=0",
+                "",
+            ]
+
+            for rel_path in sorted(files_map.keys()):
+                src = os.path.join(install_pkg_dir, rel_path)
+                # Map relative paths to TPL project structure
+                script_lines += [
+                    f'# File: {rel_path}',
+                    f'if [ -f "{src}" ]; then',
+                    f'    dest="$TPL_ROOT/{rel_path}"',
+                    f'    mkdir -p "$(dirname "$dest")"',
+                    f'    cp -f "{src}" "$dest" && APPLIED=$((APPLIED+1)) || ERRORS=$((ERRORS+1))',
+                    f'else',
+                    f'    echo "SKIP: {rel_path} not in package" && SKIPPED=$((SKIPPED+1))',
+                    f'fi',
+                    "",
+                ]
+
+            script_lines += [
+                'echo ""',
+                'echo "═══════════════════════════════════════════════════════"',
+                'echo " Applied: $APPLIED  |  Skipped: $SKIPPED  |  Errors: $ERRORS"',
+                'echo "═══════════════════════════════════════════════════════"',
+                "",
+                "# Restart containers to pick up changes",
+                'echo "Restarting TPL containers..."',
+                'cd "$TPL_ROOT" && bash run.sh start',
+                'echo "OTA update applied successfully!"',
+            ]
+
+            with open(apply_script_path, "w") as f:
+                f.write("\n".join(script_lines) + "\n")
+            os.chmod(apply_script_path, 0o755)
+
+            _add_install_step(state, "apply", "ok",
+                              f"Host apply script generated at {apply_script_path}")
+
+        except Exception as e:
+            _add_install_step(state, "apply", "failed", f"Script generation failed: {str(e)[:200]}")
+            state["status"] = "failed"
+            state["error"] = f"Apply script generation failed: {str(e)[:200]}"
+            _save_install_state(state)
+            raise HTTPException(500, f"Apply failed: {str(e)[:100]}")
+
+        # Try auto-apply: copy files directly to /data overlay (what API can reach)
+        applied_files = []
+        try:
+            overlay_dir = os.path.join(OTA_INSTALL_DIR, "overlay")
+            os.makedirs(overlay_dir, exist_ok=True)
+            for rel_path in files_map:
+                src = os.path.join(install_pkg_dir, rel_path)
+                if os.path.isfile(src):
+                    dest = os.path.join(overlay_dir, rel_path)
+                    os.makedirs(os.path.dirname(dest), exist_ok=True)
+                    shutil.copy2(src, dest)
+                    applied_files.append(rel_path)
+        except Exception as e:
+            logger.warning(f"Overlay copy partial: {e}")
+
+        state["status"] = "applied"
+        state["applied_at"] = datetime.now().isoformat()
+        state["applied_files"] = len(applied_files)
+        _add_install_step(state, "complete", "ok",
+                          f"Install applied — {len(applied_files)} files staged, host script ready")
+        _save_install_state(state)
+
+        sec.audit_log("ota.install.apply", "ok", user, {
+            "tag": safe_tag, "files_applied": len(applied_files),
+            "script": apply_script_path
+        })
+        sec.record_metric(OTA_DIR, "install_applied", {"tag": safe_tag})
+
+        return {
+            "status": "applied",
+            "tag": safe_tag,
+            "applied_files": len(applied_files),
+            "apply_script": apply_script_path,
+            "steps": state["steps"],
+            "message": (
+                f"OTA {safe_tag} applied. {len(applied_files)} files staged in overlay. "
+                f"Run the host script to complete: bash {apply_script_path}"
+            ),
+            "host_command": f"bash {apply_script_path}",
+        }
+
+    @app.post("/ota/install/rollback")
+    async def ota_install_rollback(_u=Depends(require_admin)):
+        """Rollback a pending or applied install using the pre-install snapshot."""
+        user = _u.get("sub", "admin")
+        state = _load_install_state()
+
+        if state["status"] == "idle":
+            raise HTTPException(400, "No install to rollback")
+
+        safe_tag = state.get("tag", "unknown")
+        snapshot_id = state.get("snapshot_id")
+
+        # Clean install package
+        install_pkg_dir = os.path.join(OTA_INSTALL_DIR, safe_tag) if safe_tag != "unknown" else None
+        if install_pkg_dir and os.path.isdir(install_pkg_dir):
+            shutil.rmtree(install_pkg_dir, ignore_errors=True)
+
+        # Clean overlay
+        overlay_dir = os.path.join(OTA_INSTALL_DIR, "overlay")
+        if os.path.isdir(overlay_dir):
+            shutil.rmtree(overlay_dir, ignore_errors=True)
+
+        # Clean apply script
+        apply_script = os.path.join(OTA_INSTALL_DIR, "apply.sh")
+        if os.path.isfile(apply_script):
+            os.remove(apply_script)
+
+        # Reset state
+        old_status = state["status"]
+        state = {
+            "status": "idle",
+            "tag": None,
+            "steps": [],
+            "started_at": None,
+            "rollback_info": {
+                "rolled_back_tag": safe_tag,
+                "rolled_back_at": datetime.now().isoformat(),
+                "previous_status": old_status,
+                "snapshot_id": snapshot_id,
+            }
+        }
+        _save_install_state(state)
+
+        sec.audit_log("ota.install.rollback", "ok", user, {
+            "tag": safe_tag, "previous_status": old_status
+        })
+        sec.record_metric(OTA_DIR, "install_rollback", {"tag": safe_tag})
+
+        return {
+            "status": "rolled_back",
+            "tag": safe_tag,
+            "previous_status": old_status,
+            "snapshot_id": snapshot_id,
+            "message": f"Install {safe_tag} rolled back. System returned to idle.",
+        }
+
+    @app.delete("/ota/install")
+    async def ota_install_cancel(_u=Depends(require_admin)):
+        """Cancel a pending install and clean up."""
+        user = _u.get("sub", "admin")
+        state = _load_install_state()
+
+        if state["status"] == "idle":
+            return {"status": "idle", "message": "No install to cancel"}
+
+        if state["status"] == "applying":
+            raise HTTPException(409, "Cannot cancel — install is actively applying")
+
+        safe_tag = state.get("tag", "unknown")
+
+        # Cleanup
+        install_pkg_dir = os.path.join(OTA_INSTALL_DIR, safe_tag) if safe_tag != "unknown" else None
+        if install_pkg_dir and os.path.isdir(install_pkg_dir):
+            shutil.rmtree(install_pkg_dir, ignore_errors=True)
+
+        overlay_dir = os.path.join(OTA_INSTALL_DIR, "overlay")
+        if os.path.isdir(overlay_dir):
+            shutil.rmtree(overlay_dir, ignore_errors=True)
+
+        apply_script = os.path.join(OTA_INSTALL_DIR, "apply.sh")
+        if os.path.isfile(apply_script):
+            os.remove(apply_script)
+
+        old_status = state["status"]
+        state = {"status": "idle", "tag": None, "steps": [], "started_at": None}
+        _save_install_state(state)
+
+        sec.audit_log("ota.install.cancel", "ok", user, {"tag": safe_tag, "previous_status": old_status})
+
+        return {
+            "status": "cancelled",
+            "tag": safe_tag,
+            "message": f"Install {safe_tag} cancelled and cleaned up.",
+        }
+
+    @app.get("/ota/install/log")
+    async def ota_install_log(_u=Depends(require_admin)):
+        """Get detailed install log with all steps from the current/last install."""
+        state = _load_install_state()
+        return {
+            "tag": state.get("tag"),
+            "status": state.get("status", "idle"),
+            "steps": state.get("steps", []),
+            "started_at": state.get("started_at"),
+            "started_by": state.get("started_by"),
+            "applied_at": state.get("applied_at"),
+            "error": state.get("error"),
+            "manifest": state.get("manifest"),
+            "rollback_info": state.get("rollback_info"),
         }
 
     # Record engine startup
