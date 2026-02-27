@@ -1,10 +1,10 @@
 {
-  "version": "3.1.0",
-  "build": 20260227001,
+  "version": "3.2.0",
+  "build": 20260227002,
   "channel": "stable",
-  "codename": "Fortress",
-  "full_version": "3.1.0+20260227001",
-  "released_at": "2026-02-27T00:00:00Z",
+  "codename": "Horizon",
+  "full_version": "3.2.0+20260227002",
+  "released_at": "2026-02-27T12:00:00Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
 }
