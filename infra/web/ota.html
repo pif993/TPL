@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>TPL · Centro Aggiornamenti OTA</title>
+  <title>TPL · OTA Manager</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta3/dist/css/adminlte.min.css" rel="stylesheet">
@@ -12,458 +12,270 @@
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary sb-collapsed">
   <div class="app-wrapper">
 
-    <!-- Top Navbar -->
+    <!-- Navbar -->
     <nav class="app-header navbar navbar-expand bg-body">
       <div class="container-fluid">
         <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link" id="sidebarToggle" href="#" role="button" aria-label="Toggle sidebar"><i class="bi bi-list"></i></a>
-          </li>
+          <li class="nav-item"><a class="nav-link" id="sidebarToggle" href="#" role="button"><i class="bi bi-list"></i></a></li>
         </ul>
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-danger" href="#" onclick="TPL.logout();return false" aria-label="Logout" title="Logout"><i class="bi bi-box-arrow-right"></i></a>
-          </li>
+          <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link text-danger" href="#" onclick="TPL.logout();return false" title="Logout"><i class="bi bi-box-arrow-right"></i></a></li>
         </ul>
       </div>
     </nav>
 
-    <!-- Sidebar -->
     <div id="sidebarMount"></div>
 
-    <!-- Main Content -->
     <main class="app-main">
-      <div class="app-content-header">
-        <div class="container-fluid">
-          <div class="row">
-            <div class="col-sm-6"><h3 class="mb-0"><i class="bi bi-cloud-arrow-down me-2"></i>Aggiornamenti OTA</h3></div>
-            <div class="col-sm-6">
-              <ol class="breadcrumb float-sm-end">
-                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item active">OTA</li>
-              </ol>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="app-content">
-        <div class="container-fluid ota2">
+        <div class="container-fluid p-3 p-lg-4">
 
-          <!-- ═══ HERO ═══════════════════════════════════════════ -->
-          <div class="ota2-hero">
-            <div class="ota2-hero-bg"></div>
-            <div class="ota2-hero-content">
-              <div class="ota2-hero-left">
-                <h2 class="ota2-hero-title">
-                  <span class="ota2-hero-icon"><i class="bi bi-cloud-arrow-down-fill"></i></span>
-                  Centro Aggiornamenti OTA
+          <!-- ═══ HERO: Version Transition ═══════════════════════ -->
+          <div class="ota-pipe-hero">
+            <div class="ota-pipe-hero-bg"></div>
+            <div class="ota-pipe-hero-content">
+              <div class="ota-pipe-hero-left">
+                <h2 class="ota-pipe-hero-title">
+                  <i class="bi bi-cloud-arrow-down-fill"></i> OTA Manager
                 </h2>
-                <p class="ota2-hero-sub">Gestione aggiornamenti con certificazione crittografica Ed25519, verifica SHA-256 e rollback automatico</p>
+                <p class="ota-pipe-hero-sub">Aggiornamenti completamente automatizzati · Ed25519 + SHA-256</p>
               </div>
-              <div class="ota2-hero-right">
-                <span class="ota2-hero-chip" id="otaGuard"><i class="bi bi-hourglass-split"></i> Verifica…</span>
-                <span class="ota2-hero-chip ota2-hero-chip--sec" id="otaHeroSecBadge"><i class="bi bi-shield-lock-fill"></i> —</span>
+              <div class="ota-pipe-hero-versions">
+                <div class="ota-pipe-ver ota-pipe-ver--current">
+                  <small>Corrente</small>
+                  <strong id="otaHeroCurrentVer">—</strong>
+                </div>
+                <div class="ota-pipe-ver-arrow" id="otaHeroArrow" style="display:none">
+                  <i class="bi bi-arrow-right-circle-fill"></i>
+                </div>
+                <div class="ota-pipe-ver ota-pipe-ver--new" id="otaHeroNewVer" style="display:none">
+                  <small>Disponibile</small>
+                  <strong id="otaHeroLatestVer">—</strong>
+                </div>
+              </div>
+              <div class="ota-pipe-hero-badges">
+                <span class="ota-pipe-badge" id="otaHeroBadge"><i class="bi bi-hourglass-split"></i> Verifica…</span>
+                <span class="ota-pipe-badge ota-pipe-badge--sec" id="otaHeroSecBadge"><i class="bi bi-shield-lock-fill"></i> —</span>
               </div>
             </div>
           </div>
 
-          <!-- ═══ Toast ══════════════════════════════════════════ -->
-          <div id="otaToast" class="d-none" role="alert" aria-live="polite"></div>
+          <!-- ═══ PIPELINE CARD (main focus) ═════════════════════ -->
+          <div class="ota-pipe-card ota-pipe-card--main">
+            <div class="ota-pipe-card-head">
+              <span class="ota-pipe-card-title"><i class="bi bi-lightning-charge-fill"></i> Pipeline di Aggiornamento</span>
+              <span class="ota-pipe-pill" id="otaPipePill">idle</span>
+            </div>
 
-          <!-- ═══ KPI ROW ════════════════════════════════════════ -->
-          <div class="ota2-kpi-row">
-            <div class="ota2-kpi" data-accent="primary">
-              <div class="ota2-kpi-icon"><i class="bi bi-box-seam-fill"></i></div>
-              <div class="ota2-kpi-body">
-                <div class="ota2-kpi-value" id="otaPageCurrentVer">—</div>
-                <div class="ota2-kpi-label">Versione corrente</div>
+            <!-- Pipeline Stepper -->
+            <div class="ota-pipe-stepper" id="otaPipeStepper">
+              <div class="ota-pipe-step" data-step="check">
+                <div class="ota-pipe-step-icon"><i class="bi bi-search"></i></div>
+                <div class="ota-pipe-step-label">Verifica</div>
+              </div>
+              <div class="ota-pipe-step-line"></div>
+              <div class="ota-pipe-step" data-step="prepare">
+                <div class="ota-pipe-step-icon"><i class="bi bi-download"></i></div>
+                <div class="ota-pipe-step-label">Prepara</div>
+              </div>
+              <div class="ota-pipe-step-line"></div>
+              <div class="ota-pipe-step" data-step="verify">
+                <div class="ota-pipe-step-icon"><i class="bi bi-shield-check"></i></div>
+                <div class="ota-pipe-step-label">Verifica Sicurezza</div>
+              </div>
+              <div class="ota-pipe-step-line"></div>
+              <div class="ota-pipe-step" data-step="apply">
+                <div class="ota-pipe-step-icon"><i class="bi bi-gear-wide-connected"></i></div>
+                <div class="ota-pipe-step-label">Applica</div>
+              </div>
+              <div class="ota-pipe-step-line"></div>
+              <div class="ota-pipe-step" data-step="finalize">
+                <div class="ota-pipe-step-icon"><i class="bi bi-check-circle"></i></div>
+                <div class="ota-pipe-step-label">Completa</div>
               </div>
             </div>
-            <div class="ota2-kpi" data-accent="success" id="otaKpiLatest">
-              <div class="ota2-kpi-icon"><i class="bi bi-arrow-up-circle-fill"></i></div>
-              <div class="ota2-kpi-body">
-                <div class="ota2-kpi-value" id="otaPageLatestVer">—</div>
-                <div class="ota2-kpi-label">Ultima disponibile</div>
-              </div>
-              <div class="ota2-kpi-badge" id="otaPageStatusBadge"><i class="bi bi-circle-fill"></i> —</div>
-            </div>
-            <div class="ota2-kpi" data-accent="info">
-              <div class="ota2-kpi-icon"><i class="bi bi-tag-fill"></i></div>
-              <div class="ota2-kpi-body">
-                <div class="ota2-kpi-value" id="otaKpiRelCount">—</div>
-                <div class="ota2-kpi-label">Release</div>
+
+            <!-- CTA + Status Area -->
+            <div class="ota-pipe-cta-area">
+              <button class="ota-pipe-cta" id="otaPipeCta" type="button">
+                <i class="bi bi-arrow-repeat" id="otaPipeCtaIcon"></i>
+                <span id="otaPipeCtaText">Verifica aggiornamenti</span>
+              </button>
+              <div class="ota-pipe-status" id="otaPipeStatus">
+                <span class="text-muted small">Pronto per la verifica</span>
               </div>
             </div>
-            <div class="ota2-kpi" data-accent="warning">
-              <div class="ota2-kpi-icon"><i class="bi bi-clock-history"></i></div>
-              <div class="ota2-kpi-body">
-                <div class="ota2-kpi-value ota2-kpi-value--sm" id="otaPageCheckInfo">mai</div>
-                <div class="ota2-kpi-label">Ultimo controllo</div>
+
+            <!-- Real-time Pipeline Log -->
+            <div class="ota-pipe-log-wrap" id="otaPipeLogWrap" style="display:none">
+              <div class="ota-pipe-log-head">
+                <i class="bi bi-terminal-fill"></i> Log Pipeline
+                <button class="ota-pipe-log-toggle" id="otaPipeLogToggle" type="button" title="Comprimi"><i class="bi bi-chevron-up"></i></button>
               </div>
-              <div class="ota2-kpi-sub" id="otaPageRateLimit"></div>
+              <div class="ota-pipe-log" id="otaPipeLog"></div>
+            </div>
+
+            <!-- Install Controls (shown only during/after install) -->
+            <div class="ota-pipe-controls d-none" id="otaPipeControls">
+              <button class="ota-pipe-btn ota-pipe-btn--danger" id="otaPipeRollbackBtn" type="button" disabled>
+                <i class="bi bi-arrow-counterclockwise"></i> Rollback
+              </button>
+              <button class="ota-pipe-btn" id="otaPipeCancelBtn" type="button" disabled>
+                <i class="bi bi-x-circle"></i> Annulla
+              </button>
             </div>
           </div>
 
-          <!-- ═══ ACTION BAR ═════════════════════════════════════ -->
-          <div class="ota2-action-bar">
-            <button class="ota2-action-btn ota2-action-btn--primary" id="otaPageCheckBtn" type="button">
-              <i class="bi bi-arrow-clockwise"></i> Verifica aggiornamenti
-            </button>
-            <div class="ota2-action-sep"></div>
-            <button class="ota2-action-btn" id="otaSecSimulateBtn" type="button">
-              <i class="bi bi-play-circle"></i> Simula sicurezza
-            </button>
-            <button class="ota2-action-btn" id="otaSecVerifyChainBtn" type="button">
-              <i class="bi bi-link-45deg"></i> Verifica chain
-            </button>
-            <button class="ota2-action-btn" id="otaSecRepairChainBtn" type="button" style="display:none">
-              <i class="bi bi-wrench-adjustable"></i> Ripara chain
-            </button>
-            <button class="ota2-action-btn" id="otaSecRefreshBtn" type="button">
-              <i class="bi bi-shield-check"></i> Trust info
-            </button>
-            <div class="ota2-action-sep"></div>
-            <button class="ota2-action-btn ota2-action-btn--test" id="otaTestCreateBtn" type="button">
-              <i class="bi bi-box-seam"></i> Crea test update
-            </button>
-          </div>
+          <!-- ═══ MAIN GRID: Releases + Security ════════════════ -->
+          <div class="ota-pipe-grid">
 
-          <!-- Notification -->
-          <div id="otaPageNotification" class="ota-notification d-none"></div>
-
-          <!-- Progress -->
-          <div id="otaPageProgress" class="ota-progress d-none"></div>
-
-          <!-- ═══ MAIN GRID ══════════════════════════════════════ -->
-          <div class="ota2-grid">
-
-            <!-- LEFT COL -->
-            <div class="ota2-col-main">
-
-              <!-- Releases -->
-              <div class="ota2-card">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-tag-fill"></i> Release Disponibili</span>
-                  <span class="ota2-pill" id="otaPageRelPill">—</span>
+            <!-- LEFT: Releases -->
+            <div class="ota-pipe-col-main">
+              <div class="ota-pipe-card">
+                <div class="ota-pipe-card-head">
+                  <span class="ota-pipe-card-title"><i class="bi bi-tag-fill"></i> Release</span>
+                  <span class="ota-pipe-pill" id="otaRelPill">—</span>
+                  <button class="ota-pipe-btn ota-pipe-btn--sm ms-auto" id="otaCheckBtn" type="button" title="Verifica">
+                    <i class="bi bi-arrow-clockwise"></i>
+                  </button>
                 </div>
-                <div class="ota2-card-body" id="otaPageReleaseList">
-                  <div class="ota2-skeleton"><div class="ota2-skel-line"></div><div class="ota2-skel-line w-75"></div><div class="ota2-skel-line w-50"></div></div>
+                <div class="ota-pipe-card-body" id="otaReleaseList">
+                  <div class="ota-pipe-skeleton"><div class="ota-pipe-skel-line"></div><div class="ota-pipe-skel-line w-75"></div></div>
                 </div>
               </div>
 
-              <!-- Detail (hidden) -->
-              <div class="ota2-card d-none" id="otaPageDetailPanel">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-info-circle-fill"></i> Dettaglio Release</span>
-                  <button class="ota2-card-close" id="otaPageBackBtn" type="button" title="Chiudi"><i class="bi bi-x-lg"></i></button>
+              <!-- Detail Panel (hidden by default) -->
+              <div class="ota-pipe-card d-none" id="otaDetailPanel">
+                <div class="ota-pipe-card-head">
+                  <span class="ota-pipe-card-title"><i class="bi bi-info-circle-fill"></i> Dettaglio</span>
+                  <button class="ota-pipe-card-close" id="otaDetailCloseBtn" type="button"><i class="bi bi-x-lg"></i></button>
                 </div>
-                <div class="ota2-card-body" id="otaPageReleaseDetail"></div>
+                <div class="ota-pipe-card-body" id="otaDetailContent"></div>
               </div>
 
-              <!-- Security Results -->
+              <!-- Security Results (shown on verify/simulate) -->
               <div id="otaSecResults" class="d-none"></div>
-
             </div>
 
-            <!-- RIGHT COL -->
-            <div class="ota2-col-side">
+            <!-- RIGHT: Security + Config -->
+            <div class="ota-pipe-col-side">
 
-              <!-- Security Card -->
-              <div class="ota2-card ota2-card--sec">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-shield-lock-fill"></i> Sicurezza</span>
-                  <span class="ota2-sec-badge" id="otaSecBadge"><i class="bi bi-shield-check"></i> —</span>
+              <!-- Security Status -->
+              <div class="ota-pipe-card ota-pipe-card--sec">
+                <div class="ota-pipe-card-head">
+                  <span class="ota-pipe-card-title"><i class="bi bi-shield-lock-fill"></i> Sicurezza</span>
+                  <span class="ota-pipe-sec-badge" id="otaSecBadge"><i class="bi bi-shield-check"></i> —</span>
                 </div>
-                <div class="ota2-card-body">
-                  <div class="ota2-sec-keys">
-                    <div class="ota2-sec-row">
-                      <i class="bi bi-key-fill ota2-ic--pub"></i>
-                      <span class="ota2-sec-lbl">Publisher</span>
-                      <span class="ota2-sec-val" id="otaSecPublisherKey">—</span>
-                    </div>
-                    <div class="ota2-sec-row">
-                      <i class="bi bi-cpu-fill ota2-ic--plat"></i>
-                      <span class="ota2-sec-lbl">Platform</span>
-                      <span class="ota2-sec-val" id="otaSecPlatformKey">—</span>
-                    </div>
-                    <div class="ota2-sec-row">
-                      <i class="bi bi-fingerprint ota2-ic--algo"></i>
-                      <span class="ota2-sec-lbl">Algoritmi</span>
-                      <span class="ota2-sec-val" id="otaSecAlgorithms">—</span>
-                    </div>
-                    <div class="ota2-sec-row">
-                      <i class="bi bi-link-45deg ota2-ic--chain"></i>
-                      <span class="ota2-sec-lbl">Chain</span>
-                      <span class="ota2-sec-val" id="otaSecChainInfo">—</span>
-                    </div>
+                <div class="ota-pipe-card-body">
+                  <div class="ota-pipe-sec-keys">
+                    <div class="ota-pipe-sec-row"><i class="bi bi-key-fill"></i><span>Publisher</span><span id="otaSecPubKey">—</span></div>
+                    <div class="ota-pipe-sec-row"><i class="bi bi-cpu-fill"></i><span>Platform</span><span id="otaSecPlatKey">—</span></div>
+                    <div class="ota-pipe-sec-row"><i class="bi bi-fingerprint"></i><span>Algoritmi</span><span id="otaSecAlgo">—</span></div>
+                    <div class="ota-pipe-sec-row"><i class="bi bi-link-45deg"></i><span>Chain</span><span id="otaSecChain">—</span></div>
+                    <div class="ota-pipe-sec-row"><i class="bi bi-pin-map-fill"></i><span>TOFU</span><span id="otaSecTofu">—</span></div>
                   </div>
 
-                  <!-- Trust flow -->
-                  <div class="ota2-trust-flow">
-                    <div class="ota2-tf-step"><i class="bi bi-pen-fill"></i> Firma</div>
-                    <i class="bi bi-chevron-right ota2-tf-arrow"></i>
-                    <div class="ota2-tf-step"><i class="bi bi-hash"></i> Hash</div>
-                    <i class="bi bi-chevron-right ota2-tf-arrow"></i>
-                    <div class="ota2-tf-step"><i class="bi bi-shield-fill-check"></i> Verify</div>
-                    <i class="bi bi-chevron-right ota2-tf-arrow"></i>
-                    <div class="ota2-tf-step"><i class="bi bi-journal-bookmark-fill"></i> Audit</div>
+                  <div class="ota-pipe-sec-actions">
+                    <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaSecChainBtn" type="button"><i class="bi bi-link-45deg"></i> Chain</button>
+                    <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaSecRepairBtn" type="button" style="display:none"><i class="bi bi-wrench"></i> Ripara</button>
+                    <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaSecSimBtn" type="button"><i class="bi bi-play-circle"></i> Simula</button>
+                    <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaSecRefreshBtn" type="button"><i class="bi bi-arrow-clockwise"></i></button>
                   </div>
 
-                  <!-- Policy -->
-                  <details class="ota2-details">
-                    <summary><i class="bi bi-sliders2"></i> Policy sicurezza</summary>
-                    <div class="ota2-details-body">
-                      <label class="ota2-toggle"><span>Firma obbligatoria</span><input class="form-check-input" type="checkbox" id="otaSecCfgSignature" checked></label>
-                      <label class="ota2-toggle"><span>Checksum obbligatorio</span><input class="form-check-input" type="checkbox" id="otaSecCfgChecksum" checked></label>
-                      <label class="ota2-toggle"><span>Quarantena sospetti</span><input class="form-check-input" type="checkbox" id="otaSecCfgQuarantine" checked></label>
-                      <label class="ota2-toggle"><span>TOFU (Trust On First Use)</span><input class="form-check-input" type="checkbox" id="otaSecCfgTofu" checked></label>
-                      <label class="ota2-toggle"><span>Rischio max</span><input type="number" class="form-control form-control-sm" id="otaSecCfgMaxRisk" value="30" min="0" max="100" style="width:56px"></label>
-                      <div class="ota2-details-actions">
-                        <button class="ota2-action-btn ota2-action-btn--sm" id="otaSecCfgSaveBtn" type="button"><i class="bi bi-check-lg"></i> Salva</button>
+                  <details class="ota-pipe-details">
+                    <summary><i class="bi bi-sliders2"></i> Policy &amp; Lockdown</summary>
+                    <div class="ota-pipe-details-body">
+                      <label class="ota-pipe-toggle"><span>Firma obbligatoria</span><input class="form-check-input" type="checkbox" id="otaSecCfgSig" checked></label>
+                      <label class="ota-pipe-toggle"><span>Checksum obbligatorio</span><input class="form-check-input" type="checkbox" id="otaSecCfgCheck" checked></label>
+                      <label class="ota-pipe-toggle"><span>Quarantena sospetti</span><input class="form-check-input" type="checkbox" id="otaSecCfgQuar" checked></label>
+                      <label class="ota-pipe-toggle"><span>Rischio max</span><input type="number" class="form-control form-control-sm" id="otaSecCfgRisk" value="30" min="0" max="100" style="width:56px"></label>
+                      <div class="ota-pipe-details-actions">
+                        <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaSecCfgSaveBtn" type="button"><i class="bi bi-check-lg"></i> Salva</button>
                         <span id="otaSecCfgResult" class="small"></span>
                       </div>
-                    </div>
-                  </details>
-
-                  <!-- Lockdown Mode -->
-                  <details class="ota2-details">
-                    <summary><i class="bi bi-lock-fill"></i> Lockdown Mode</summary>
-                    <div class="ota2-details-body">
-                      <p class="small text-muted mb-2">Blocca download, preparazioni e rotazioni chiave</p>
+                      <hr class="my-2 opacity-25">
                       <div class="d-flex align-items-center gap-2">
-                        <span class="ota2-lockdown-status" id="otaLockdownStatus"><i class="bi bi-unlock-fill"></i> Inattivo</span>
-                        <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--danger" id="otaLockdownToggle" type="button">
-                          <i class="bi bi-lock-fill"></i> Attiva lockdown
-                        </button>
+                        <span id="otaLockdownStatus"><i class="bi bi-unlock-fill"></i> Inattivo</span>
+                        <button class="ota-pipe-btn ota-pipe-btn--sm ota-pipe-btn--danger" id="otaLockdownBtn" type="button"><i class="bi bi-lock-fill"></i> Lockdown</button>
                       </div>
                     </div>
                   </details>
-
-                </div>
-              </div>
-
-              <!-- TOFU & Key Rotation -->
-              <div class="ota2-card">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-fingerprint"></i> TOFU & Chiavi</span>
-                </div>
-                <div class="ota2-card-body">
-                  <div class="ota2-sec-row">
-                    <i class="bi bi-pin-map-fill ota2-ic--pub"></i>
-                    <span class="ota2-sec-lbl">Pin attivi</span>
-                    <span class="ota2-sec-val" id="otaTofuPins">—</span>
-                  </div>
-                  <div class="ota2-sec-row">
-                    <i class="bi bi-check-circle-fill ota2-ic--algo"></i>
-                    <span class="ota2-sec-lbl">TOFU Status</span>
-                    <span class="ota2-sec-val" id="otaTofuStatus">—</span>
-                  </div>
-                  <div class="d-flex gap-2 mt-2">
-                    <button class="ota2-action-btn ota2-action-btn--sm" id="otaTofuVerifyBtn" type="button">
-                      <i class="bi bi-shield-check"></i> Verifica TOFU
-                    </button>
-                    <span id="otaTofuResult" class="small"></span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Metrics -->
-              <div class="ota2-card">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-graph-up-arrow"></i> Metriche OTA</span>
-                </div>
-                <div class="ota2-card-body" id="otaMetricsBody">
-                  <div class="ota2-skeleton"><div class="ota2-skel-line"></div><div class="ota2-skel-line w-75"></div></div>
-                </div>
-              </div>
-
-              <!-- Health -->
-              <div class="ota2-card">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-heart-pulse-fill"></i> Health Check</span>
-                </div>
-                <div class="ota2-card-body">
-                  <div id="otaHealthBody">
-                    <span class="text-muted small">Nessun check eseguito</span>
-                  </div>
-                  <button class="ota2-action-btn ota2-action-btn--sm mt-2" id="otaHealthRunBtn" type="button">
-                    <i class="bi bi-heart-pulse"></i> Esegui health check
-                  </button>
                 </div>
               </div>
 
               <!-- Config -->
-              <div class="ota2-card">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-gear-wide-connected"></i> Configurazione</span>
+              <div class="ota-pipe-card">
+                <div class="ota-pipe-card-head">
+                  <span class="ota-pipe-card-title"><i class="bi bi-gear-wide-connected"></i> Config</span>
                 </div>
-                <div class="ota2-card-body">
-                  <label class="ota2-toggle"><span>Auto-check</span><input class="form-check-input" type="checkbox" id="otaPageCfgAutoCheck" checked></label>
-                  <label class="ota2-cfg-field"><span>Intervallo (min)</span><input type="number" class="form-control form-control-sm" id="otaPageCfgInterval" value="60" min="15" max="1440" style="width:68px"></label>
-                  <label class="ota2-cfg-field"><span>Branch</span><input type="text" class="form-control form-control-sm" id="otaPageCfgBranch" value="main" style="width:88px"></label>
-                  <label class="ota2-toggle"><span>Pre-release</span><input class="form-check-input" type="checkbox" id="otaPageCfgPreRelease"></label>
-                  <div class="mt-2 d-flex align-items-center gap-2">
-                    <button class="ota2-action-btn ota2-action-btn--sm" id="otaPageCfgSaveBtn" type="button"><i class="bi bi-check-lg"></i> Salva</button>
-                    <span id="otaPageCfgResult" class="small"></span>
+                <div class="ota-pipe-card-body">
+                  <label class="ota-pipe-toggle"><span>Auto-check</span><input class="form-check-input" type="checkbox" id="otaCfgAuto" checked></label>
+                  <div class="d-flex gap-2 align-items-center mb-1">
+                    <label class="ota-pipe-cfg-field mb-0"><span>Intervallo</span><input type="number" class="form-control form-control-sm" id="otaCfgInterval" value="60" min="15" max="1440" style="width:56px"><span class="text-muted" style="font-size:.65rem">min</span></label>
+                    <label class="ota-pipe-cfg-field mb-0"><span>Branch</span><input type="text" class="form-control form-control-sm" id="otaCfgBranch" value="main" style="width:72px"></label>
                   </div>
-                </div>
-              </div>
-
-              <!-- OTA Install Wizard -->
-              <div class="ota2-card ota2-card--install">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-download"></i> Installazione OTA</span>
-                  <span class="ota2-pill" id="otaInstallPill">idle</span>
-                </div>
-                <div class="ota2-card-body">
-                  <p class="small text-muted mb-2">Pipeline di installazione automatica: preflight → verifica → backup → installa</p>
-
-                  <!-- Status display -->
-                  <div id="otaInstallStatus" class="ota2-install-status">
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                      <i class="bi bi-circle text-muted"></i>
-                      <span class="small text-muted">Nessuna installazione in corso</span>
-                    </div>
+                  <label class="ota-pipe-toggle"><span>Pre-release</span><input class="form-check-input" type="checkbox" id="otaCfgPre"></label>
+                  <div class="d-flex align-items-center gap-2">
+                    <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaCfgSaveBtn" type="button"><i class="bi bi-check-lg"></i> Salva</button>
+                    <span id="otaCfgResult" class="small"></span>
                   </div>
-
-                  <!-- Progress bar -->
-                  <div id="otaInstallProgressWrap" class="d-none mb-2">
-                    <div class="ota2-install-progress">
-                      <div class="ota2-install-progress-bar" id="otaInstallProgressBar" style="width:0%"></div>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                      <small class="text-muted" id="otaInstallProgressText">0 / 5</small>
-                      <small class="text-muted" id="otaInstallTag">—</small>
-                    </div>
-                  </div>
-
-                  <!-- Steps log -->
-                  <div id="otaInstallSteps" class="ota2-install-steps d-none"></div>
-
-                  <!-- Actions -->
-                  <div class="ota2-install-actions mt-2">
-                    <div class="d-flex gap-1 flex-wrap">
-                      <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--primary" id="otaInstallStartBtn" type="button">
-                        <i class="bi bi-play-fill"></i> Installa
-                      </button>
-                      <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--success" id="otaInstallApplyBtn" type="button" disabled>
-                        <i class="bi bi-check-circle"></i> Applica
-                      </button>
-                      <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--danger" id="otaInstallRollbackBtn" type="button" disabled>
-                        <i class="bi bi-arrow-counterclockwise"></i> Rollback
-                      </button>
-                      <button class="ota2-action-btn ota2-action-btn--sm" id="otaInstallCancelBtn" type="button" disabled>
-                        <i class="bi bi-x-circle"></i> Annulla
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Host command (shown after apply) -->
-                  <div id="otaInstallHostCmd" class="d-none mt-2">
-                    <div class="ota2-cmd" data-copy="" id="otaInstallHostCmdCopy">
-                      <code id="otaInstallHostCmdText">—</code><span>Esegui su host</span>
-                    </div>
-                  </div>
-
-                  <div id="otaInstallResult" class="mt-2 small"></div>
                 </div>
               </div>
 
-              <!-- Test Update Delivery -->
-              <div class="ota2-card ota2-card--test">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-box-seam-fill"></i> Test Update OTA</span>
-                  <span class="ota2-pill" id="otaTestPill">—</span>
-                </div>
-                <div class="ota2-card-body">
-                  <p class="small text-muted mb-2">Crea e consegna un aggiornamento di test v3.1.0-rc1 attraverso la pipeline OTA completa</p>
-                  <div id="otaTestInfo">
-                    <span class="text-muted small">Nessun test update</span>
-                  </div>
-                  <div class="ota2-test-actions mt-2">
-                    <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--test" id="otaTestCreateBtn2" type="button">
-                      <i class="bi bi-plus-circle"></i> Crea pacchetto
-                    </button>
-                    <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--primary" id="otaTestDeliverBtn" type="button" disabled>
-                      <i class="bi bi-send"></i> Consegna OTA
-                    </button>
-                    <button class="ota2-action-btn ota2-action-btn--sm" id="otaTestVerifyBtn" type="button" disabled>
-                      <i class="bi bi-shield-check"></i> Verifica
-                    </button>
-                    <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--danger" id="otaTestCleanBtn" type="button" disabled>
-                      <i class="bi bi-trash3"></i> Rimuovi
-                    </button>
+              <!-- Test Update (collapsible) -->
+              <details class="ota-pipe-card">
+                <summary class="ota-pipe-card-head" style="cursor:pointer;list-style:none">
+                  <span class="ota-pipe-card-title"><i class="bi bi-box-seam-fill"></i> Test Update</span>
+                  <span class="ota-pipe-pill" id="otaTestPill">—</span>
+                </summary>
+                <div class="ota-pipe-card-body">
+                  <div id="otaTestInfo"><span class="text-muted small">Nessun test update</span></div>
+                  <div class="d-flex gap-1 flex-wrap mt-2">
+                    <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaTestCreateBtn" type="button"><i class="bi bi-plus-circle"></i> Crea</button>
+                    <button class="ota-pipe-btn ota-pipe-btn--sm ota-pipe-btn--primary" id="otaTestDeliverBtn" type="button" disabled><i class="bi bi-send"></i> Consegna</button>
+                    <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaTestVerifyBtn" type="button" disabled><i class="bi bi-shield-check"></i> Verifica</button>
+                    <button class="ota-pipe-btn ota-pipe-btn--sm ota-pipe-btn--danger" id="otaTestCleanBtn" type="button" disabled><i class="bi bi-trash3"></i> Rimuovi</button>
                   </div>
                   <div id="otaTestResult" class="mt-2 small"></div>
                 </div>
-              </div>
-
-              <!-- Host Commands -->
-              <div class="ota2-card">
-                <div class="ota2-card-head">
-                  <span class="ota2-card-title"><i class="bi bi-terminal-fill"></i> Host CLI</span>
-                </div>
-                <div class="ota2-card-body ota2-cmd-list">
-                  <div class="ota2-cmd" data-copy="sudo bash scripts/ota_update.sh --check">
-                    <code>--check</code><span>Verifica pronti</span>
-                  </div>
-                  <div class="ota2-cmd" data-copy="sudo bash scripts/ota_update.sh --apply <tag>">
-                    <code>--apply &lt;tag&gt;</code><span>Applica + backup</span>
-                  </div>
-                  <div class="ota2-cmd" data-copy="sudo bash scripts/ota_update.sh --rollback">
-                    <code>--rollback</code><span>Ripristina</span>
-                  </div>
-                  <div class="ota2-cmd" data-copy="sudo bash scripts/ota_update.sh --list">
-                    <code>--list</code><span>Elenco staged</span>
-                  </div>
-                </div>
-              </div>
-
+              </details>
             </div>
           </div>
 
-          <!-- ═══ BOTTOM ROW ═════════════════════════════════════ -->
-          <div class="ota2-bottom">
-            <div class="ota2-card">
-              <div class="ota2-card-head">
-                <span class="ota2-card-title"><i class="bi bi-journal-text"></i> Changelog</span>
+          <!-- ═══ BOTTOM: Changelog + Rollback/Snapshots ════════ -->
+          <div class="ota-pipe-bottom">
+            <div class="ota-pipe-card">
+              <div class="ota-pipe-card-head">
+                <span class="ota-pipe-card-title"><i class="bi bi-journal-text"></i> Changelog</span>
               </div>
-              <div class="ota2-card-body ota2-scroll" id="otaPageChangelog">
-                <div class="ota2-skeleton"><div class="ota2-skel-line"></div><div class="ota2-skel-line w-75"></div></div>
-              </div>
-            </div>
-            <div class="ota2-card">
-              <div class="ota2-card-head">
-                <span class="ota2-card-title"><i class="bi bi-arrow-counterclockwise"></i> Rollback Points</span>
-                <span class="ota2-pill" id="otaPageRbPill">—</span>
-              </div>
-              <div class="ota2-card-body ota2-scroll" id="otaPageRollbackList">
-                <div class="ota2-skeleton"><div class="ota2-skel-line"></div><div class="ota2-skel-line w-75"></div></div>
+              <div class="ota-pipe-card-body ota-pipe-scroll" id="otaChangelog">
+                <div class="ota-pipe-skeleton"><div class="ota-pipe-skel-line"></div><div class="ota-pipe-skel-line w-75"></div></div>
               </div>
             </div>
-            <div class="ota2-card">
-              <div class="ota2-card-head">
-                <span class="ota2-card-title"><i class="bi bi-camera-fill"></i> Rollback Snapshots</span>
-                <span class="ota2-pill" id="otaPageSnapPill">—</span>
+            <div class="ota-pipe-card">
+              <div class="ota-pipe-card-head">
+                <span class="ota-pipe-card-title"><i class="bi bi-arrow-counterclockwise"></i> Rollback &amp; Snapshot</span>
+                <span class="ota-pipe-pill" id="otaRbPill">—</span>
               </div>
-              <div class="ota2-card-body ota2-scroll" id="otaPageSnapshotList">
-                <div class="ota2-skeleton"><div class="ota2-skel-line"></div><div class="ota2-skel-line w-75"></div></div>
+              <div class="ota-pipe-card-body ota-pipe-scroll" id="otaRollbackList">
+                <div class="ota-pipe-skeleton"><div class="ota-pipe-skel-line"></div></div>
               </div>
-              <div class="mt-2">
-                <button class="ota2-action-btn ota2-action-btn--sm" id="otaSnapCreateBtn" type="button">
-                  <i class="bi bi-camera"></i> Crea snapshot
-                </button>
+              <div class="ota-pipe-card-body ota-pipe-scroll" id="otaSnapshotList" style="border-top:1px solid rgba(0,0,0,.06)">
+                <div class="ota-pipe-skeleton"><div class="ota-pipe-skel-line w-50"></div></div>
+              </div>
+              <div class="px-3 pb-2 d-flex align-items-center gap-2">
+                <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaSnapCreateBtn" type="button"><i class="bi bi-camera"></i> Snapshot</button>
+                <span class="ota-pipe-pill" id="otaSnapPill">—</span>
               </div>
             </div>
           </div>
 
-          <!-- Shortcuts -->
-          <div class="ota2-shortcuts">
-            <kbd>R</kbd> aggiorna <kbd>C</kbd> controlla <kbd>S</kbd> simulazione <kbd>T</kbd> test update <kbd>I</kbd> installa <kbd>Esc</kbd> chiudi
+          <!-- Toast -->
+          <div id="otaToast" class="d-none" role="alert" aria-live="polite"></div>
+
+          <div class="ota-pipe-shortcuts">
+            <kbd>R</kbd> aggiorna <kbd>C</kbd> verifica <kbd>S</kbd> simula <kbd>U</kbd> aggiorna <kbd>Esc</kbd> chiudi
           </div>
 
         </div>
@@ -471,7 +283,7 @@
     </main>
 
     <footer class="app-footer">
-      <div class="float-end d-none d-sm-inline">v3.5</div>
+      <div class="float-end d-none d-sm-inline">v5.0</div>
       <strong>&copy; TPL Platform</strong>
     </footer>
 
@@ -486,11 +298,11 @@
         const me = await TPL.jsonFetch('/api/me');
         if (me.roles && me.roles.includes('admin')) TPLSidebar.setAdmin(true);
         TPLSidebar.setUser(me.sub || '—');
-        const g = document.getElementById('otaGuard');
-        if (g) { g.className = 'ota2-hero-chip'; g.innerHTML = `<i class="bi bi-person-check-fill"></i> ${me.sub}`; }
+        const g = document.getElementById('otaHeroBadge');
+        if (g) { g.className = 'ota-pipe-badge'; g.innerHTML = `<i class="bi bi-person-check-fill"></i> ${me.sub}`; }
       } catch { location.href = '/'; }
     })();
   </script>
-  <script src="/ota.js?v=3.5"></script>
+  <script src="/ota.js?v=5.0"></script>
 </body>
 </html>

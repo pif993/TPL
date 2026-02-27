@@ -5685,3 +5685,442 @@ body.tpl-compact * { transition: none !important; }
   .ota2-sec-checks { grid-template-columns: 1fr; }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   OTA PIPELINE (ota-pipe-*) — Smart Pipeline Design System
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Hero ───────────────────────────────────────────────────── */
+.ota-pipe-hero {
+  position: relative;
+  border-radius: 1rem;
+  padding: 2rem 2.25rem;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  color: #fff;
+}
+.ota-pipe-hero-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 40%, #a855f7 100%);
+  z-index: 0;
+}
+.ota-pipe-hero-content {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.5rem; flex-wrap: wrap;
+}
+.ota-pipe-hero-left { flex: 1; min-width: 200px; }
+.ota-pipe-hero-title {
+  font-size: 1.5rem; font-weight: 700; margin: 0 0 .25rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.ota-pipe-hero-sub { margin: 0; opacity: .85; font-size: .85rem; }
+.ota-pipe-hero-versions {
+  display: flex; align-items: center; gap: .75rem;
+}
+.ota-pipe-ver {
+  text-align: center; padding: .5rem 1rem;
+  border-radius: .75rem;
+  background: rgba(255,255,255,.12); backdrop-filter: blur(8px);
+}
+.ota-pipe-ver small { display: block; font-size: .65rem; opacity: .7; text-transform: uppercase; letter-spacing: .04em; }
+.ota-pipe-ver strong { font-size: 1.15rem; font-weight: 700; }
+.ota-pipe-ver--current { border: 1px solid rgba(255,255,255,.25); }
+.ota-pipe-ver--new { border: 1px solid rgba(34,197,94,.6); background: rgba(34,197,94,.15); }
+.ota-pipe-ver-arrow {
+  font-size: 1.5rem; opacity: .6;
+  animation: otaPipeArrowPulse 1.5s ease-in-out infinite;
+}
+@keyframes otaPipeArrowPulse {
+  0%, 100% { opacity: .5; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(3px); }
+}
+.ota-pipe-hero-badges { display: flex; gap: .5rem; margin-top: .75rem; flex-wrap: wrap; }
+.ota-pipe-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .25rem .65rem; border-radius: 2rem;
+  font-size: .7rem; font-weight: 600;
+  background: rgba(255,255,255,.15); backdrop-filter: blur(6px);
+  color: #fff;
+}
+.ota-pipe-badge--sec { background: rgba(34,197,94,.2); }
+
+/* ── Cards ──────────────────────────────────────────────────── */
+.ota-pipe-card {
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: .75rem;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  transition: box-shadow .2s;
+}
+.ota-pipe-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+.ota-pipe-card--main { border: 1.5px solid rgba(79,70,229,.25); }
+.ota-pipe-card--sec { border-left: 3px solid #22c55e; }
+.ota-pipe-card-head {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .75rem 1rem;
+  background: rgba(0,0,0,.015);
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  font-size: .8rem; font-weight: 600;
+}
+.ota-pipe-card-title { display: flex; align-items: center; gap: .35rem; }
+.ota-pipe-card-close {
+  background: none; border: none; cursor: pointer;
+  padding: .2rem .4rem; border-radius: .25rem;
+  color: var(--bs-body-color, #333); opacity: .5;
+  margin-left: auto;
+}
+.ota-pipe-card-close:hover { opacity: 1; background: rgba(0,0,0,.06); }
+.ota-pipe-card-body { padding: 1rem; }
+
+/* ── Grid Layout ────────────────────────────────────────────── */
+.ota-pipe-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.ota-pipe-col-main { min-width: 0; }
+.ota-pipe-col-side { min-width: 0; }
+
+/* ── Bottom (Changelog + Rollback) ──────────────────────────── */
+.ota-pipe-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ── Scroll area ────────────────────────────────────────────── */
+.ota-pipe-scroll { max-height: 220px; overflow-y: auto; }
+
+/* ── Pipeline Stepper ───────────────────────────────────────── */
+.ota-pipe-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 1.25rem 1.5rem;
+}
+.ota-pipe-step {
+  display: flex; flex-direction: column; align-items: center;
+  gap: .35rem; position: relative; z-index: 1;
+}
+.ota-pipe-step-icon {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  border: 2px solid #d1d5db;
+  background: #f9fafb;
+  color: #9ca3af;
+  transition: all .3s ease;
+}
+.ota-pipe-step-label {
+  font-size: .65rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .03em;
+  color: #9ca3af; white-space: nowrap;
+  transition: color .3s;
+}
+.ota-pipe-step-line {
+  flex: 1; height: 2px; min-width: 32px;
+  background: #e5e7eb;
+  margin: 0 .25rem;
+  align-self: center;
+  margin-bottom: 1.2rem;
+  transition: background .3s;
+}
+
+/* Step states */
+.ota-pipe-step--active .ota-pipe-step-icon {
+  border-color: #4f46e5; background: #4f46e5; color: #fff;
+  box-shadow: 0 0 0 4px rgba(79,70,229,.2);
+  animation: otaPipeStepPulse 1.5s ease-in-out infinite;
+}
+.ota-pipe-step--active .ota-pipe-step-label { color: #4f46e5; }
+@keyframes otaPipeStepPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(79,70,229,.15); }
+  50% { box-shadow: 0 0 0 8px rgba(79,70,229,.08); }
+}
+.ota-pipe-step--done .ota-pipe-step-icon {
+  border-color: #22c55e; background: #22c55e; color: #fff;
+}
+.ota-pipe-step--done .ota-pipe-step-label { color: #22c55e; }
+.ota-pipe-step--error .ota-pipe-step-icon {
+  border-color: #ef4444; background: #ef4444; color: #fff;
+}
+.ota-pipe-step--error .ota-pipe-step-label { color: #ef4444; }
+
+/* Filled line before completed step */
+.ota-pipe-step-line--done { background: #22c55e; }
+
+/* ── Pills ──────────────────────────────────────────────────── */
+.ota-pipe-pill {
+  display: inline-flex; align-items: center;
+  padding: .15rem .55rem;
+  border-radius: 2rem;
+  font-size: .6rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+  background: #f1f5f9; color: #64748b;
+  white-space: nowrap;
+}
+.ota-pipe-pill--active { background: #eef2ff; color: #4f46e5; animation: otaPipePillGlow 2s infinite; }
+@keyframes otaPipePillGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79,70,229,.2); }
+  50% { box-shadow: 0 0 0 4px rgba(79,70,229,.1); }
+}
+.ota-pipe-pill--ok { background: #dcfce7; color: #16a34a; }
+.ota-pipe-pill--warn { background: #fef9c3; color: #a16207; }
+.ota-pipe-pill--err { background: #fef2f2; color: #dc2626; }
+
+/* ── CTA Button ─────────────────────────────────────────────── */
+.ota-pipe-cta-area {
+  display: flex; flex-direction: column; align-items: center;
+  gap: .75rem; padding: 0 1.5rem 1.25rem;
+}
+.ota-pipe-cta {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .75rem 2rem;
+  border-radius: 2rem;
+  border: none; cursor: pointer;
+  font-size: .9rem; font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 4px 14px rgba(79,70,229,.3);
+  transition: all .2s;
+}
+.ota-pipe-cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(79,70,229,.4);
+}
+.ota-pipe-cta:disabled {
+  opacity: .6; cursor: not-allowed;
+  transform: none; box-shadow: none;
+}
+.ota-pipe-cta--go {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 4px 14px rgba(34,197,94,.3);
+}
+.ota-pipe-cta--go:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(34,197,94,.4);
+}
+.ota-pipe-cta--running {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  animation: otaPipeCtaGlow 2s ease-in-out infinite;
+}
+@keyframes otaPipeCtaGlow {
+  0%, 100% { box-shadow: 0 4px 14px rgba(79,70,229,.3); }
+  50% { box-shadow: 0 4px 24px rgba(79,70,229,.5); }
+}
+.ota-pipe-cta--done {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 4px 14px rgba(34,197,94,.3);
+}
+.ota-pipe-cta--error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 4px 14px rgba(239,68,68,.3);
+}
+.ota-pipe-status { text-align: center; min-height: 1.2rem; }
+
+/* ── Spinner ────────────────────────────────────────────────── */
+.ota-pipe-spin { animation: otaPipeSpin 1s linear infinite; }
+@keyframes otaPipeSpin { to { transform: rotate(360deg); } }
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.ota-pipe-btn {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .4rem .75rem; border-radius: .5rem;
+  border: 1px solid rgba(0,0,0,.1);
+  background: #f8fafc; color: #334155;
+  font-size: .75rem; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+  white-space: nowrap;
+}
+.ota-pipe-btn:hover { background: #e2e8f0; border-color: rgba(0,0,0,.15); }
+.ota-pipe-btn:disabled { opacity: .4; cursor: not-allowed; }
+.ota-pipe-btn--primary {
+  background: #4f46e5; color: #fff; border-color: #4f46e5;
+}
+.ota-pipe-btn--primary:hover { background: #4338ca; }
+.ota-pipe-btn--danger {
+  background: #fef2f2; color: #dc2626; border-color: #fca5a5;
+}
+.ota-pipe-btn--danger:hover { background: #fee2e2; }
+.ota-pipe-btn--sm { padding: .3rem .55rem; font-size: .7rem; }
+.ota-pipe-btn--xs { padding: .2rem .4rem; font-size: .65rem; }
+
+/* ── Controls ───────────────────────────────────────────────── */
+.ota-pipe-controls {
+  display: flex; gap: .5rem; padding: .75rem 1rem;
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+
+/* ── Pipeline Log ───────────────────────────────────────────── */
+.ota-pipe-log-wrap {
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+.ota-pipe-log-head {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .5rem 1rem;
+  font-size: .7rem; font-weight: 600;
+  color: #64748b;
+  background: rgba(0,0,0,.015);
+}
+.ota-pipe-log-toggle {
+  background: none; border: none; cursor: pointer;
+  margin-left: auto; padding: .15rem .35rem; border-radius: .25rem;
+  color: #94a3b8;
+}
+.ota-pipe-log-toggle:hover { background: rgba(0,0,0,.06); color: #475569; }
+.ota-pipe-log {
+  max-height: 240px; overflow-y: auto;
+  padding: .5rem 1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: .7rem; line-height: 1.6;
+  background: #0f172a; color: #94a3b8;
+  border-radius: 0 0 .75rem .75rem;
+}
+.ota-pipe-log-line { display: flex; gap: .5rem; }
+.ota-pipe-log-ts { color: #475569; user-select: none; flex-shrink: 0; }
+.ota-pipe-log-line[data-type="ok"] { color: #4ade80; }
+.ota-pipe-log-line[data-type="error"] { color: #f87171; }
+.ota-pipe-log-line[data-type="warn"] { color: #facc15; }
+
+/* ── Releases ───────────────────────────────────────────────── */
+.ota-pipe-releases { display: flex; flex-direction: column; gap: .5rem; }
+.ota-pipe-rel {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .6rem .75rem; border-radius: .5rem;
+  border: 1px solid rgba(0,0,0,.06);
+  cursor: pointer; transition: all .15s;
+}
+.ota-pipe-rel:hover { background: rgba(79,70,229,.03); border-color: rgba(79,70,229,.15); }
+.ota-pipe-rel--current { border-left: 3px solid #4f46e5; background: rgba(79,70,229,.03); }
+.ota-pipe-rel--newer { border-left: 3px solid #22c55e; }
+.ota-pipe-rel--prepared { background: rgba(34,197,94,.04); }
+.ota-pipe-rel-tag { font-weight: 700; font-size: .85rem; min-width: 80px; }
+.ota-pipe-rel-date { font-size: .7rem; color: #94a3b8; }
+.ota-pipe-rel-badges { display: flex; gap: .25rem; flex-wrap: wrap; flex: 1; }
+.ota-pipe-rel-actions { display: flex; gap: .25rem; margin-left: auto; }
+.ota-pipe-release-notes {
+  padding: .5rem .75rem;
+  font-size: .75rem; color: #64748b; line-height: 1.5;
+  background: rgba(0,0,0,.015); border-radius: .35rem;
+  margin-top: .5rem;
+}
+
+/* ── Security ───────────────────────────────────────────────── */
+.ota-pipe-sec-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .15rem .5rem; border-radius: 2rem;
+  font-size: .65rem; font-weight: 700;
+  margin-left: auto;
+}
+.ota-pipe-sec-badge--ok { background: #dcfce7; color: #16a34a; }
+.ota-pipe-sec-badge--err { background: #fef2f2; color: #dc2626; }
+.ota-pipe-sec-keys { display: flex; flex-direction: column; gap: .4rem; }
+.ota-pipe-sec-row {
+  display: grid; grid-template-columns: 20px 70px 1fr;
+  align-items: center; gap: .35rem;
+  font-size: .7rem;
+}
+.ota-pipe-sec-row i { color: #94a3b8; font-size: .75rem; }
+.ota-pipe-sec-row span:nth-child(2) { font-weight: 600; color: #64748b; }
+.ota-pipe-sec-row span:nth-child(3) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .6rem; color: #94a3b8;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ota-pipe-sec-actions {
+  display: flex; flex-wrap: wrap; gap: .35rem;
+  margin-top: .75rem; padding-top: .75rem;
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+.ota-pipe-sec-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .5rem;
+  margin-top: .5rem;
+}
+.ota-pipe-sec-results {
+  border-radius: .5rem; padding: .75rem;
+  margin-top: .75rem;
+  font-size: .75rem;
+}
+
+/* ── Details / Toggles ──────────────────────────────────────── */
+.ota-pipe-details { margin-top: .75rem; }
+.ota-pipe-details summary {
+  display: flex; align-items: center; gap: .35rem;
+  font-size: .75rem; font-weight: 600; color: #64748b;
+  cursor: pointer; padding: .35rem 0;
+  list-style: none;
+}
+.ota-pipe-details summary::-webkit-details-marker { display: none; }
+.ota-pipe-details summary::before { content: '▸ '; transition: transform .2s; }
+.ota-pipe-details[open] summary::before { content: '▾ '; }
+.ota-pipe-details-body { padding: .5rem 0; }
+.ota-pipe-details-actions { display: flex; align-items: center; gap: .5rem; margin-top: .5rem; }
+.ota-pipe-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .5rem; padding: .3rem 0;
+  font-size: .75rem; color: #334155;
+}
+.ota-pipe-cfg-field {
+  display: flex; align-items: center; gap: .35rem;
+  font-size: .75rem; color: #334155;
+}
+
+/* ── Skeleton Loaders ───────────────────────────────────────── */
+.ota-pipe-skeleton { padding: .5rem 0; }
+.ota-pipe-skel-line {
+  height: 12px; border-radius: 4px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: otaPipeSkelShimmer 1.5s infinite;
+  margin-bottom: .5rem;
+}
+@keyframes otaPipeSkelShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Shortcuts bar ──────────────────────────────────────────── */
+.ota-pipe-shortcuts {
+  text-align: center;
+  padding: .75rem;
+  font-size: .65rem;
+  color: #94a3b8;
+}
+.ota-pipe-shortcuts kbd {
+  display: inline-block;
+  padding: .1rem .35rem;
+  border-radius: .2rem;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: .6rem;
+  font-family: inherit;
+  margin: 0 .15rem;
+}
+
+/* ── Responsive: OTA Pipeline ───────────────────────────────── */
+@media (max-width: 991.98px) {
+  .ota-pipe-grid { grid-template-columns: 1fr; }
+  .ota-pipe-bottom { grid-template-columns: 1fr; }
+  .ota-pipe-hero-content { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 767.98px) {
+  .ota-pipe-hero { padding: 1.25rem; }
+  .ota-pipe-hero-title { font-size: 1.2rem; }
+  .ota-pipe-stepper { flex-wrap: wrap; gap: .25rem; padding: .75rem; }
+  .ota-pipe-step-line { min-width: 16px; }
+  .ota-pipe-cta { padding: .6rem 1.5rem; font-size: .8rem; }
+}
+@media (max-width: 479.98px) {
+  .ota-pipe-hero-versions { flex-direction: column; }
+  .ota-pipe-ver-arrow { transform: rotate(90deg); }
+  .ota-pipe-stepper { padding: .5rem; }
+  .ota-pipe-step-icon { width: 32px; height: 32px; font-size: .8rem; }
+  .ota-pipe-step-label { font-size: .55rem; }
+  .ota-pipe-rel { flex-wrap: wrap; }
+}
+

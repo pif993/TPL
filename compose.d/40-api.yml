@@ -3,6 +3,9 @@ services:
     build: ./apps/api
     # Run as non-root user (matches Dockerfile USER appuser → UID 999)
     user: "999:999"
+    # OTA Auto-Apply: supplementary group for project write access
+    group_add:
+      - "${TPL_GID:-1000}"
     environment:
       # ── Configuration ONLY — no secrets here ──────────────────────
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
@@ -24,6 +27,8 @@ services:
       TPL_UPDATE_CHANNEL: ${TPL_UPDATE_CHANNEL:-stable}
       TPL_UPDATE_URL: ${TPL_UPDATE_URL:-}
       TPL_MAX_RELEASES: ${TPL_MAX_RELEASES:-5}
+      # ── OTA Auto-Apply ────────────────────────────────────────────
+      TPL_OTA_PROJECT_DIR: /project
     volumes:
       # State volume (API keys, users, audit logs)
       - ${TPL_DATA_DIR_HOST:-./data}:/data
@@ -34,6 +39,9 @@ services:
       # Modules live on the data volume as artifacts, NOT in the repo.
       # Update via: ./run.sh modules update (CLI, signed bundles)
       - ${TPL_DATA_DIR_HOST:-./data}/modules/current:/work/modules:ro
+      # OTA Auto-Apply: project root + live API code mount
+      - ${TPL_PROJECT_ROOT:-.}:/project
+      - ./apps/api/app:/app/app
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -55,4 +63,3 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-

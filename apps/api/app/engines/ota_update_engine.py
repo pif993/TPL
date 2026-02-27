@@ -1203,6 +1203,8 @@ def register(app: FastAPI):
     OTA_SIM_DIR = os.path.join(OTA_DIR, "simulations")
     OTA_INSTALL_DIR = os.path.join(OTA_DIR, "install")
     OTA_INSTALL_STATE = os.path.join(OTA_INSTALL_DIR, "install_state.json")
+    # OTA Auto-Apply: project root mounted from host for direct file updates
+    OTA_PROJECT_ROOT = os.environ.get("TPL_OTA_PROJECT_DIR", "/project")
 
     for d in (OTA_DIR, OTA_DOWNLOADS, OTA_STAGING, OTA_SIM_DIR, OTA_INSTALL_DIR):
         os.makedirs(d, exist_ok=True)
@@ -3920,15 +3922,23 @@ echo "=== Security smoke completato ==="
         with open(manifest_path) as f:
             manifest = json.load(f)
 
-        # Run preflight checks
+        # Run preflight deep scan
         try:
-            preflight = sec.run_preflight_checks(staging_dir, manifest)
-            failed_checks = [c for c in preflight if not c.get("passed", False)]
-            if failed_checks:
-                detail = f"{len(failed_checks)} check(s) failed: " + ", ".join(c["check"] for c in failed_checks)
-                _add_install_step(state, "preflight", "warning", detail)
+            scan = sec.deep_scan(staging_dir)
+            risk = scan.get("risk_score", 0)
+            verdict = scan.get("verdict", "unknown")
+            total = scan.get("total_files", 0)
+            blocked = len(scan.get("blocked_files", []))
+            suspicious = len(scan.get("suspicious_files", []))
+            if blocked > 0:
+                _add_install_step(state, "preflight", "warning",
+                                  f"Scan: {total} file, rischio {risk}/100, {blocked} bloccati — {verdict}")
+            elif risk > 30:
+                _add_install_step(state, "preflight", "warning",
+                                  f"Scan: {total} file, rischio {risk}/100 — {verdict}")
             else:
-                _add_install_step(state, "preflight", "ok", f"All {len(preflight)} checks passed")
+                _add_install_step(state, "preflight", "ok",
+                                  f"Scan: {total} file, rischio {risk}/100 — {verdict}")
         except Exception as e:
             _add_install_step(state, "preflight", "warning", f"Preflight error (non-fatal): {str(e)[:200]}")
 
@@ -3963,14 +3973,16 @@ echo "=== Security smoke completato ==="
         files_ok = 0
         files_fail = 0
         manifest_files = manifest.get("files", {})
-        for rel_path, expected_hash in manifest_files.items():
+        for rel_path, file_info in manifest_files.items():
+            # file_info can be a string (sha256) or dict {sha256, mode, size}
+            expected_sha = file_info.get("sha256", file_info) if isinstance(file_info, dict) else file_info
             file_path = os.path.join(staging_dir, rel_path)
             if os.path.isfile(file_path):
                 sha = hashlib.sha256()
                 with open(file_path, "rb") as bf:
                     for chunk in iter(lambda: bf.read(8192), b""):
                         sha.update(chunk)
-                if sha.hexdigest() == expected_hash:
+                if sha.hexdigest() == expected_sha:
                     files_ok += 1
                 else:
                     files_fail += 1
@@ -4069,8 +4081,8 @@ echo "=== Security smoke completato ==="
 
     @app.post("/ota/install/apply")
     async def ota_install_apply(_u=Depends(require_admin)):
-        """Apply the prepared OTA install — copies update files to host apply area
-        and generates a host-side apply script."""
+        """Apply the prepared OTA install — copies update files directly to
+        project root via Docker volume mount.  Fully automated, no terminal needed."""
         user = _u.get("sub", "admin")
         state = _load_install_state()
 
@@ -4091,103 +4103,103 @@ echo "=== Security smoke completato ==="
             raise HTTPException(500, "Install package not found — re-run /ota/install/start/{tag}")
 
         state["status"] = "applying"
-        _add_install_step(state, "apply", "running", "Applying update files...")
+        _add_install_step(state, "apply", "running", "Applying update files to project...")
         _save_install_state(state)
 
-        # Generate host-apply script
-        apply_script_path = os.path.join(OTA_INSTALL_DIR, "apply.sh")
+        # ── Direct file copy via project root mount ──────────────────
         try:
             with open(os.path.join(install_pkg_dir, "MANIFEST.json")) as f:
                 manifest = json.load(f)
 
             files_map = manifest.get("files", {})
-            script_lines = [
-                "#!/usr/bin/env bash",
-                "# TPL OTA Host Applicator — Auto-generated",
-                f"# Tag: {safe_tag}",
-                f"# Generated: {datetime.now().isoformat()}",
-                'set -euo pipefail',
-                "",
-                f'INSTALL_SRC="{install_pkg_dir}"',
-                f'TPL_ROOT="/home/curciop/Documenti/TPL"',
-                "",
-                'echo "╔══════════════════════════════════════════════════════╗"',
-                f'echo "║  TPL OTA Install — {safe_tag}"',
-                'echo "╚══════════════════════════════════════════════════════╝"',
-                'echo ""',
-                "",
-                "APPLIED=0",
-                "SKIPPED=0",
-                "ERRORS=0",
-                "",
-            ]
+            applied_files = []
+            skipped_files = []
+            error_files = []
+            categories = {"web": [], "api": [], "modules": [], "infra": [], "other": []}
+
+            project_root = OTA_PROJECT_ROOT
+            if not os.path.isdir(project_root):
+                raise RuntimeError(f"Project root not mounted at {project_root}")
 
             for rel_path in sorted(files_map.keys()):
                 src = os.path.join(install_pkg_dir, rel_path)
-                # Map relative paths to TPL project structure
-                script_lines += [
-                    f'# File: {rel_path}',
-                    f'if [ -f "{src}" ]; then',
-                    f'    dest="$TPL_ROOT/{rel_path}"',
-                    f'    mkdir -p "$(dirname "$dest")"',
-                    f'    cp -f "{src}" "$dest" && APPLIED=$((APPLIED+1)) || ERRORS=$((ERRORS+1))',
-                    f'else',
-                    f'    echo "SKIP: {rel_path} not in package" && SKIPPED=$((SKIPPED+1))',
-                    f'fi',
-                    "",
-                ]
+                if not os.path.isfile(src):
+                    skipped_files.append(rel_path)
+                    continue
 
-            script_lines += [
-                'echo ""',
-                'echo "═══════════════════════════════════════════════════════"',
-                'echo " Applied: $APPLIED  |  Skipped: $SKIPPED  |  Errors: $ERRORS"',
-                'echo "═══════════════════════════════════════════════════════"',
-                "",
-                "# Restart containers to pick up changes",
-                'echo "Restarting TPL containers..."',
-                'cd "$TPL_ROOT" && bash run.sh start',
-                'echo "OTA update applied successfully!"',
-            ]
+                # Protect the OTA engine itself — never overwrite with a placeholder
+                if rel_path == "apps/api/app/engines/ota_update_engine.py":
+                    skipped_files.append(rel_path)
+                    continue
 
-            with open(apply_script_path, "w") as f:
-                f.write("\n".join(script_lines) + "\n")
-            os.chmod(apply_script_path, 0o755)
+                dest = os.path.join(project_root, rel_path)
+                try:
+                    os.makedirs(os.path.dirname(dest), exist_ok=True)
+                    # Use raw file copy (not copy2) to avoid EPERM from metadata
+                    # preservation when running without CAP_FOWNER in container
+                    with open(src, "rb") as fsrc, open(dest, "wb") as fdst:
+                        fdst.write(fsrc.read())
+                    applied_files.append(rel_path)
 
-            _add_install_step(state, "apply", "ok",
-                              f"Host apply script generated at {apply_script_path}")
+                    # Categorize for restart logic
+                    if rel_path.startswith("infra/web/"):
+                        categories["web"].append(rel_path)
+                    elif rel_path.startswith("apps/api/"):
+                        categories["api"].append(rel_path)
+                    elif rel_path.startswith("modules/") or rel_path.startswith("data/modules/"):
+                        categories["modules"].append(rel_path)
+                    elif rel_path.startswith("infra/"):
+                        categories["infra"].append(rel_path)
+                    else:
+                        categories["other"].append(rel_path)
+                except Exception as fe:
+                    error_files.append({"file": rel_path, "error": str(fe)[:200]})
+                    logger.warning(f"OTA apply file error: {rel_path}: {fe}")
 
-        except Exception as e:
-            _add_install_step(state, "apply", "failed", f"Script generation failed: {str(e)[:200]}")
-            state["status"] = "failed"
-            state["error"] = f"Apply script generation failed: {str(e)[:200]}"
-            _save_install_state(state)
-            raise HTTPException(500, f"Apply failed: {str(e)[:100]}")
-
-        # Try auto-apply: copy files directly to /data overlay (what API can reach)
-        applied_files = []
-        try:
-            overlay_dir = os.path.join(OTA_INSTALL_DIR, "overlay")
-            os.makedirs(overlay_dir, exist_ok=True)
-            for rel_path in files_map:
-                src = os.path.join(install_pkg_dir, rel_path)
-                if os.path.isfile(src):
+            # Also copy to overlay for backup reference
+            try:
+                overlay_dir = os.path.join(OTA_INSTALL_DIR, "overlay")
+                os.makedirs(overlay_dir, exist_ok=True)
+                for rel_path in applied_files:
+                    src = os.path.join(install_pkg_dir, rel_path)
                     dest = os.path.join(overlay_dir, rel_path)
                     os.makedirs(os.path.dirname(dest), exist_ok=True)
-                    shutil.copy2(src, dest)
-                    applied_files.append(rel_path)
+                    with open(src, "rb") as fsrc, open(dest, "wb") as fdst:
+                        fdst.write(fsrc.read())
+            except Exception as oe:
+                logger.warning(f"Overlay backup copy: {oe}")
+
+            restart_needed = len(categories["api"]) > 0 or len(categories["modules"]) > 0
+            cat_summary = {k: len(v) for k, v in categories.items() if v}
+
+            if error_files:
+                _add_install_step(state, "apply", "warning",
+                                  f"Applied {len(applied_files)} files, {len(error_files)} errors")
+            else:
+                _add_install_step(state, "apply", "ok",
+                                  f"Applied {len(applied_files)} files directly to project")
+
         except Exception as e:
-            logger.warning(f"Overlay copy partial: {e}")
+            _add_install_step(state, "apply", "failed", f"Apply failed: {str(e)[:200]}")
+            state["status"] = "failed"
+            state["error"] = f"Apply failed: {str(e)[:200]}"
+            _save_install_state(state)
+            raise HTTPException(500, f"Apply failed: {str(e)[:100]}")
 
         state["status"] = "applied"
         state["applied_at"] = datetime.now().isoformat()
         state["applied_files"] = len(applied_files)
+        state["restart_needed"] = restart_needed
+        state["categories"] = cat_summary
         _add_install_step(state, "complete", "ok",
-                          f"Install applied — {len(applied_files)} files staged, host script ready")
+                          f"Update applied — {len(applied_files)} files. "
+                          f"{'Restart needed.' if restart_needed else 'No restart needed (web-only).'}")
         _save_install_state(state)
 
         sec.audit_log("ota.install.apply", "ok", user, {
             "tag": safe_tag, "files_applied": len(applied_files),
-            "script": apply_script_path
+            "errors": len(error_files), "restart_needed": restart_needed,
+            "categories": cat_summary,
         })
         sec.record_metric(OTA_DIR, "install_applied", {"tag": safe_tag})
 
@@ -4195,13 +4207,64 @@ echo "=== Security smoke completato ==="
             "status": "applied",
             "tag": safe_tag,
             "applied_files": len(applied_files),
-            "apply_script": apply_script_path,
+            "skipped_files": len(skipped_files),
+            "error_files": error_files,
+            "categories": cat_summary,
+            "restart_needed": restart_needed,
             "steps": state["steps"],
             "message": (
-                f"OTA {safe_tag} applied. {len(applied_files)} files staged in overlay. "
-                f"Run the host script to complete: bash {apply_script_path}"
+                f"OTA {safe_tag} applied: {len(applied_files)} files updated. "
+                + ("API restart needed for code changes." if restart_needed
+                   else "Web files updated — changes active immediately.")
             ),
-            "host_command": f"bash {apply_script_path}",
+        }
+
+    @app.post("/ota/install/finalize")
+    async def ota_install_finalize(_u=Depends(require_admin)):
+        """Finalize the OTA install.  If API code was updated, schedule a
+        graceful self-restart (Docker restart: unless-stopped handles it)."""
+        import signal as _signal
+        import threading as _threading
+
+        user = _u.get("sub", "admin")
+        state = _load_install_state()
+
+        if state["status"] != "applied":
+            raise HTTPException(
+                409,
+                f"Cannot finalize — status is '{state['status']}'. Must be 'applied'."
+            )
+
+        restart_needed = state.get("restart_needed", False)
+
+        state["status"] = "finalized"
+        state["finalized_at"] = datetime.now().isoformat()
+        state["finalized_by"] = user
+        _add_install_step(state, "finalize", "ok",
+                          "Update finalized" + (" — scheduling API restart" if restart_needed else ""))
+        _save_install_state(state)
+
+        sec.audit_log("ota.install.finalize", "ok", user, {
+            "tag": state.get("tag"), "restart_needed": restart_needed
+        })
+
+        if restart_needed:
+            def _delayed_restart():
+                import time
+                time.sleep(2)
+                logger.info("OTA finalize: sending SIGTERM for graceful restart...")
+                os.kill(os.getpid(), _signal.SIGTERM)
+            _threading.Thread(target=_delayed_restart, daemon=True).start()
+
+        return {
+            "status": "finalized",
+            "tag": state.get("tag"),
+            "restart_scheduled": restart_needed,
+            "message": (
+                "API restarting in 2 seconds — will be back shortly."
+                if restart_needed
+                else "Update finalized. All changes are already active."
+            ),
         }
 
     @app.post("/ota/install/rollback")

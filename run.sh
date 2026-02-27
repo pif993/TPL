@@ -219,6 +219,10 @@ _export_env() {
   export TPL_DATA_DIR_HOST="$DATA_DIR"
   export TPL_TLS_DIR="$TLS_DIR"
   export TPL_LOG_DIR_HOST="$LOG_DIR"
+  # OTA Auto-Apply: export host UID/GID for container group_add
+  export TPL_UID="$(id -u)"
+  export TPL_GID="$(id -g)"
+  export TPL_PROJECT_ROOT="$SCRIPT_DIR"
   # Local mode: force loopback binding so Traefik is never reachable from network
   if [[ "${DOMAIN_MODE:-local}" = "local" ]]; then
     export TRAEFIK_BIND_IP="127.0.0.1"

@@ -113,9 +113,18 @@
     let data = text;
     try { data = JSON.parse(text); } catch (_) { /* plain text */ }
     if (!resp.ok) {
-      const err = new Error(
-        typeof data === 'string' ? data : (data.detail || JSON.stringify(data))
-      );
+      let errMsg;
+      if (typeof data === 'string') {
+        errMsg = data;
+      } else if (Array.isArray(data.detail)) {
+        // FastAPI / Pydantic validation errors → extract human-readable messages
+        errMsg = data.detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+      } else if (typeof data.detail === 'string') {
+        errMsg = data.detail;
+      } else {
+        errMsg = JSON.stringify(data);
+      }
+      const err = new Error(errMsg);
       err.status = resp.status;
       throw err;
     }
