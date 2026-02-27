@@ -140,6 +140,21 @@
         q('otaHeroNewVer')?.style.setProperty('display', 'none');
       }
 
+      // Repo status warning
+      const repoWarn = q('otaRepoStatus');
+      if (repoWarn) {
+        if (data.repo_status === 'not_found') {
+          repoWarn.style.display = '';
+          repoWarn.innerHTML = `<div class="alert alert-warning py-1 px-2 small mb-2">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            Repository non trovato o non ancora pubblico. Le release GitHub non sono disponibili.
+            Puoi usare i <strong>Test Update</strong> per verificare il sistema OTA.
+          </div>`;
+        } else {
+          repoWarn.style.display = 'none';
+        }
+      }
+
       // Config fields
       const cfgAuto = q('otaCfgAuto');
       const cfgInterval = q('otaCfgInterval');
@@ -172,6 +187,13 @@
       const data = await TPL.jsonFetch('/api/ota/check', { method: 'POST' });
       await loadStatus();
       loadReleases();
+      if (data.repo_status === 'not_found' && !data.update_available) {
+        showToast('Repository GitHub non trovato — nessuna release disponibile. Usa Test Update per provare il sistema.', 'warning');
+      } else if (data.update_available) {
+        showToast(`Aggiornamento disponibile: v${data.latest_version}`, 'success');
+      } else {
+        showToast('Piattaforma aggiornata, nessun update disponibile.', 'info');
+      }
       return data;
     } catch (error) {
       showToast(`Controllo OTA fallito: ${error}`, 'danger');
@@ -192,9 +214,12 @@
       if (!container) return;
 
       if (!_releases.length) {
+        const repoNotFound = _state.repo_status === 'not_found';
         container.innerHTML = `<div class="text-center p-3 text-muted small">
           <i class="bi bi-inbox" style="font-size:1.4rem;opacity:.3;display:block;margin-bottom:.3rem"></i>
-          Nessuna release trovata. Premi "Verifica aggiornamenti".
+          ${repoNotFound
+            ? 'Repository GitHub non disponibile. Usa <strong>Test Update</strong> per provare il sistema OTA.'
+            : 'Nessuna release trovata. Premi "Verifica aggiornamenti".'}
         </div>`;
         return;
       }
@@ -450,10 +475,11 @@
         const cfgCheck = q('otaSecCfgCheck');
         const cfgQuar = q('otaSecCfgQuar');
         const cfgRisk = q('otaSecCfgRisk');
-        if (cfgSig) cfgSig.checked = status.require_signature !== false;
-        if (cfgCheck) cfgCheck.checked = status.require_checksum !== false;
-        if (cfgQuar) cfgQuar.checked = status.quarantine_suspicious !== false;
-        if (cfgRisk) cfgRisk.value = status.max_risk_score ?? 30;
+        // Fields are now also at top level for convenience
+        if (cfgSig) cfgSig.checked = (status.require_signature ?? status.security?.require_signature) !== false;
+        if (cfgCheck) cfgCheck.checked = (status.require_checksum ?? status.security?.require_checksum) !== false;
+        if (cfgQuar) cfgQuar.checked = (status.quarantine_suspicious ?? status.security?.quarantine_suspicious) !== false;
+        if (cfgRisk) cfgRisk.value = status.max_risk_score ?? status.security?.max_risk_score ?? 30;
       }
     } catch (e) { console.warn('Trust info failed:', e); }
   };
@@ -727,6 +753,11 @@
       const checkData = await TPL.jsonFetch('/api/ota/check', { method: 'POST' });
       await loadStatus();
       await loadReleases();
+
+      // Handle repo not found — inform user but don't block if test updates exist
+      if (checkData.repo_status === 'not_found') {
+        pipeLog('Repository GitHub non raggiungibile — verifica test update locali.', 'warn');
+      }
 
       const newer = checkData.newer_releases || [];
       if (!tag && newer.length > 0) {

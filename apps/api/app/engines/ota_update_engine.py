@@ -120,8 +120,12 @@ class OTAConfigUpdate(BaseModel):
     pre_release: Optional[bool] = None
     require_signature: Optional[bool] = None
     require_checksum: Optional[bool] = None
+    quarantine_suspicious: Optional[bool] = None
+    max_risk_score: Optional[int] = Field(None, ge=0, le=100)
     lockdown_mode: Optional[bool] = None
     tofu_enabled: Optional[bool] = None
+    auto_snapshot: Optional[bool] = None
+    health_check_after_prepare: Optional[bool] = None
 
 
 class OTAPrepareRequest(BaseModel):
@@ -1235,6 +1239,77 @@ def register(app: FastAPI):
     rate_limiter = OTARateLimiter()
     health_checker = OTAHealthChecker()
 
+    # ── Startup: reset stale install states ───────────────────────────
+    # If the API restarts while an install was in progress, the install state
+    # may be stuck. Auto-reset to idle so new operations can proceed.
+    try:
+        if os.path.isfile(OTA_INSTALL_STATE):
+            with open(OTA_INSTALL_STATE) as _isf:
+                _is = json.load(_isf)
+            _stuck_statuses = ("installing", "applying", "applied", "ready")
+            if _is.get("status") in _stuck_statuses:
+                logger.warning(
+                    f"OTA install state stuck at '{_is['status']}' for tag '{_is.get('tag')}' — "
+                    f"auto-resetting to idle (API restarted)"
+                )
+                _reset = {
+                    "status": "idle",
+                    "tag": None,
+                    "steps": [],
+                    "started_at": None,
+                    "auto_reset_reason": f"API restart with stale status '{_is['status']}'",
+                    "auto_reset_at": datetime.now().isoformat(),
+                    "previous_tag": _is.get("tag"),
+                }
+                with open(OTA_INSTALL_STATE, "w") as _isf:
+                    json.dump(_reset, _isf, indent=2)
+                sec.audit_log("ota.install.auto_reset", "ok", "system", {
+                    "previous_status": _is["status"],
+                    "previous_tag": _is.get("tag"),
+                })
+    except json.JSONDecodeError:
+        # Corrupted install state file — write a clean idle state
+        logger.warning("OTA install state file corrupted — resetting to idle")
+        try:
+            _reset = {
+                "status": "idle",
+                "tag": None,
+                "steps": [],
+                "started_at": None,
+                "auto_reset_reason": "corrupted_json",
+                "auto_reset_at": datetime.now().isoformat(),
+            }
+            with open(OTA_INSTALL_STATE, "w") as _isf:
+                json.dump(_reset, _isf, indent=2)
+            sec.audit_log("ota.install.auto_reset", "ok", "system", {
+                "reason": "corrupted_json",
+            })
+        except Exception:
+            pass
+    except Exception as e:
+        logger.warning(f"OTA install state cleanup failed: {e}")
+
+    # ── Startup: clean stale test staging directories ─────────────────
+    try:
+        if os.path.isdir(OTA_STAGING):
+            stale_dirs = [
+                d for d in os.listdir(OTA_STAGING)
+                if d.startswith("v") and "-test-" in d
+                and os.path.isdir(os.path.join(OTA_STAGING, d))
+            ]
+            if len(stale_dirs) > 2:
+                # Keep only the 2 most recent test staging directories
+                stale_dirs.sort(
+                    key=lambda d: os.path.getmtime(os.path.join(OTA_STAGING, d)),
+                    reverse=True,
+                )
+                for d in stale_dirs[2:]:
+                    dp = os.path.join(OTA_STAGING, d)
+                    shutil.rmtree(dp, ignore_errors=True)
+                    logger.info(f"OTA startup: cleaned stale test staging {d}")
+    except Exception as e:
+        logger.warning(f"OTA staging cleanup failed: {e}")
+
     # ── State Management ──────────────────────────────────────────────
 
     def _load_config() -> dict:
@@ -1346,17 +1421,20 @@ def register(app: FastAPI):
 
         if status == 304:
             # Not modified — use cache
+            state["repo_status"] = "ok"
             return state.get("releases_cache", [])
 
         if status == 404:
             # Repo not found or no releases yet
             state["repo_status"] = "not_found"
-            return []
+            logger.info(f"GitHub repo {owner}/{repo}: 404 (not public or no releases)")
+            return state.get("releases_cache", [])
 
         if data is None:
             return state.get("releases_cache", [])
 
         state["etag"] = headers.get("etag", "")
+        state["repo_status"] = "ok"
 
         releases = []
         for r in data:
@@ -1851,11 +1929,13 @@ def register(app: FastAPI):
                     state["latest_version"] = latest["version"]
                 else:
                     state["update_available"] = False
-                    state["latest_version"] = None
+                    # Keep last known version if no releases found (repo might be temp unavailable)
+                    if not state.get("latest_version"):
+                        state["latest_version"] = None
 
                 _save_state(state)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"OTA auto-check error: {e}")
 
             interval = config.get("check_interval_minutes", 60) * 60
             await asyncio.sleep(max(interval, 900))
@@ -1897,10 +1977,19 @@ def register(app: FastAPI):
             "dismissed": state.get("dismissed", []),
             "repo": f"https://github.com/{config.get('repo_owner', GITHUB_OWNER)}/{config.get('repo_name', GITHUB_REPO)}",
             "repo_status": state.get("repo_status", "ok"),
+            # Security config fields at top level for frontend binding
+            "require_signature": config.get("require_signature", True),
+            "require_checksum": config.get("require_checksum", True),
+            "quarantine_suspicious": config.get("quarantine_suspicious", True),
+            "max_risk_score": config.get("max_risk_score", 30),
+            "auto_snapshot": config.get("auto_snapshot", True),
+            "health_check_after_prepare": config.get("health_check_after_prepare", True),
             "security": {
                 "policy_version": SECURITY_POLICY_VERSION,
                 "require_signature": config.get("require_signature", True),
                 "require_checksum": config.get("require_checksum", True),
+                "quarantine_suspicious": config.get("quarantine_suspicious", True),
+                "max_risk_score": config.get("max_risk_score", 30),
                 "publisher_key_loaded": trust.get("publisher_key_loaded", False),
                 "publisher_fingerprint": trust.get("publisher_key_fingerprint"),
                 "audit_entries": trust.get("audit_entries", 0),
@@ -2262,11 +2351,19 @@ def register(app: FastAPI):
             config["require_signature"] = cfg.require_signature
         if cfg.require_checksum is not None:
             config["require_checksum"] = cfg.require_checksum
+        if cfg.quarantine_suspicious is not None:
+            config["quarantine_suspicious"] = cfg.quarantine_suspicious
+        if cfg.max_risk_score is not None:
+            config["max_risk_score"] = cfg.max_risk_score
         if cfg.lockdown_mode is not None:
             sec.set_lockdown(OTA_DIR, cfg.lockdown_mode, "config_update")
             config["lockdown_mode"] = cfg.lockdown_mode
         if cfg.tofu_enabled is not None:
             config["tofu_enabled"] = cfg.tofu_enabled
+        if cfg.auto_snapshot is not None:
+            config["auto_snapshot"] = cfg.auto_snapshot
+        if cfg.health_check_after_prepare is not None:
+            config["health_check_after_prepare"] = cfg.health_check_after_prepare
 
         _save_config(config)
 
@@ -4137,7 +4234,24 @@ echo "=== Security smoke completato ==="
 
             project_root = OTA_PROJECT_ROOT
             if not os.path.isdir(project_root):
-                raise RuntimeError(f"Project root not mounted at {project_root}")
+                # Try fallback paths for the project root
+                fallbacks = [
+                    os.environ.get("TPL_PROJECT_ROOT", ""),
+                    "/app",
+                    os.path.join(root, ".."),
+                ]
+                found = False
+                for fb in fallbacks:
+                    if fb and os.path.isdir(fb) and os.path.isfile(os.path.join(fb, "compose.yml")):
+                        project_root = fb
+                        found = True
+                        logger.info(f"OTA apply: using fallback project root {fb}")
+                        break
+                if not found:
+                    raise RuntimeError(
+                        f"Project root not mounted at {OTA_PROJECT_ROOT}. "
+                        f"Ensure TPL_OTA_PROJECT_DIR volume is configured in compose.d/40-api.yml"
+                    )
 
             for rel_path in sorted(files_map.keys()):
                 src = os.path.join(install_pkg_dir, rel_path)
