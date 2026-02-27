@@ -39,7 +39,6 @@ infra/keycloak/data/
 
 # ─── Build Artifacts & Distribution ──────────────────────────────────
 dist/
-*.tar.gz
 *.zip
 
 # ─── Python ──────────────────────────────────────────────────────────
