@@ -67,8 +67,8 @@ def _load_platform_version() -> str:
     """Load version from VERSION.json (single source of truth).
     Falls back to hardcoded value if file is unavailable."""
     _candidates = [
-        Path(__file__).resolve().parents[4] / "VERSION.json",  # repo root from engines/
-        Path("/app/VERSION.json"),                              # Docker mount
+        Path("/app/VERSION.json"),                              # Docker mount (primary)
+        Path(__file__).resolve().parents[2] / "VERSION.json",   # /app from engines/
         Path(os.environ.get("TPL_ROOT", "")) / "VERSION.json", # env override
     ]
     for p in _candidates:
@@ -1637,9 +1637,15 @@ def register(app: FastAPI):
         if not staging_exists:
             return checks
 
+        # For sandbox test updates, the structure files are nested under _ota_test_sandbox/
+        struct_root = staging_dir
+        sandbox_sub = os.path.join(staging_dir, _TEST_SANDBOX)
+        if os.path.isdir(sandbox_sub):
+            struct_root = sandbox_sub
+
         # 2. Key files present
         for key_file in REQUIRED_FILES:
-            exists = os.path.isfile(os.path.join(staging_dir, key_file))
+            exists = os.path.isfile(os.path.join(struct_root, key_file))
             checks.append({
                 "id": f"file_{key_file.replace('/', '_')}",
                 "name": f"File chiave: {key_file}",
@@ -1649,7 +1655,7 @@ def register(app: FastAPI):
             })
 
         # 3. API main.py present
-        api_main = os.path.join(staging_dir, "apps", "api", "app", "main.py")
+        api_main = os.path.join(struct_root, "apps", "api", "app", "main.py")
         checks.append({
             "id": "file_apps_api_app_main_py",
             "name": "File chiave: apps/api/app/main.py",
@@ -1659,7 +1665,7 @@ def register(app: FastAPI):
         })
 
         # 4. Modules directory
-        modules_dir = os.path.join(staging_dir, "modules")
+        modules_dir = os.path.join(struct_root, "modules")
         has_modules = os.path.isdir(modules_dir)
         module_count = len([f for f in os.listdir(modules_dir) if f.endswith(".sh")]) if has_modules else 0
         checks.append({
@@ -1671,7 +1677,7 @@ def register(app: FastAPI):
         })
 
         # 5. Engines directory
-        engines_dir = os.path.join(staging_dir, "apps", "api", "app", "engines")
+        engines_dir = os.path.join(struct_root, "apps", "api", "app", "engines")
         has_engines = os.path.isdir(engines_dir)
         engine_count = (
             len([f for f in os.listdir(engines_dir) if f.endswith("_engine.py")])
@@ -2739,11 +2745,22 @@ def register(app: FastAPI):
     TEST_UPDATE_TAG = f"v{TEST_UPDATE_VERSION}"
     TEST_UPDATE_META_FILE = os.path.join(OTA_DIR, "test_update_meta.json")
 
+    # Sandbox prefix: all test update files live under this prefix
+    # so install/apply NEVER overwrites real project files.
+    _TEST_SANDBOX = "_ota_test_sandbox"
+
     def _build_test_update_files() -> dict:
-        """Build a realistic v3.1.0-rc1 test update package with real TPL content."""
+        """Build a realistic v3.1.0-rc1 test update package.
+
+        SAFETY: All files are prefixed with _ota_test_sandbox/ to ensure
+        the install/apply pipeline can never overwrite real production files.
+        The full pipeline (preflight, signature, integrity, apply) runs
+        identically — only the final file destination is sandboxed.
+        """
+        pfx = _TEST_SANDBOX
         return {
-            # ── Core platform files ───────────────────────────────
-            "compose.yml": f"""# TPL Platform {TEST_UPDATE_TAG}
+            # ── Core platform files (sandboxed) ───────────────────
+            f"{pfx}/compose.yml": f"""# TPL Platform {TEST_UPDATE_TAG}
 # Generato dal sistema OTA Test Update Delivery
 version: "3.8"
 
@@ -2781,7 +2798,7 @@ services:
     volumes:
       - ./infra/web:/usr/share/nginx/html:ro
 """,
-            "run.sh": f"""#!/bin/bash
+            f"{pfx}/run.sh": f"""#!/bin/bash
 # TPL Platform Runner — {TEST_UPDATE_TAG}
 # Migliorato: startup parallelo, health-wait, diagnostica avanzata
 set -euo pipefail
@@ -2824,7 +2841,7 @@ fi
 
 log "=== TPL Platform $TPL_VERSION — Pronto ==="
 """,
-            "init.sh": f"""#!/bin/bash
+            f"{pfx}/init.sh": f"""#!/bin/bash
 # TPL Platform Init — {TEST_UPDATE_TAG}
 set -euo pipefail
 echo "[TPL] Inizializzazione piattaforma v{TEST_UPDATE_VERSION}"
@@ -2839,7 +2856,7 @@ chmod 700 data/ota/keys 2>/dev/null || true
 
 echo "[TPL] Init completato"
 """,
-            "README.md": f"""# TPL Platform — {TEST_UPDATE_TAG}
+            f"{pfx}/README.md": f"""# TPL Platform — {TEST_UPDATE_TAG}
 
 ## Changelog v{TEST_UPDATE_VERSION}
 
@@ -2867,7 +2884,7 @@ echo "[TPL] Init completato"
 - Docker Compose v2
 - 2 GB RAM minimo, 4 GB raccomandato
 """,
-            "bootstrap.sh": """#!/bin/bash
+            f"{pfx}/bootstrap.sh": """#!/bin/bash
 # TPL Bootstrap — verifica dipendenze e prepara ambiente
 set -euo pipefail
 
@@ -2883,7 +2900,7 @@ echo "[TPL] Dipendenze verificate"
 """,
 
             # ── API Backend ───────────────────────────────────────
-            "apps/api/app/main.py": f'''"""
+            f"{pfx}/apps/api/app/main.py": f'''"""
 TPL Platform API — v{TEST_UPDATE_VERSION}
 FastAPI backend con autenticazione, engine modulari e OTA updates.
 """
@@ -2920,7 +2937,7 @@ async def timing_middleware(request: Request, call_next):
 async def health():
     return {{"status": "healthy", "version": "{TEST_UPDATE_VERSION}"}}
 ''',
-            "apps/api/app/engines/diagnostics_engine.py": f'''"""
+            f"{pfx}/apps/api/app/engines/diagnostics_engine.py": f'''"""
 TPL Diagnostics Engine — v1.0.0
 Engine di diagnostica avanzata per la piattaforma TPL.
 Esegue 12 controlli automatici su sistema, sicurezza e performance.
@@ -3046,7 +3063,7 @@ def register(app: FastAPI):
     async def diagnostics_version(_u=Depends(require_admin)):
         return {{"engine": ENGINE_NAME, "version": ENGINE_VERSION}}
 ''',
-            "apps/api/app/engines/ota_update_engine.py": f'''"""
+            f"{pfx}/apps/api/app/engines/ota_update_engine.py": f'''"""
 TPL OTA Update Engine — v3.0.0 (Hardened Secure OTA)
 Placeholder per l'aggiornamento di test.
 Il file reale viene preservato durante l'installazione.
@@ -3055,7 +3072,7 @@ Il file reale viene preservato durante l'installazione.
 # L'engine OTA reale rimane invariato durante l'aggiornamento.
 ENGINE_VERSION = "3.0.0"
 ''',
-            "apps/api/requirements.txt": """fastapi==0.115.7
+            f"{pfx}/apps/api/requirements.txt": """fastapi==0.115.7
 uvicorn[standard]==0.34.0
 httpx==0.27.2
 cryptography==44.0.0
@@ -3065,7 +3082,7 @@ psutil==5.9.8
 python-multipart==0.0.18
 jinja2==3.1.5
 """,
-            "apps/api/Dockerfile": f"""FROM python:3.12-slim
+            f"{pfx}/apps/api/Dockerfile": f"""FROM python:3.12-slim
 LABEL maintainer="pif993" version="{TEST_UPDATE_VERSION}"
 WORKDIR /app
 COPY requirements.txt .
@@ -3076,19 +3093,19 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 """,
 
             # ── Modules ──────────────────────────────────────────
-            "modules/10_traefik.sh": """#!/bin/bash
+            f"{pfx}/modules/10_traefik.sh": """#!/bin/bash
 meta() { echo '{"name":"traefik","version":"3.2","desc":"Reverse proxy con TLS"}'; }
 apply() { echo "Traefik configurato"; }
 """,
-            "modules/40_api_base.sh": """#!/bin/bash
+            f"{pfx}/modules/40_api_base.sh": """#!/bin/bash
 meta() { echo '{"name":"api_base","version":"3.1","desc":"API FastAPI backend"}'; }
 apply() { echo "API base configurata"; }
 """,
-            "modules/108_ota_update.sh": """#!/bin/bash
+            f"{pfx}/modules/108_ota_update.sh": """#!/bin/bash
 meta() { echo '{"name":"ota_update","version":"3.0","desc":"Engine OTA con sicurezza Ed25519"}'; }
 apply() { echo "OTA engine configurato"; }
 """,
-            "modules/109_diagnostics.sh": f"""#!/bin/bash
+            f"{pfx}/modules/109_diagnostics.sh": f"""#!/bin/bash
 # TPL Module: Diagnostics — v1.0.0
 # Aggiunto in {TEST_UPDATE_TAG}
 meta() {{ echo '{{"name":"diagnostics","version":"1.0","desc":"Engine diagnostica avanzata"}}'; }}
@@ -3104,7 +3121,7 @@ apply() {{
 """,
 
             # ── Infrastructure ────────────────────────────────────
-            "infra/web/index.html": f"""<!DOCTYPE html>
+            f"{pfx}/infra/web/index.html": f"""<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
@@ -3117,7 +3134,7 @@ apply() {{
 </body>
 </html>
 """,
-            "infra/web/styles.css": """/* TPL Platform Styles — v3.1 */
+            f"{pfx}/infra/web/styles.css": """/* TPL Platform Styles — v3.1 */
 :root {
   --tpl-primary: #6366f1;
   --tpl-success: #22c55e;
@@ -3127,7 +3144,7 @@ apply() {{
 }
 body { margin: 0; font-family: system-ui, sans-serif; }
 """,
-            "infra/traefik/traefik.yml": """# Traefik v3.2 configuration
+            f"{pfx}/infra/traefik/traefik.yml": """# Traefik v3.2 configuration
 entryPoints:
   web:
     address: ':80'
@@ -3150,7 +3167,7 @@ certificatesResolvers: {}
 """,
 
             # ── Scripts ──────────────────────────────────────────
-            "scripts/test_all.sh": f"""#!/bin/bash
+            f"{pfx}/scripts/test_all.sh": f"""#!/bin/bash
 # TPL Test Suite — {TEST_UPDATE_TAG}
 set -euo pipefail
 echo "=== TPL Test Suite v{TEST_UPDATE_VERSION} ==="
@@ -3181,7 +3198,7 @@ echo "Risultato: $PASS passati, $FAIL falliti"
 [ $FAIL -eq 0 ] && echo "=== TUTTI I TEST SUPERATI ===" || echo "=== ALCUNI TEST FALLITI ==="
 exit $FAIL
 """,
-            "scripts/security_smoke.sh": """#!/bin/bash
+            f"{pfx}/scripts/security_smoke.sh": """#!/bin/bash
 # Security smoke test
 set -euo pipefail
 echo "=== Security Smoke Test ==="
@@ -3197,7 +3214,7 @@ echo "=== Security smoke completato ==="
 """,
 
             # ── Compose overlays ─────────────────────────────────
-            "compose.d/10-traefik.yml": """services:
+            f"{pfx}/compose.d/10-traefik.yml": """services:
   traefik:
     image: traefik:v3.2
     restart: unless-stopped
@@ -3208,7 +3225,7 @@ echo "=== Security smoke completato ==="
       - ./infra/traefik:/etc/traefik:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
 """,
-            "compose.d/40-api.yml": """services:
+            f"{pfx}/compose.d/40-api.yml": """services:
   api:
     build: ./apps/api
     restart: unless-stopped
@@ -3221,7 +3238,7 @@ echo "=== Security smoke completato ==="
 """,
 
             # ── CHANGELOG.md ─────────────────────────────────────
-            f"CHANGELOG.md": f"""# Changelog
+            f"{pfx}/CHANGELOG.md": f"""# Changelog
 
 ## [{TEST_UPDATE_VERSION}] — {datetime.now().strftime('%Y-%m-%d')}
 
@@ -4010,9 +4027,11 @@ echo "=== Security smoke completato ==="
             raise HTTPException(404, f"Version {safe_tag} not staged. Prepare it first via /ota/prepare/{{tag}}")
 
         # Initialize install state
+        is_test = "-test-" in safe_tag
         state = {
             "status": "installing",
             "tag": safe_tag,
+            "is_test": is_test,
             "started_at": datetime.now().isoformat(),
             "started_by": user,
             "steps": [],
@@ -4232,26 +4251,42 @@ echo "=== Security smoke completato ==="
             error_files = []
             categories = {"web": [], "api": [], "modules": [], "infra": [], "other": []}
 
-            project_root = OTA_PROJECT_ROOT
-            if not os.path.isdir(project_root):
-                # Try fallback paths for the project root
-                fallbacks = [
-                    os.environ.get("TPL_PROJECT_ROOT", ""),
-                    "/app",
-                    os.path.join(root, ".."),
-                ]
-                found = False
-                for fb in fallbacks:
-                    if fb and os.path.isdir(fb) and os.path.isfile(os.path.join(fb, "compose.yml")):
-                        project_root = fb
-                        found = True
-                        logger.info(f"OTA apply: using fallback project root {fb}")
-                        break
-                if not found:
-                    raise RuntimeError(
-                        f"Project root not mounted at {OTA_PROJECT_ROOT}. "
-                        f"Ensure TPL_OTA_PROJECT_DIR volume is configured in compose.d/40-api.yml"
-                    )
+            # ── Test update safety: detect sandboxed files ───────────
+            is_test = state.get("is_test", False) or any(
+                k.startswith(_TEST_SANDBOX + "/") for k in files_map
+            )
+            if is_test:
+                # For test updates, write to a sandbox subdirectory
+                # under the OTA data dir — NEVER to the live project root.
+                sandbox_dir = os.path.join(OTA_DIR, "install", "sandbox")
+                if os.path.isdir(sandbox_dir):
+                    shutil.rmtree(sandbox_dir)
+                os.makedirs(sandbox_dir, exist_ok=True)
+                project_root = sandbox_dir
+                logger.info(f"OTA apply: TEST UPDATE — writing to sandbox {sandbox_dir}")
+                _add_install_step(state, "sandbox", "ok",
+                                  f"Test update: using sandbox dir (production files safe)")
+            else:
+                project_root = OTA_PROJECT_ROOT
+                if not os.path.isdir(project_root):
+                    # Try fallback paths for the project root
+                    fallbacks = [
+                        os.environ.get("TPL_PROJECT_ROOT", ""),
+                        "/app",
+                        os.path.join(root, ".."),
+                    ]
+                    found = False
+                    for fb in fallbacks:
+                        if fb and os.path.isdir(fb) and os.path.isfile(os.path.join(fb, "compose.yml")):
+                            project_root = fb
+                            found = True
+                            logger.info(f"OTA apply: using fallback project root {fb}")
+                            break
+                    if not found:
+                        raise RuntimeError(
+                            f"Project root not mounted at {OTA_PROJECT_ROOT}. "
+                            f"Ensure TPL_OTA_PROJECT_DIR volume is configured in compose.d/40-api.yml"
+                        )
 
             for rel_path in sorted(files_map.keys()):
                 src = os.path.join(install_pkg_dir, rel_path)
@@ -4311,7 +4346,10 @@ echo "=== Security smoke completato ==="
             except Exception as oe:
                 logger.warning(f"Overlay backup copy: {oe}")
 
-            restart_needed = len(categories["api"]) > 0 or len(categories["modules"]) > 0
+            restart_needed = (
+                not is_test and
+                (len(categories["api"]) > 0 or len(categories["modules"]) > 0)
+            )
             cat_summary = {k: len(v) for k, v in categories.items() if v}
 
             if error_files:
@@ -4378,6 +4416,15 @@ echo "=== Security smoke completato ==="
             )
 
         restart_needed = state.get("restart_needed", False)
+        is_test = state.get("is_test", False)
+
+        # Clean up test sandbox if this was a test update
+        if is_test:
+            sandbox_dir = os.path.join(OTA_DIR, "install", "sandbox")
+            if os.path.isdir(sandbox_dir):
+                shutil.rmtree(sandbox_dir, ignore_errors=True)
+                logger.info("OTA finalize: cleaned up test sandbox")
+            restart_needed = False  # never restart for test updates
 
         state["status"] = "finalized"
         state["finalized_at"] = datetime.now().isoformat()
