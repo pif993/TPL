@@ -4456,6 +4456,245 @@ echo "=== Security smoke completato ==="
             ),
         }
 
+    # ═══════════════════════════════════════════════════════════════════
+    # ── POST-INSTALL INTEGRITY VERIFICATION ───────────────────────────
+    # ═══════════════════════════════════════════════════════════════════
+
+    @app.post("/ota/install/verify")
+    async def ota_install_verify(_u=Depends(require_admin)):
+        """Verify integrity of files installed by the last OTA update.
+
+        Performs a comprehensive post-install check:
+          1. SHA-256 checksum of every applied file at its destination
+          2. VERSION.json consistency (runtime vs. on-disk vs. manifest)
+          3. Detection of post-install tampering or partial writes
+          4. Overlay backup cross-reference
+
+        Returns a detailed integrity report with per-file status.
+        Can be called after apply or finalize.
+        """
+        user = _u.get("sub", "admin")
+        state = _load_install_state()
+
+        if state.get("status") not in ("applied", "finalized"):
+            raise HTTPException(
+                409,
+                f"Cannot verify — status is '{state.get('status', 'idle')}'. "
+                "Must be 'applied' or 'finalized'."
+            )
+
+        safe_tag = state.get("tag", "unknown")
+        install_pkg_dir = state.get("install_dir",
+                                     os.path.join(OTA_INSTALL_DIR, safe_tag))
+
+        # ── Load the MANIFEST from the install package ────────────────
+        manifest_path = os.path.join(install_pkg_dir, "MANIFEST.json")
+        if not os.path.isfile(manifest_path):
+            raise HTTPException(
+                404,
+                f"Install package for {safe_tag} not found — "
+                "may have been cleaned up after finalize."
+            )
+
+        with open(manifest_path) as f:
+            manifest = json.load(f)
+
+        files_map = manifest.get("files", {})
+
+        # ── Determine the project root used during apply ──────────────
+        is_test = state.get("is_test", False) or any(
+            k.startswith(_TEST_SANDBOX + "/") for k in files_map
+        )
+        if is_test:
+            project_root = os.path.join(OTA_DIR, "install", "sandbox")
+        else:
+            project_root = OTA_PROJECT_ROOT
+            # Same fallback logic as apply
+            if not os.path.isdir(project_root):
+                for fb in [os.environ.get("TPL_PROJECT_ROOT", ""), "/app",
+                           os.path.join(root, "..")]:
+                    if fb and os.path.isdir(fb) and os.path.isfile(
+                            os.path.join(fb, "compose.yml")):
+                        project_root = fb
+                        break
+
+        # ── Protected files list (mirrored from apply) ────────────────
+        _PROTECTED_FILES = {
+            "apps/api/app/engines/ota_update_engine.py",
+            "compose.d/40-api.yml",
+            "run.sh",
+            "infra/web/styles.css",
+            ".env",
+        }
+
+        # ── Per-file integrity verification ───────────────────────────
+        verified = []
+        tampered = []
+        missing = []
+        skipped_protected = []
+        errors = []
+        total_bytes_checked = 0
+
+        for rel_path, meta in sorted(files_map.items()):
+            expected_sha = meta.get("sha256", "")
+
+            # Protected files are skipped during apply — skip in verify too
+            if rel_path in _PROTECTED_FILES:
+                skipped_protected.append(rel_path)
+                continue
+
+            dest = os.path.join(project_root, rel_path)
+            src = os.path.join(install_pkg_dir, rel_path)
+
+            if not os.path.isfile(dest):
+                # File wasn't applied (source might not have existed)
+                if not os.path.isfile(src):
+                    skipped_protected.append(rel_path)  # source absent → skip
+                else:
+                    missing.append({
+                        "file": rel_path,
+                        "reason": "destination file missing after apply",
+                        "expected_sha256": expected_sha[:16] + "…",
+                    })
+                continue
+
+            try:
+                actual_sha = sec.sha256_file(dest)
+                fsize = os.path.getsize(dest)
+                total_bytes_checked += fsize
+
+                if actual_sha == expected_sha:
+                    verified.append({
+                        "file": rel_path,
+                        "status": "ok",
+                        "sha256_match": True,
+                        "size": fsize,
+                    })
+                else:
+                    tampered.append({
+                        "file": rel_path,
+                        "status": "mismatch",
+                        "expected_sha256": expected_sha[:16] + "…",
+                        "actual_sha256": actual_sha[:16] + "…",
+                        "size": fsize,
+                    })
+            except Exception as e:
+                errors.append({
+                    "file": rel_path,
+                    "error": str(e)[:200],
+                })
+
+        # ── VERSION.json consistency check ────────────────────────────
+        version_check = {"consistent": False, "details": {}}
+        try:
+            # 1. Runtime version (loaded at engine start)
+            runtime_ver = PLATFORM_VERSION
+
+            # 2. On-disk VERSION.json (live file)
+            disk_ver = None
+            for vp in [Path("/app/VERSION.json"),
+                       Path(project_root) / "VERSION.json"]:
+                if vp.is_file():
+                    try:
+                        vdata = json.loads(vp.read_text(encoding="utf-8"))
+                        disk_ver = vdata.get("version")
+                        break
+                    except (OSError, json.JSONDecodeError):
+                        continue
+
+            # 3. Manifest version (what the update should have installed)
+            manifest_ver = manifest.get("version", safe_tag.lstrip("v"))
+
+            version_check["details"] = {
+                "runtime": runtime_ver,
+                "on_disk": disk_ver,
+                "manifest": manifest_ver,
+            }
+            version_check["consistent"] = (
+                disk_ver is not None
+                and disk_ver == manifest_ver
+            )
+            # After finalize + restart, runtime should also match
+            if state.get("status") == "finalized":
+                version_check["runtime_matches"] = runtime_ver == manifest_ver
+            else:
+                version_check["runtime_matches"] = None  # restart pending
+
+        except Exception as e:
+            version_check["error"] = str(e)[:200]
+
+        # ── Overlay cross-reference (if available) ────────────────────
+        overlay_check = {"checked": False, "mismatches": 0}
+        overlay_dir = os.path.join(OTA_INSTALL_DIR, "overlay")
+        if os.path.isdir(overlay_dir):
+            overlay_check["checked"] = True
+            ov_mismatches = 0
+            for fpath in Path(overlay_dir).rglob("*"):
+                if not fpath.is_file():
+                    continue
+                rel = str(fpath.relative_to(overlay_dir))
+                dest = os.path.join(project_root, rel)
+                if os.path.isfile(dest):
+                    ov_sha = sec.sha256_file(str(fpath))
+                    dest_sha = sec.sha256_file(dest)
+                    if ov_sha != dest_sha:
+                        ov_mismatches += 1
+            overlay_check["mismatches"] = ov_mismatches
+            overlay_check["overlay_matches_destination"] = ov_mismatches == 0
+
+        # ── Build report ──────────────────────────────────────────────
+        all_ok = (
+            len(tampered) == 0
+            and len(missing) == 0
+            and len(errors) == 0
+            and version_check.get("consistent", False)
+        )
+
+        report = {
+            "status": "verified" if all_ok else "integrity_issues",
+            "tag": safe_tag,
+            "install_status": state.get("status"),
+            "summary": {
+                "total_files": len(files_map),
+                "verified_ok": len(verified),
+                "tampered": len(tampered),
+                "missing": len(missing),
+                "skipped_protected": len(skipped_protected),
+                "errors": len(errors),
+                "bytes_checked": total_bytes_checked,
+                "bytes_checked_human": _fmt_size(total_bytes_checked),
+            },
+            "integrity_passed": all_ok,
+            "version_check": version_check,
+            "overlay_check": overlay_check,
+            "tampered_files": tampered,
+            "missing_files": missing,
+            "error_files": errors,
+            "verified_at": datetime.now().isoformat(),
+        }
+
+        # Audit
+        sec.audit_log(
+            "ota.install.verify",
+            "passed" if all_ok else "failed",
+            user,
+            {
+                "tag": safe_tag,
+                "verified": len(verified),
+                "tampered": len(tampered),
+                "missing": len(missing),
+                "errors": len(errors),
+                "version_consistent": version_check.get("consistent"),
+            },
+        )
+        sec.record_metric(OTA_DIR, "install_verify", {
+            "tag": safe_tag,
+            "passed": all_ok,
+            "files_checked": len(verified) + len(tampered),
+        })
+
+        return report
+
     @app.post("/ota/install/rollback")
     async def ota_install_rollback(_u=Depends(require_admin)):
         """Rollback a pending or applied install using the pre-install snapshot."""
