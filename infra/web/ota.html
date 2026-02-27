@@ -213,6 +213,7 @@
                       <label class="ota2-toggle"><span>Firma obbligatoria</span><input class="form-check-input" type="checkbox" id="otaSecCfgSignature" checked></label>
                       <label class="ota2-toggle"><span>Checksum obbligatorio</span><input class="form-check-input" type="checkbox" id="otaSecCfgChecksum" checked></label>
                       <label class="ota2-toggle"><span>Quarantena sospetti</span><input class="form-check-input" type="checkbox" id="otaSecCfgQuarantine" checked></label>
+                      <label class="ota2-toggle"><span>TOFU (Trust On First Use)</span><input class="form-check-input" type="checkbox" id="otaSecCfgTofu" checked></label>
                       <label class="ota2-toggle"><span>Rischio max</span><input type="number" class="form-control form-control-sm" id="otaSecCfgMaxRisk" value="30" min="0" max="100" style="width:56px"></label>
                       <div class="ota2-details-actions">
                         <button class="ota2-action-btn ota2-action-btn--sm" id="otaSecCfgSaveBtn" type="button"><i class="bi bi-check-lg"></i> Salva</button>
@@ -221,6 +222,70 @@
                     </div>
                   </details>
 
+                  <!-- Lockdown Mode -->
+                  <details class="ota2-details">
+                    <summary><i class="bi bi-lock-fill"></i> Lockdown Mode</summary>
+                    <div class="ota2-details-body">
+                      <p class="small text-muted mb-2">Blocca download, preparazioni e rotazioni chiave</p>
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="ota2-lockdown-status" id="otaLockdownStatus"><i class="bi bi-unlock-fill"></i> Inattivo</span>
+                        <button class="ota2-action-btn ota2-action-btn--sm ota2-action-btn--danger" id="otaLockdownToggle" type="button">
+                          <i class="bi bi-lock-fill"></i> Attiva lockdown
+                        </button>
+                      </div>
+                    </div>
+                  </details>
+
+                </div>
+              </div>
+
+              <!-- TOFU & Key Rotation -->
+              <div class="ota2-card">
+                <div class="ota2-card-head">
+                  <span class="ota2-card-title"><i class="bi bi-fingerprint"></i> TOFU & Chiavi</span>
+                </div>
+                <div class="ota2-card-body">
+                  <div class="ota2-sec-row">
+                    <i class="bi bi-pin-map-fill ota2-ic--pub"></i>
+                    <span class="ota2-sec-lbl">Pin attivi</span>
+                    <span class="ota2-sec-val" id="otaTofuPins">—</span>
+                  </div>
+                  <div class="ota2-sec-row">
+                    <i class="bi bi-check-circle-fill ota2-ic--algo"></i>
+                    <span class="ota2-sec-lbl">TOFU Status</span>
+                    <span class="ota2-sec-val" id="otaTofuStatus">—</span>
+                  </div>
+                  <div class="d-flex gap-2 mt-2">
+                    <button class="ota2-action-btn ota2-action-btn--sm" id="otaTofuVerifyBtn" type="button">
+                      <i class="bi bi-shield-check"></i> Verifica TOFU
+                    </button>
+                    <span id="otaTofuResult" class="small"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Metrics -->
+              <div class="ota2-card">
+                <div class="ota2-card-head">
+                  <span class="ota2-card-title"><i class="bi bi-graph-up-arrow"></i> Metriche OTA</span>
+                </div>
+                <div class="ota2-card-body" id="otaMetricsBody">
+                  <div class="ota2-skeleton"><div class="ota2-skel-line"></div><div class="ota2-skel-line w-75"></div></div>
+                </div>
+              </div>
+
+              <!-- Health -->
+              <div class="ota2-card">
+                <div class="ota2-card-head">
+                  <span class="ota2-card-title"><i class="bi bi-heart-pulse-fill"></i> Health Check</span>
+                </div>
+                <div class="ota2-card-body">
+                  <div id="otaHealthBody">
+                    <span class="text-muted small">Nessun check eseguito</span>
+                  </div>
+                  <button class="ota2-action-btn ota2-action-btn--sm mt-2" id="otaHealthRunBtn" type="button">
+                    <i class="bi bi-heart-pulse"></i> Esegui health check
+                  </button>
                 </div>
               </div>
 
@@ -284,6 +349,20 @@
                 <div class="ota2-skeleton"><div class="ota2-skel-line"></div><div class="ota2-skel-line w-75"></div></div>
               </div>
             </div>
+            <div class="ota2-card">
+              <div class="ota2-card-head">
+                <span class="ota2-card-title"><i class="bi bi-camera-fill"></i> Rollback Snapshots</span>
+                <span class="ota2-pill" id="otaPageSnapPill">—</span>
+              </div>
+              <div class="ota2-card-body ota2-scroll" id="otaPageSnapshotList">
+                <div class="ota2-skeleton"><div class="ota2-skel-line"></div><div class="ota2-skel-line w-75"></div></div>
+              </div>
+              <div class="mt-2">
+                <button class="ota2-action-btn ota2-action-btn--sm" id="otaSnapCreateBtn" type="button">
+                  <i class="bi bi-camera"></i> Crea snapshot
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Shortcuts -->
@@ -296,7 +375,7 @@
     </main>
 
     <footer class="app-footer">
-      <div class="float-end d-none d-sm-inline">v3.1</div>
+      <div class="float-end d-none d-sm-inline">v3.2</div>
       <strong>&copy; TPL Platform</strong>
     </footer>
 
@@ -304,7 +383,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/app.js"></script>
-  <script src="/sidebar.js?v=3.2"></script>
+  <script src="/sidebar.js?v=3.3"></script>
   <script>
     (async () => {
       try {
@@ -316,6 +395,6 @@
       } catch { location.href = '/'; }
     })();
   </script>
-  <script src="/ota.js?v=3.2"></script>
+  <script src="/ota.js?v=3.3"></script>
 </body>
 </html>

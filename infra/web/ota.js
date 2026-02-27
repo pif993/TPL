@@ -783,6 +783,7 @@
         require_signature: q('otaSecCfgSignature')?.checked ?? true,
         require_checksum: q('otaSecCfgChecksum')?.checked ?? true,
         quarantine_suspicious: q('otaSecCfgQuarantine')?.checked ?? true,
+        tofu_enabled: q('otaSecCfgTofu')?.checked ?? true,
         max_risk_score: parseInt(q('otaSecCfgMaxRisk')?.value || '30', 10),
       };
       await TPL.jsonFetch('/api/ota/config', {
@@ -801,6 +802,166 @@
     }
   };
 
+  /* ── Lockdown Mode ─────────────────────────────────────────── */
+  const loadLockdownStatus = async () => {
+    try {
+      const data = await TPL.jsonFetch('/api/ota/security/lockdown');
+      const el = q('otaLockdownStatus');
+      const btn = q('otaLockdownToggle');
+      if (data.active) {
+        if (el) el.innerHTML = '<i class="bi bi-lock-fill text-danger"></i> <strong class="text-danger">ATTIVO</strong>';
+        if (btn) { btn.innerHTML = '<i class="bi bi-unlock-fill"></i> Disattiva lockdown'; btn.classList.remove('ota2-action-btn--danger'); btn.classList.add('ota2-action-btn--primary'); }
+      } else {
+        if (el) el.innerHTML = '<i class="bi bi-unlock-fill text-success"></i> Inattivo';
+        if (btn) { btn.innerHTML = '<i class="bi bi-lock-fill"></i> Attiva lockdown'; btn.classList.add('ota2-action-btn--danger'); btn.classList.remove('ota2-action-btn--primary'); }
+      }
+    } catch { /* ignore */ }
+  };
+
+  const toggleLockdown = async () => {
+    try {
+      const current = await TPL.jsonFetch('/api/ota/security/lockdown');
+      const newState = !current.active;
+      if (newState && !confirm('Sei sicuro di voler attivare il LOCKDOWN? Tutte le operazioni OTA verranno bloccate.')) return;
+      await TPL.jsonFetch('/api/ota/security/lockdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: newState, reason: newState ? 'manual_lockdown' : 'manual_unlock' }),
+      });
+      showToast(newState ? 'Lockdown attivato' : 'Lockdown disattivato', newState ? 'warning' : 'success');
+      loadLockdownStatus();
+    } catch (e) {
+      showToast('Errore lockdown: ' + e, 'danger');
+    }
+  };
+
+  /* ── TOFU ──────────────────────────────────────────────────── */
+  const loadTofuStatus = async () => {
+    try {
+      const data = await TPL.jsonFetch('/api/ota/security/tofu-status');
+      const pins = q('otaTofuPins');
+      const status = q('otaTofuStatus');
+      if (pins) pins.textContent = `${data.total_pinned_keys} key pinned`;
+      if (status) {
+        status.textContent = data.tofu_enabled ? 'Attivo' : 'Disattivato';
+        status.style.color = data.tofu_enabled ? 'var(--bs-success)' : 'var(--bs-secondary)';
+      }
+    } catch { /* ignore */ }
+  };
+
+  const verifyTofu = async () => {
+    const res = q('otaTofuResult');
+    try {
+      const data = await TPL.jsonFetch('/api/ota/security/tofu-verify', { method: 'POST' });
+      if (data.trusted) {
+        if (res) res.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Trusted${data.auto_pinned ? ' (pinned)' : ''}</span>`;
+      } else {
+        if (res) res.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> ${data.status}</span>`;
+      }
+      setTimeout(() => { if (res) res.textContent = ''; }, 4000);
+      loadTofuStatus();
+    } catch (e) {
+      if (res) res.innerHTML = `<span class="text-danger">${esc(String(e))}</span>`;
+    }
+  };
+
+  /* ── Metrics ───────────────────────────────────────────────── */
+  const loadMetrics = async () => {
+    try {
+      const data = await TPL.jsonFetch('/api/ota/metrics');
+      const m = data.metrics || {};
+      const el = q('otaMetricsBody');
+      if (el) el.innerHTML = `
+        <div class="ota2-metrics-grid">
+          <div class="ota2-metric"><span class="ota2-metric-val">${m.total_checks || 0}</span><span class="ota2-metric-lbl">Check</span></div>
+          <div class="ota2-metric"><span class="ota2-metric-val">${m.total_simulations || 0}</span><span class="ota2-metric-lbl">Simulazioni</span></div>
+          <div class="ota2-metric"><span class="ota2-metric-val">${m.total_prepares || 0}</span><span class="ota2-metric-lbl">Preparazioni</span></div>
+          <div class="ota2-metric"><span class="ota2-metric-val">${m.successful_verifications || 0}</span><span class="ota2-metric-lbl">Verify OK</span></div>
+          <div class="ota2-metric"><span class="ota2-metric-val">${m.failed_verifications || 0}</span><span class="ota2-metric-lbl">Verify FAIL</span></div>
+          <div class="ota2-metric"><span class="ota2-metric-val">${m.events_24h || 0}</span><span class="ota2-metric-lbl">Events 24h</span></div>
+        </div>
+        <div class="small text-muted mt-2">
+          Uptime engine: ${Math.floor((data.engine_uptime_seconds || 0) / 60)}min &bullet;
+          Policy: v${esc(data.security_policy || '?')}
+        </div>`;
+    } catch (e) {
+      const el = q('otaMetricsBody');
+      if (el) el.innerHTML = `<span class="text-muted small">Non disponibile</span>`;
+    }
+  };
+
+  /* ── Health Check ──────────────────────────────────────────── */
+  const runHealthCheck = async () => {
+    const el = q('otaHealthBody');
+    const btn = q('otaHealthRunBtn');
+    if (btn) btn.disabled = true;
+    if (btn) btn.innerHTML = '<span class="ota2-spinner"></span> Checking…';
+    try {
+      const data = await TPL.jsonFetch('/api/ota/health');
+      const icon = data.healthy ? '<i class="bi bi-heart-fill text-success"></i>' : '<i class="bi bi-heart-fill text-danger"></i>';
+      let html = `<div class="mb-2">${icon} <strong>${data.healthy ? 'Healthy' : 'UNHEALTHY'}</strong> — ${data.passed}/${data.total_checks} check</div>`;
+      html += '<div class="ota2-health-checks">';
+      for (const c of (data.checks || [])) {
+        const ci = c.passed ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-x-circle-fill text-danger"></i>';
+        html += `<div class="ota2-health-check">${ci} <strong>${esc(c.check)}</strong> <span class="text-muted">${esc(c.detail)}</span></div>`;
+      }
+      html += '</div>';
+      html += `<div class="small text-muted mt-1">${data.total_latency_ms}ms — ${fmtDateShort(data.checked_at)}</div>`;
+      if (el) el.innerHTML = html;
+    } catch (e) {
+      if (el) el.innerHTML = `<span class="text-danger">${esc(String(e))}</span>`;
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-heart-pulse"></i> Esegui health check'; }
+    }
+  };
+
+  /* ── Rollback Snapshots ────────────────────────────────────── */
+  const loadSnapshots = async () => {
+    try {
+      const data = await TPL.jsonFetch('/api/ota/rollback/snapshots');
+      const el = q('otaPageSnapshotList');
+      const pill = q('otaPageSnapPill');
+      if (pill) pill.textContent = data.total || 0;
+      if (!el) return;
+
+      if (!data.snapshots || data.snapshots.length === 0) {
+        el.innerHTML = '<div class="text-muted small">Nessun snapshot disponibile</div>';
+        return;
+      }
+
+      el.innerHTML = data.snapshots.map(s => `
+        <div class="ota2-snap-item">
+          <div class="d-flex justify-content-between align-items-center">
+            <strong class="small"><i class="bi bi-camera-fill me-1"></i>${esc(s.snap_id || s.tag || '?')}</strong>
+            <span class="badge bg-secondary">${s.files_saved || 0} files</span>
+          </div>
+          <div class="small text-muted">${fmtDateShort(s.created_at)} — v${esc(s.platform_version || '?')}</div>
+        </div>
+      `).join('');
+    } catch {
+      const el = q('otaPageSnapshotList');
+      if (el) el.innerHTML = '<div class="text-muted small">Non disponibile</div>';
+    }
+  };
+
+  const createSnapshot = async () => {
+    const btn = q('otaSnapCreateBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ota2-spinner"></span> Creazione…'; }
+    try {
+      await TPL.jsonFetch('/api/ota/rollback/create-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag: `manual-${Date.now()}` }),
+      });
+      showToast('Snapshot creato', 'success');
+      loadSnapshots();
+    } catch (e) {
+      showToast('Errore snapshot: ' + e, 'danger');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-camera"></i> Crea snapshot'; }
+    }
+  };
+
   /* ── Event listeners ───────────────────────────────────────── */
   q('otaPageCheckBtn')?.addEventListener('click', checkUpdates);
   q('otaPageCfgSaveBtn')?.addEventListener('click', saveConfig);
@@ -813,6 +974,12 @@
   q('otaSecVerifyChainBtn')?.addEventListener('click', verifyChain);
   q('otaSecRefreshBtn')?.addEventListener('click', loadTrustInfo);
   q('otaSecCfgSaveBtn')?.addEventListener('click', saveSecurityConfig);
+
+  // New feature buttons
+  q('otaLockdownToggle')?.addEventListener('click', toggleLockdown);
+  q('otaTofuVerifyBtn')?.addEventListener('click', verifyTofu);
+  q('otaHealthRunBtn')?.addEventListener('click', runHealthCheck);
+  q('otaSnapCreateBtn')?.addEventListener('click', createSnapshot);
 
   // Host CLI: click-to-copy on ota2-cmd elements
   document.querySelectorAll('.ota2-cmd[data-copy]').forEach(cmd => {
@@ -847,6 +1014,10 @@
       loadChangelog(),
       loadRollback(),
       loadTrustInfo(),
+      loadLockdownStatus(),
+      loadTofuStatus(),
+      loadMetrics(),
+      loadSnapshots(),
     ]);
   };
 
