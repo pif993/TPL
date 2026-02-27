@@ -44,8 +44,13 @@ def register(app: FastAPI):
     def _get_comm_secret() -> str:
         return get_secret("COMM_SHARED_SECRET")
 
-    # Nonce replay protection (last 1000 nonces)
-    _seen_nonces: list[str] = []
+    # ── Nonce replay protection ─────────────────────────────────────
+    # Time-windowed set keyed by (sender, nonce).  Entries auto-expire
+    # after _NONCE_WINDOW seconds — aligned with the ±300 s timestamp
+    # tolerance so a nonce cannot be reused inside the valid window.
+    _NONCE_WINDOW: int = 310          # slightly > 300 to cover clock skew
+    _NONCE_CAP: int = 50_000          # hard cap to bound memory
+    _seen_nonces: dict[tuple[str, str], float] = {}   # (sender, nonce) → timestamp
 
     # Internal message bus — subscribers keyed by recipient engine name
     _subscribers: dict[str, list] = defaultdict(list)
@@ -73,15 +78,27 @@ def register(app: FastAPI):
         digest = hmac.new(_get_comm_secret().encode("utf-8"), data, hashlib.sha256).hexdigest()
         return hmac.compare_digest(digest, x.signature)
 
-    def _check_nonce(nonce: str) -> bool:
-        """Return True if nonce is new (not replayed)."""
+    def _check_nonce(sender: str, nonce: str) -> bool:
+        """Return True if (sender, nonce) is new within the replay window."""
+        now = time.time()
+        key = (sender, nonce)
         with _LOCK:
-            if nonce in _seen_nonces:
+            # ── Periodic GC: purge expired entries ──
+            if len(_seen_nonces) > _NONCE_CAP // 2:
+                cutoff = now - _NONCE_WINDOW
+                expired = [k for k, ts in _seen_nonces.items() if ts < cutoff]
+                for k in expired:
+                    del _seen_nonces[k]
+            # ── Check / insert ──
+            if key in _seen_nonces:
                 _stats["replay_blocked"] += 1
                 return False
-            _seen_nonces.append(nonce)
-            if len(_seen_nonces) > 1000:
-                _seen_nonces.pop(0)
+            if len(_seen_nonces) >= _NONCE_CAP:
+                # Emergency eviction: drop oldest quarter
+                oldest = sorted(_seen_nonces, key=_seen_nonces.get)[:_NONCE_CAP // 4]
+                for k in oldest:
+                    del _seen_nonces[k]
+            _seen_nonces[key] = now
             return True
 
     def _encrypt_payload(payload: dict) -> tuple[str, bool]:
@@ -195,7 +212,7 @@ def register(app: FastAPI):
         now = int(time.time())
         if abs(now - x.ts) > 300:
             raise HTTPException(400, "stale_timestamp")
-        if not _check_nonce(x.nonce):
+        if not _check_nonce(x.sender, x.nonce):
             raise HTTPException(409, "replay_detected")
         if not verify(x):
             with _LOCK:
@@ -266,6 +283,7 @@ def register(app: FastAPI):
                 "signatures_verified": _stats["signatures_verified"],
                 "signatures_failed": _stats["signatures_failed"],
                 "replay_blocked": _stats["replay_blocked"],
+                "nonce_store_size": len(_seen_nonces),
                 "subscribers": {k: len(v) for k, v in _subscribers.items()},
                 "encryption_available": _get_enc() is not None,
             }

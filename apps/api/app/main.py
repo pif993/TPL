@@ -50,6 +50,43 @@ LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "8"))
 # Control plane (module apply + reset) is DISABLED by default for security.
 # Set ENABLE_CONTROL_PLANE=1 to allow runtime module management via API.
 ENABLE_CONTROL_PLANE = os.getenv("ENABLE_CONTROL_PLANE", "0") == "1"
+# Control plane hardening: restrict to admin-net CIDRs only (break-glass pattern)
+# Set CONTROL_PLANE_CIDRS to a comma-separated list of allowed source CIDRs.
+# Default: only loopback + RFC1918 (no public internet).
+_CP_NETS: list = []
+for _cp_cidr in os.getenv("CONTROL_PLANE_CIDRS", "127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,::1/128").split(","):
+    _cp_cidr = _cp_cidr.strip()
+    if _cp_cidr:
+        try:
+            _CP_NETS.append(ipaddress.ip_network(_cp_cidr, strict=False))
+        except ValueError:
+            pass
+# Rate limiter for control plane operations (stricter than login)
+_cp_rate = RateLimiter(max_attempts=5, window_seconds=300)
+
+def _guard_control_plane(request: Request, u: dict):
+    """Break-glass guard: enforce network restriction + rate limit + severe audit."""
+    client = _client_ip(request)
+    actor = u.get("sub", "admin")
+    # Network restriction
+    try:
+        addr = ipaddress.ip_address(client)
+        allowed = any(addr in net for net in _CP_NETS)
+    except ValueError:
+        allowed = False
+    if not allowed:
+        _audit(request, "control_plane.denied", "network_blocked", actor,
+               {"ip": client, "reason": "source_ip_outside_control_plane_cidr"})
+        raise HTTPException(403, {
+            "error": "control_plane_network_denied",
+            "message": f"Control plane access denied from {client}. Must originate from admin network.",
+        })
+    # Rate limit control plane operations (per actor)
+    if _cp_rate.is_limited(actor):
+        _audit(request, "control_plane.denied", "rate_limited", actor,
+               {"ip": client, "reason": "control_plane_rate_limit_exceeded"})
+        raise HTTPException(429, "control_plane_rate_limited")
+    _cp_rate.register_attempt(actor)
 
 # ── API Key Manager (HMAC-peppered hashing, per-key scope/rate) ───────
 from .api_key_manager import ApiKeyManager
@@ -250,6 +287,21 @@ def _audit(request: Request, action: str, outcome: str, actor: str = "anonymous"
   except Exception as e:
     print(f"WARN: audit write failed: {e}", file=sys.stderr)
 
+def _audit_internal(action: str, outcome: str, actor: str = "system", details: dict | None = None):
+  """Audit helper for non-request contexts (startup, engine loading, etc.)."""
+  global _AUDIT_PREV_HASH
+  entry = {"ts": int(time.time()),"action": action,"outcome": outcome,"actor": actor,"ip": "127.0.0.1","request_id": "","details": details or {}}
+  entry["prev_hash"] = _AUDIT_PREV_HASH
+  record_str = json.dumps(entry, separators=(",", ":"), sort_keys=True)
+  entry["hash"] = hashlib.sha256(record_str.encode("utf-8")).hexdigest()
+  _AUDIT_PREV_HASH = entry["hash"]
+  try:
+    with _file_lock(AUDIT_LOG, exclusive=True):
+      with open(AUDIT_LOG, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+  except Exception as e:
+    print(f"WARN: audit write failed: {e}", file=sys.stderr)
+
 def _audit_tail(limit: int = 100):
   """Read last N audit records using shared JSONL utility."""
   return jsonl_tail(AUDIT_LOG, limit)
@@ -427,6 +479,14 @@ async def me(u=Depends(_me)):
       "roles": u.get("roles", []),
       "must_change_password": u.get("must_change_password", False),
   }
+
+# ── Engine Registry ───────────────────────────────────────────────────
+@app.get("/engines/registry")
+async def engines_registry(u=Depends(_need("admin"))):
+  """Return the engine registry with SHA-256 hashes and load status."""
+  registry = getattr(app.state, "engine_registry", {})
+  return {"engines": registry, "count": len(registry)}
+
 @app.get("/modules/state")
 async def modules_state(u=Depends(_need("admin"))):
   st = _load(); installed = st.get("installed", {}); ms=[]
@@ -462,6 +522,8 @@ async def modules_apply(x: ModuleApplyRequest, request: Request, confirm: str | 
       "docs": "https://github.com/tpl/docs/blob/main/modules.md",
       "cli_command": "scripts/tpl-modules install <bundle.tar.gz>",
     })
+  # ── Break-glass hardening: network restriction + rate limit ──
+  _guard_control_plane(request, u)
   # Dev-only fallback: still allow subprocess execution when ENABLE_CONTROL_PLANE=1
   if not os.path.isdir(MOD):
     raise HTTPException(503, "modules_dir_missing: mount modules volume when ENABLE_CONTROL_PLANE=1")
@@ -491,6 +553,8 @@ async def modules_reset(request: Request, confirm: str | None = Header(default=N
                  "Utilizzare il CLI: scripts/tpl-modules rollback",
       "cli_command": "scripts/tpl-modules rollback",
     })
+  # ── Break-glass hardening: network restriction + rate limit ──
+  _guard_control_plane(request, u)
   # Dev-only fallback
   if confirm != "YES": raise HTTPException(428, "missing_confirm")
   _save({"installed": {}})
@@ -587,16 +651,42 @@ def _register_builtin_context():
 
 def _load_engines():
   if not ENGINES_DIR.is_dir(): return
+  registry_path = Path(DATA) / ".tpl_engine_registry.json"
+  prev_registry = {}
+  if registry_path.is_file():
+    try:
+      prev_registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except Exception:
+      pass
+  new_registry = {}
+  tampered = []
   for file in sorted(ENGINES_DIR.glob("*_engine.py")):
     mod_name = f"app.engines.{file.stem}"
     try:
+      raw = file.read_bytes()
+      sha = hashlib.sha256(raw).hexdigest()
+      # Check for drift against previous registry
+      if file.name in prev_registry and prev_registry[file.name]["sha256"] != sha:
+        tampered.append(file.name)
+        _audit_internal("engine.drift", "warning", "system",
+                        {"engine": file.name, "expected": prev_registry[file.name]["sha256"], "actual": sha})
       spec = importlib.util.spec_from_file_location(mod_name, file)
       if not spec or not spec.loader: continue
       module = importlib.util.module_from_spec(spec)
       spec.loader.exec_module(module)
       register = getattr(module, "register", None)
       if callable(register): register(app)
+      new_registry[file.name] = {"sha256": sha, "loaded_at": time.time(), "status": "ok"}
     except Exception as e:
+      new_registry[file.name] = {"sha256": "", "loaded_at": time.time(), "status": f"error: {e}"}
       print(f"WARN: engine load failed: {file.name}: {e}")
+  if tampered:
+    print(f"SECURITY: engine drift detected in: {', '.join(tampered)}")
+  # Persist registry
+  try:
+    registry_path.write_text(json.dumps(new_registry, indent=2), encoding="utf-8")
+  except Exception:
+    pass
+  app.state.engine_registry = new_registry
 
 _register_builtin_context(); auth_impl.set_app(app); _load_engines()

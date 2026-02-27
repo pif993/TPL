@@ -1,0 +1,27 @@
+# TPL — Ruff linter configuration
+# https://docs.astral.sh/ruff/
+
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = [
+  "E",     # pycodestyle errors
+  "W",     # pycodestyle warnings
+  "F",     # pyflakes
+  "I",     # isort
+  "B",     # flake8-bugbear
+  "S",     # flake8-bandit (security)
+  "UP",    # pyupgrade
+]
+ignore = [
+  "E501",  # line length (handled by formatter)
+  "S101",  # assert in tests is fine
+  "S104",  # binding to 0.0.0.0 is intentional in containers
+  "S603",  # subprocess calls are admin-only control plane
+  "S607",  # partial path subprocess — same
+  "B008",  # Depends() in function defaults is FastAPI convention
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["S"]   # disable security lints in tests

@@ -4,8 +4,14 @@ WORKDIR /app
 # Create non-root user with explicit UID/GID matching compose user: "999:999"
 RUN groupadd -r -g 999 appuser && useradd -r -u 999 -g appuser -d /app -s /sbin/nologin appuser
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements.lock ./
+# Use lockfile with hash verification for supply-chain security.
+# Fall back to requirements.txt if lockfile is missing (development).
+RUN if [ -f requirements.lock ]; then \
+      pip install --no-cache-dir --require-hashes -r requirements.lock; \
+    else \
+      pip install --no-cache-dir -r requirements.txt; \
+    fi
 
 COPY app ./app
 
