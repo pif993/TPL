@@ -4301,7 +4301,6 @@ echo "=== Security smoke completato ==="
                     # Infrastructure files customized during install / by user
                     "compose.d/40-api.yml",
                     "run.sh",
-                    "infra/web/styles.css",
                     ".env",
                 }
                 if rel_path in _PROTECTED_FILES:
@@ -4523,7 +4522,6 @@ echo "=== Security smoke completato ==="
             "apps/api/app/engines/ota_update_engine.py",
             "compose.d/40-api.yml",
             "run.sh",
-            "infra/web/styles.css",
             ".env",
         }
 

@@ -1,10 +1,10 @@
 {
-  "version": "3.4.0",
-  "build": 20260227004,
+  "version": "3.4.1",
+  "build": 20260227005,
   "channel": "stable",
   "codename": "Aurora",
-  "full_version": "3.4.0+20260227004",
-  "released_at": "2026-02-27T21:00:00Z",
+  "full_version": "3.4.1+20260227005",
+  "released_at": "2026-02-27T22:00:00Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
 }
