@@ -4127,9 +4127,19 @@ echo "=== Security smoke completato ==="
                     skipped_files.append(rel_path)
                     continue
 
-                # Protect the OTA engine itself — never overwrite with a placeholder
-                if rel_path == "apps/api/app/engines/ota_update_engine.py":
+                # ── Self-protection: never overwrite files with local customizations ──
+                _PROTECTED_FILES = {
+                    # OTA engine itself (avoid replacing with a placeholder)
+                    "apps/api/app/engines/ota_update_engine.py",
+                    # Infrastructure files customized during install / by user
+                    "compose.d/40-api.yml",
+                    "run.sh",
+                    "infra/web/styles.css",
+                    ".env",
+                }
+                if rel_path in _PROTECTED_FILES:
                     skipped_files.append(rel_path)
+                    logger.info(f"OTA apply: skipping protected file {rel_path}")
                     continue
 
                 dest = os.path.join(project_root, rel_path)
