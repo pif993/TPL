@@ -42,6 +42,8 @@ services:
       # OTA Auto-Apply: project root + live API code mount
       - ${TPL_PROJECT_ROOT:-.}:/project
       - ./apps/api/app:/app/app
+      # Platform version manifest (single source of truth)
+      - ./VERSION.json:/app/VERSION.json:ro
     restart: unless-stopped
     read_only: true
     tmpfs:

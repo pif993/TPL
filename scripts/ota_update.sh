@@ -235,6 +235,7 @@ cmd_apply() {
   # Root-level files to update
   local -a UPDATE_FILES=(
     "compose.yml"
+    "VERSION.json"
     "run.sh"
     "bootstrap.sh"
     "init.sh"
@@ -273,6 +274,15 @@ cmd_apply() {
     "${TPL_ROOT}/init.sh" "${TPL_ROOT}/install.sh" "${TPL_ROOT}/install_tpl.sh" 2>/dev/null || true
 
   log "  ${updated} componenti aggiornati ✓"
+
+  # ── Step 4b: Propagate version from VERSION.json ─────────────────
+  if [[ -x "${TPL_ROOT}/scripts/version.sh" ]] && [[ -f "${TPL_ROOT}/VERSION.json" ]]; then
+    log "  Propagazione versione ai file della piattaforma..."
+    bash "${TPL_ROOT}/scripts/version.sh" apply 2>&1 | while read -r line; do
+      log "    $line"
+    done
+    log "  Versione propagata ✓"
+  fi
 
   # ── Step 5: Rebuild containers ───────────────────────────────────
   log "Step 5/6: Rebuild container"

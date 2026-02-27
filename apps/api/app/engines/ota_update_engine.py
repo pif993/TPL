@@ -62,13 +62,31 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger("tpl.ota.security")
 
+# ── Dynamic Version from VERSION.json ───────────────────────────────────
+def _load_platform_version() -> str:
+    """Load version from VERSION.json (single source of truth).
+    Falls back to hardcoded value if file is unavailable."""
+    _candidates = [
+        Path(__file__).resolve().parents[4] / "VERSION.json",  # repo root from engines/
+        Path("/app/VERSION.json"),                              # Docker mount
+        Path(os.environ.get("TPL_ROOT", "")) / "VERSION.json", # env override
+    ]
+    for p in _candidates:
+        try:
+            if p.is_file():
+                data = json.loads(p.read_text(encoding="utf-8"))
+                return data.get("version", "3.1.0")
+        except (OSError, json.JSONDecodeError, TypeError):
+            continue
+    return "3.1.0"
+
 # ── Constants ───────────────────────────────────────────────────────────
 
 GITHUB_OWNER = "pif993"
 GITHUB_REPO = "TPL"
 GITHUB_API = "https://api.github.com"
 GITHUB_DOWNLOAD = "https://github.com"
-PLATFORM_VERSION = "3.0.0"
+PLATFORM_VERSION = _load_platform_version()
 
 # ── Security Constants ──────────────────────────────────────────────────
 # Maximum allowed download size (500 MB) to prevent DoS

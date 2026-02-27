@@ -262,6 +262,41 @@
   };
 
   // ────────────────────────────────────────────────────────────────
+  //  Platform version badge  (auto-populated from /api/status)
+  // ────────────────────────────────────────────────────────────────
+  let _versionCache = null;
+
+  /**
+   * Fetch platform version from /api/status and populate every
+   * element with id="tplVersionBadge" or class="tpl-version-badge".
+   * Caches the response for the session to avoid redundant fetches.
+   */
+  const populateVersionBadge = async () => {
+    try {
+      if (!_versionCache) {
+        const res = await fetch('/api/status', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        _versionCache = data.platform || null;
+      }
+      if (!_versionCache) return;
+
+      const v = _versionCache;
+      const label  = v.full_version ? `v${v.full_version}` : (v.version ? `v${v.version}` : null);
+      if (!label) return;
+
+      const badges = document.querySelectorAll('#tplVersionBadge, .tpl-version-badge');
+      badges.forEach(el => {
+        el.textContent = label;
+        if (v.codename) el.title = `${v.codename} — build ${v.build || '?'}`;
+      });
+    } catch (_) { /* API unavailable — keep static badge text */ }
+  };
+
+  /** Return cached version info or null. */
+  const getVersion = () => _versionCache;
+
+  // ────────────────────────────────────────────────────────────────
   //  Public API
   // ────────────────────────────────────────────────────────────────
   window.TPL = {
@@ -287,6 +322,10 @@
     // i18n
     setLang, getLang, t, applyI18n,
 
+    // Version
+    getVersion,
+    populateVersionBadge,
+
     // Utilities
     getTemplate,
     makeCommSignature,
@@ -299,5 +338,7 @@
     // Restore refresh schedule from surviving session
     const exp = sessionStorage.getItem(EXPIRY_KEY);
     if (exp) _scheduleRefresh(parseInt(exp, 10));
+    // Populate version badges from API
+    TPL.populateVersionBadge();
   });
 })();

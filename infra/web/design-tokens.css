@@ -1,0 +1,384 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TPL FORTRESS — Design Token System v1.0
+   ═══════════════════════════════════════════════════════════════════════════
+   Single source of truth for the entire platform visual language.
+   Derived from the login form's design DNA: modern, secure, premium.
+   
+   Usage:  <link href="/design-tokens.css" rel="stylesheet">  (BEFORE styles.css)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ──────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap');
+
+:root {
+
+  /* ══ TYPOGRAPHY ════════════════════════════════════════════════════════ */
+  --tpl-font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --tpl-font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, 'Liberation Mono', monospace;
+
+  --tpl-fs-xs:    .65rem;   /* 10.4px */
+  --tpl-fs-sm:    .75rem;   /* 12px   */
+  --tpl-fs-base:  .85rem;   /* 13.6px */
+  --tpl-fs-md:    .92rem;   /* 14.7px */
+  --tpl-fs-lg:    1.1rem;   /* 17.6px */
+  --tpl-fs-xl:    1.35rem;  /* 21.6px */
+  --tpl-fs-2xl:   1.65rem;  /* 26.4px */
+  --tpl-fs-3xl:   2rem;     /* 32px   */
+
+  --tpl-fw-light:    300;
+  --tpl-fw-regular:  400;
+  --tpl-fw-medium:   500;
+  --tpl-fw-semibold: 600;
+  --tpl-fw-bold:     700;
+  --tpl-fw-black:    800;
+
+  --tpl-leading-tight:  1.15;
+  --tpl-leading-snug:   1.35;
+  --tpl-leading-normal: 1.55;
+
+  --tpl-tracking-tight:  -.03em;
+  --tpl-tracking-normal: .01em;
+  --tpl-tracking-wide:   .04em;
+  --tpl-tracking-wider:  .08em;
+
+  /* ══ COLOR PALETTE ════════════════════════════════════════════════════ */
+
+  /* ── Brand Gradient (login DNA) ── */
+  --tpl-brand-gradient:    linear-gradient(160deg, #1e3a5f 0%, #2d1b69 50%, #1a1a2e 100%);
+  --tpl-brand-gradient-135: linear-gradient(135deg, #1e3a5f 0%, #2d1b69 55%, #1a1a2e 100%);
+  --tpl-brand-dark:        #0f172a;
+  --tpl-brand-deep:        #1a1a2e;
+  --tpl-brand-navy:        #1e3a5f;
+  --tpl-brand-indigo:      #2d1b69;
+
+  /* ── Accent — Blue (Primary Action) ── */
+  --tpl-blue-50:   #eff6ff;
+  --tpl-blue-100:  #dbeafe;
+  --tpl-blue-200:  #bfdbfe;
+  --tpl-blue-300:  #93c5fd;
+  --tpl-blue-400:  #60a5fa;
+  --tpl-blue-500:  #3b82f6;
+  --tpl-blue-600:  #2563eb;
+  --tpl-blue-700:  #1d4ed8;
+
+  /* ── Accent — Indigo (Secondary Action) ── */
+  --tpl-indigo-50:  #eef2ff;
+  --tpl-indigo-100: #e0e7ff;
+  --tpl-indigo-200: #c7d2fe;
+  --tpl-indigo-300: #a5b4fc;
+  --tpl-indigo-400: #818cf8;
+  --tpl-indigo-500: #6366f1;
+  --tpl-indigo-600: #4f46e5;
+  --tpl-indigo-700: #4338ca;
+
+  /* ── Accent — Violet (Tertiary) ── */
+  --tpl-violet-400: #a78bfa;
+  --tpl-violet-500: #8b5cf6;
+  --tpl-violet-600: #7c3aed;
+  --tpl-violet-700: #6d28d9;
+
+  /* ── Accent Gradients ── */
+  --tpl-accent-gradient:     linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
+  --tpl-accent-gradient-vivid: linear-gradient(135deg, var(--tpl-blue-600), var(--tpl-indigo-600));
+  --tpl-accent-gradient-soft: linear-gradient(135deg, var(--tpl-blue-400), var(--tpl-violet-400));
+
+  /* ── Semantic — Success ── */
+  --tpl-success-50:  #f0fdf4;
+  --tpl-success-100: #dcfce7;
+  --tpl-success-200: #bbf7d0;
+  --tpl-success-400: #4ade80;
+  --tpl-success-500: #22c55e;
+  --tpl-success-600: #16a34a;
+  --tpl-success-700: #15803d;
+
+  /* ── Semantic — Warning ── */
+  --tpl-warning-50:  #fffbeb;
+  --tpl-warning-100: #fef3c7;
+  --tpl-warning-200: #fde68a;
+  --tpl-warning-400: #fbbf24;
+  --tpl-warning-500: #f59e0b;
+  --tpl-warning-600: #d97706;
+  --tpl-warning-700: #b45309;
+  --tpl-warning-800: #92400e;
+
+  /* ── Semantic — Danger ── */
+  --tpl-danger-50:  #fef2f2;
+  --tpl-danger-100: #fee2e2;
+  --tpl-danger-200: #fecaca;
+  --tpl-danger-300: #fca5a5;
+  --tpl-danger-400: #f87171;
+  --tpl-danger-500: #ef4444;
+  --tpl-danger-600: #dc2626;
+  --tpl-danger-700: #b91c1c;
+
+  /* ── Semantic — Info ── */
+  --tpl-info-50:  #ecfeff;
+  --tpl-info-100: #cffafe;
+  --tpl-info-400: #22d3ee;
+  --tpl-info-500: #06b6d4;
+  --tpl-info-600: #0891b2;
+
+  /* ── Neutrals (Slate scale) ── */
+  --tpl-slate-50:  #f8fafc;
+  --tpl-slate-100: #f1f5f9;
+  --tpl-slate-200: #e2e8f0;
+  --tpl-slate-300: #cbd5e1;
+  --tpl-slate-400: #94a3b8;
+  --tpl-slate-500: #64748b;
+  --tpl-slate-600: #475569;
+  --tpl-slate-700: #334155;
+  --tpl-slate-800: #1e293b;
+  --tpl-slate-900: #0f172a;
+
+  /* ── Surface & Background ── */
+  --tpl-bg:          var(--tpl-slate-100);
+  --tpl-surface:     #ffffff;
+  --tpl-surface-alt: var(--tpl-slate-50);
+  --tpl-surface-raised: #ffffff;
+
+  /* ── Borders ── */
+  --tpl-border-light:  var(--tpl-slate-100);
+  --tpl-border:        var(--tpl-slate-200);
+  --tpl-border-strong: var(--tpl-slate-300);
+  --tpl-border-accent: rgba(59, 130, 246, .2);
+  --tpl-border-focus:  var(--tpl-blue-500);
+
+  /* ── Text ── */
+  --tpl-text:        var(--tpl-slate-800);
+  --tpl-text-sec:    var(--tpl-slate-600);
+  --tpl-text-muted:  var(--tpl-slate-500);
+  --tpl-text-faint:  var(--tpl-slate-400);
+  --tpl-text-inverse: #ffffff;
+
+  /* ══ SPACING ══════════════════════════════════════════════════════════ */
+  --tpl-sp-0:  0;
+  --tpl-sp-1:  .25rem;     /*  4px */
+  --tpl-sp-2:  .5rem;      /*  8px */
+  --tpl-sp-3:  .75rem;     /* 12px */
+  --tpl-sp-4:  1rem;       /* 16px */
+  --tpl-sp-5:  1.25rem;    /* 20px */
+  --tpl-sp-6:  1.5rem;     /* 24px */
+  --tpl-sp-8:  2rem;       /* 32px */
+  --tpl-sp-10: 2.5rem;     /* 40px */
+  --tpl-sp-12: 3rem;       /* 48px */
+
+  /* ══ BORDER RADIUS ════════════════════════════════════════════════════ */
+  --tpl-radius-xs:   .25rem;   /*  4px */
+  --tpl-radius-sm:   .35rem;   /*  5.6px */
+  --tpl-radius-md:   .5rem;    /*  8px */
+  --tpl-radius-lg:   .65rem;   /* 10.4px — input fields */
+  --tpl-radius-xl:   .75rem;   /* 12px — cards */
+  --tpl-radius-2xl:  1rem;     /* 16px — hero, modals */
+  --tpl-radius-full: 9999px;   /* pills */
+
+  /* ══ SHADOWS ══════════════════════════════════════════════════════════ */
+  --tpl-shadow-xs:   0 1px 2px rgba(0, 0, 0, .04);
+  --tpl-shadow-sm:   0 1px 3px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .04);
+  --tpl-shadow-md:   0 4px 14px rgba(0, 0, 0, .08);
+  --tpl-shadow-lg:   0 8px 24px rgba(0, 0, 0, .1);
+  --tpl-shadow-xl:   0 16px 48px rgba(0, 0, 0, .12);
+  --tpl-shadow-glow-blue:   0 0 0 3.5px rgba(59, 130, 246, .1), 0 1px 3px rgba(0, 0, 0, .04);
+  --tpl-shadow-glow-indigo: 0 0 0 4px rgba(99, 102, 241, .12);
+
+  /* ══ TRANSITIONS ══════════════════════════════════════════════════════ */
+  --tpl-ease-default: cubic-bezier(.4, 0, .2, 1);
+  --tpl-ease-bounce:  cubic-bezier(.34, 1.56, .64, 1);
+  --tpl-ease-in:      cubic-bezier(.4, 0, 1, 1);
+  --tpl-ease-out:     cubic-bezier(0, 0, .2, 1);
+
+  --tpl-duration-fast:   .15s;
+  --tpl-duration-normal: .25s;
+  --tpl-duration-slow:   .4s;
+
+  --tpl-transition-colors: color var(--tpl-duration-fast) var(--tpl-ease-default),
+                           background-color var(--tpl-duration-fast) var(--tpl-ease-default),
+                           border-color var(--tpl-duration-fast) var(--tpl-ease-default);
+  --tpl-transition-all:    all var(--tpl-duration-normal) var(--tpl-ease-default);
+
+  /* ══ Z-INDEX SCALE ════════════════════════════════════════════════════ */
+  --tpl-z-base:     1;
+  --tpl-z-dropdown: 100;
+  --tpl-z-sticky:   200;
+  --tpl-z-sidebar:  1040;
+  --tpl-z-backdrop: 1039;
+  --tpl-z-modal:    9999;
+
+  /* ══ GLASSMORPHISM ════════════════════════════════════════════════════ */
+  --tpl-glass-bg:     rgba(255, 255, 255, .08);
+  --tpl-glass-bg-med: rgba(255, 255, 255, .12);
+  --tpl-glass-bg-strong: rgba(255, 255, 255, .18);
+  --tpl-glass-border: rgba(255, 255, 255, .1);
+  --tpl-glass-border-strong: rgba(255, 255, 255, .2);
+  --tpl-glass-blur:   blur(12px);
+
+  /* ══ SIDEBAR TOKENS ═══════════════════════════════════════════════════ */
+  --tpl-sidebar-bg:      #151929;
+  --tpl-sidebar-width:   250px;
+  --tpl-sidebar-text:    var(--tpl-slate-400);
+  --tpl-sidebar-hover:   rgba(255, 255, 255, .06);
+  --tpl-sidebar-active:  rgba(59, 130, 246, .14);
+  --tpl-sidebar-accent:  var(--tpl-blue-500);
+  --tpl-sidebar-divider: rgba(255, 255, 255, .07);
+
+  /* ══ INPUT TOKENS ═════════════════════════════════════════════════════ */
+  --tpl-input-bg:         var(--tpl-surface);
+  --tpl-input-border:     var(--tpl-border);
+  --tpl-input-border-hover: var(--tpl-slate-300);
+  --tpl-input-border-focus: var(--tpl-blue-500);
+  --tpl-input-radius:     var(--tpl-radius-lg);
+  --tpl-input-shadow-focus: var(--tpl-shadow-glow-blue);
+  --tpl-input-text:       var(--tpl-text);
+  --tpl-input-placeholder: var(--tpl-text-faint);
+
+  /* ══ BUTTON TOKENS ════════════════════════════════════════════════════ */
+  --tpl-btn-primary-bg:     var(--tpl-accent-gradient);
+  --tpl-btn-primary-bg-hover: var(--tpl-accent-gradient-vivid);
+  --tpl-btn-primary-shadow: 0 4px 14px rgba(59, 130, 246, .2), 0 1px 3px rgba(0, 0, 0, .05);
+  --tpl-btn-primary-shadow-hover: 0 8px 24px rgba(59, 130, 246, .3), 0 2px 6px rgba(0, 0, 0, .06);
+  --tpl-btn-radius:         var(--tpl-radius-lg);
+
+  /* ══ CARD TOKENS ══════════════════════════════════════════════════════ */
+  --tpl-card-bg:       var(--tpl-surface);
+  --tpl-card-border:   var(--tpl-border);
+  --tpl-card-radius:   var(--tpl-radius-xl);
+  --tpl-card-shadow:   var(--tpl-shadow-sm);
+  --tpl-card-shadow-hover: var(--tpl-shadow-md);
+
+  /* ══ HERO TOKENS ══════════════════════════════════════════════════════ */
+  --tpl-hero-bg:       var(--tpl-brand-gradient-135);
+  --tpl-hero-radius:   var(--tpl-radius-xl);
+  --tpl-hero-text:     var(--tpl-text-inverse);
+  --tpl-hero-glow:     radial-gradient(circle, rgba(99, 102, 241, .15) 0%, transparent 70%);
+
+  /* ══ PILL / BADGE TOKENS ══════════════════════════════════════════════ */
+  --tpl-pill-radius:   var(--tpl-radius-full);
+
+  /* ══ ORBS (ambient animation) ═════════════════════════════════════════ */
+  --tpl-orb-blue:    radial-gradient(circle, var(--tpl-blue-500) 0%, transparent 70%);
+  --tpl-orb-violet:  radial-gradient(circle, var(--tpl-violet-500) 0%, transparent 70%);
+  --tpl-orb-cyan:    radial-gradient(circle, var(--tpl-info-500) 0%, transparent 70%);
+  --tpl-orb-blur:    80px;
+  --tpl-orb-opacity: .35;
+}
+
+/* ══ GLOBAL RESETS & BASE — applied when design-tokens.css is loaded ══ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--tpl-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--tpl-font-sans);
+  color: var(--tpl-text);
+  line-height: var(--tpl-leading-normal);
+}
+
+/* ── Selection ─────────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(59, 130, 246, .15);
+  color: var(--tpl-text);
+}
+
+/* ── Scrollbar (Webkit) — subtle, consistent ───────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--tpl-slate-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--tpl-slate-400); }
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tpl-slate-300) transparent;
+}
+
+/* ── Focus ring — WCAG-compliant, consistent ───────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--tpl-blue-500);
+  outline-offset: 2px;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── High contrast ─────────────────────────────────────────────────────── */
+@media (forced-colors: active) {
+  :root {
+    --tpl-border: ButtonText;
+    --tpl-text: CanvasText;
+    --tpl-surface: Canvas;
+  }
+}
+
+/* ══ UTILITY CLASSES ════════════════════════════════════════════════════ */
+
+/* Text utilities */
+.tpl-text-primary  { color: var(--tpl-blue-500) !important; }
+.tpl-text-success  { color: var(--tpl-success-600) !important; }
+.tpl-text-warning  { color: var(--tpl-warning-600) !important; }
+.tpl-text-danger   { color: var(--tpl-danger-500) !important; }
+.tpl-text-muted    { color: var(--tpl-text-muted) !important; }
+.tpl-text-faint    { color: var(--tpl-text-faint) !important; }
+
+/* Background utilities */
+.tpl-bg-surface     { background: var(--tpl-surface) !important; }
+.tpl-bg-surface-alt { background: var(--tpl-surface-alt) !important; }
+.tpl-bg-brand       { background: var(--tpl-brand-gradient) !important; color: var(--tpl-text-inverse) !important; }
+
+/* Focus ring override for interactive elements */
+.tpl-focus-ring:focus-visible {
+  outline: 2px solid var(--tpl-blue-500);
+  outline-offset: 2px;
+  box-shadow: var(--tpl-shadow-glow-blue);
+}
+
+/* Mono font utility */
+.tpl-mono { font-family: var(--tpl-font-mono); }
+
+/* ══ PLATFORM VERSION BADGE ═════════════════════════════════════════════ */
+.tpl-version-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .15rem .55rem;
+  border-radius: var(--tpl-pill-radius);
+  font-size: var(--tpl-fs-xs);
+  font-weight: var(--tpl-fw-semibold);
+  font-family: var(--tpl-font-mono);
+  letter-spacing: var(--tpl-tracking-wide);
+  background: var(--tpl-slate-100);
+  color: var(--tpl-text-muted);
+  white-space: nowrap;
+  user-select: all;
+}
+.tpl-version-badge--accent {
+  background: var(--tpl-indigo-50);
+  color: var(--tpl-indigo-600);
+  border: 1px solid rgba(99, 102, 241, .12);
+}
+.tpl-version-badge--dark {
+  background: rgba(255, 255, 255, .1);
+  color: rgba(255, 255, 255, .7);
+  border: 1px solid rgba(255, 255, 255, .08);
+}

@@ -43,6 +43,29 @@ ROOT = "/work" if os.path.isdir("/work/modules") else "/"
 MOD = MOD_DATA if os.path.isdir(MOD_DATA) else os.path.join(ROOT, "modules")
 STATE = os.path.join(DATA, ".tpl_state.json")
 AUDIT_LOG = os.path.join(DATA, ".tpl_audit.jsonl")
+
+# ── Platform version (single source of truth: VERSION.json) ───────────
+_VERSION_INFO: dict = {}
+def _load_version_info() -> dict:
+    """Load VERSION.json from repo root / Docker mount."""
+    global _VERSION_INFO
+    if _VERSION_INFO:
+        return _VERSION_INFO
+    candidates = [
+        Path(__file__).resolve().parents[3] / "VERSION.json",
+        Path("/app/VERSION.json"),
+        Path(os.environ.get("TPL_ROOT", "")) / "VERSION.json",
+        Path(DATA) / "VERSION.json",
+    ]
+    for p in candidates:
+        try:
+            if p.is_file():
+                _VERSION_INFO = json.loads(p.read_text(encoding="utf-8"))
+                return _VERSION_INFO
+        except (OSError, json.JSONDecodeError, TypeError):
+            continue
+    _VERSION_INFO = {"version": "3.1.0", "build": 0, "full_version": "3.1.0", "codename": "Fortress"}
+    return _VERSION_INFO
 ENGINES_DIR = Path(__file__).resolve().parent / "engines"
 
 LOGIN_WINDOW_SECONDS = int(os.getenv("LOGIN_WINDOW_SECONDS", "120"))
@@ -365,12 +388,20 @@ def _need(role: str):
 def health(): return {"ok": True}
 @app.get("/status")
 def status():
-  # Expose operational info + auth health. Rate-limit params NOT exposed.
+  # Expose operational info + auth health + platform version.
   auth_health = auth_impl.get_auth_health()
+  vi = _load_version_info()
   return {
       "ok": True,
       "ts": int(time.time()),
       "auth": auth_health,
+      "platform": {
+          "version": vi.get("version", ""),
+          "build": vi.get("build", 0),
+          "full_version": vi.get("full_version", ""),
+          "codename": vi.get("codename", ""),
+          "channel": vi.get("channel", "stable"),
+      },
   }
 @app.post("/token")
 async def token(x: LoginRequest, request: Request):
