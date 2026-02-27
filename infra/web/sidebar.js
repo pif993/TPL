@@ -30,6 +30,7 @@
     { id: 'ai',       icon: 'bi-robot',            label: 'AI Center',        view: true, admin: true },
 
     { section: 'Strumenti' },
+    { id: 'nav-diagnostics', icon: 'bi-heart-pulse',     label: 'Diagnostica Sistema', href: '/diagnostics', admin: true },
     { id: 'nav-ota',      icon: 'bi-cloud-arrow-down', label: 'Aggiornamenti OTA', href: '/ota', admin: true },
     { id: 'nav-advanced', icon: 'bi-terminal',     label: 'Advanced',     href: '/advanced' },
     { id: 'nav-modules',  icon: 'bi-box-seam',     label: 'Distribuzione Moduli', href: '/admin/modules', admin: true },
@@ -39,6 +40,7 @@
   const PAGE = (() => {
     const p = location.pathname;
     if (p.startsWith('/admin/modules')) return 'admin-modules';
+    if (p.startsWith('/diagnostics'))   return 'diagnostics';
     if (p.startsWith('/ota'))           return 'ota';
     if (p.startsWith('/advanced'))      return 'advanced';
     return 'dashboard';
@@ -89,6 +91,8 @@
       if (PAGE === 'dashboard' && item.view && item.id === 'overview') {
         a.classList.add('active');
       } else if (PAGE === 'ota' && item.id === 'nav-ota') {
+        a.classList.add('active');
+      } else if (PAGE === 'diagnostics' && item.id === 'nav-diagnostics') {
         a.classList.add('active');
       } else if (PAGE === 'advanced' && item.id === 'nav-advanced') {
         a.classList.add('active');

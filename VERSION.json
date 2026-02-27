@@ -1,10 +1,10 @@
 {
-  "version": "3.3.0",
-  "build": 20260227003,
+  "version": "3.4.0",
+  "build": 20260227004,
   "channel": "stable",
-  "codename": "Sentinel",
-  "full_version": "3.3.0+20260227003",
-  "released_at": "2026-02-27T20:00:00Z",
+  "codename": "Aurora",
+  "full_version": "3.4.0+20260227004",
+  "released_at": "2026-02-27T21:00:00Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
 }
