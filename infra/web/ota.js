@@ -1,8 +1,9 @@
 /**
- * TPL Platform — OTA Update Center (dedicated page)
+ * TPL Platform — OTA Update Center v2
  *
- * Standalone JS for /ota page. Replicates OTA logic from dashboard-system.js
- * but with dedicated DOM IDs (otaPage*) and full-page layout.
+ * Fully redesigned JS for /ota page matching the ota2-* design system.
+ * Handles KPI cards, glassmorphic hero, click-to-copy commands,
+ * security simulation/chain verification, and keyboard shortcuts.
  */
 (() => {
   'use strict';
@@ -18,6 +19,12 @@
   const fmtDate = (iso) => {
     if (!iso) return '—';
     try { return new Date(iso).toLocaleString('it-IT', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
+    catch { return iso; }
+  };
+
+  const fmtDateShort = (iso) => {
+    if (!iso) return 'mai';
+    try { return new Date(iso).toLocaleString('it-IT', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }); }
     catch { return iso; }
   };
 
@@ -42,50 +49,52 @@
       .replace(/\n/g, '<br>');
   };
 
-  /* ── Load Status ───────────────────────────────────────────── */
+  /* ── Load Status (KPI cards) ───────────────────────────────── */
   const loadStatus = async () => {
     try {
       const data = await TPL.jsonFetch('/api/ota/status');
       _state = data;
 
+      // KPI: Current version
       const curEl = q('otaPageCurrentVer');
       if (curEl) curEl.textContent = `v${data.current_version || '?'}`;
 
-      const latestBox = q('otaPageLatestBox');
+      // KPI: Latest version
       const latestVer = q('otaPageLatestVer');
-      const arrow = q('otaPageArrow');
-      if (data.latest_version && data.update_available) {
-        if (latestBox) latestBox.style.display = '';
-        if (arrow) arrow.style.display = '';
-        if (latestVer) latestVer.textContent = `v${data.latest_version}`;
-      } else {
-        if (latestBox) latestBox.style.display = 'none';
-        if (arrow) arrow.style.display = 'none';
+      if (latestVer) {
+        latestVer.textContent = data.latest_version ? `v${data.latest_version}` : '—';
       }
 
+      // KPI: Latest card accent
+      const latestKpi = q('otaKpiLatest');
+      if (latestKpi) {
+        latestKpi.dataset.accent = data.update_available ? 'success' : 'primary';
+      }
+
+      // KPI badge: status indicator
       const badge = q('otaPageStatusBadge');
       if (badge) {
         if (data.update_available) {
-          badge.className = 'ota-status-badge ota-badge-update';
-          badge.innerHTML = '<i class="bi bi-arrow-up-circle-fill"></i> Aggiornamento disponibile';
+          badge.className = 'ota2-kpi-badge ota2-kpi-badge--update';
+          badge.innerHTML = '<i class="bi bi-arrow-up-circle-fill"></i> Disponibile';
         } else {
-          badge.className = 'ota-status-badge ota-badge-ok';
+          badge.className = 'ota2-kpi-badge ota2-kpi-badge--ok';
           badge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Aggiornato';
         }
       }
 
+      // KPI: Last check (short format for card)
       const info = q('otaPageCheckInfo');
       if (info) {
-        info.textContent = data.last_check
-          ? `Ultimo controllo: ${fmtDate(data.last_check_iso)} · ${data.check_count || 0} controlli`
-          : 'Ultimo controllo: mai';
+        info.textContent = data.last_check_iso ? fmtDateShort(data.last_check_iso) : 'mai';
       }
 
+      // KPI sub: Rate limit
       const rl = q('otaPageRateLimit');
       if (rl) {
         const remaining = data.rate_limit_remaining ?? 60;
         rl.textContent = `API: ${remaining}/60`;
-        rl.className = `ota-rate-limit ${remaining < 10 ? 'ota-rate-warn' : ''}`;
+        rl.style.color = remaining < 10 ? 'var(--ota-danger, #ef4444)' : '';
       }
 
       // Config fields
@@ -109,8 +118,8 @@
   const checkUpdates = async () => {
     const badge = q('otaPageStatusBadge');
     if (badge) {
-      badge.className = 'ota-status-badge ota-badge-checking';
-      badge.innerHTML = '<i class="bi bi-arrow-repeat ota-spin"></i> Controllo…';
+      badge.className = 'ota2-kpi-badge ota2-kpi-badge--checking';
+      badge.innerHTML = '<i class="bi bi-arrow-repeat ota2-spinner"></i> …';
     }
     try {
       const data = await TPL.jsonFetch('/api/ota/check', { method: 'POST' });
@@ -146,7 +155,7 @@
     } catch (error) {
       const badge2 = q('otaPageStatusBadge');
       if (badge2) {
-        badge2.className = 'ota-status-badge ota-badge-error';
+        badge2.className = 'ota2-kpi-badge ota2-kpi-badge--error';
         badge2.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Errore';
       }
       showToast(`Controllo OTA fallito: ${error}`, 'danger');
@@ -159,6 +168,10 @@
       const data = await TPL.jsonFetch('/api/ota/releases');
       _releases = data.releases || [];
 
+      // KPI: release count
+      const kpiRelCount = q('otaKpiRelCount');
+      if (kpiRelCount) kpiRelCount.textContent = _releases.length;
+
       const pill = q('otaPageRelPill');
       if (pill) pill.textContent = `${_releases.length} release`;
 
@@ -169,7 +182,7 @@
         container.innerHTML = `<div class="ov-empty" style="padding:1.5rem">
           <i class="bi bi-inbox" style="font-size:1.6rem;opacity:.3"></i>
           <span class="ov-empty-text" style="margin-top:.4rem;font-size:.78rem">Nessuna release trovata nel repository</span>
-          <span class="ov-empty-text" style="font-size:.7rem;opacity:.6">Premi "Verifica ora" per controllare GitHub</span>
+          <span class="ov-empty-text" style="font-size:.7rem;opacity:.6">Premi "Verifica aggiornamenti" per controllare GitHub</span>
         </div>`;
         return;
       }
@@ -226,7 +239,7 @@
     if (!panel || !container) return;
 
     panel.classList.remove('d-none');
-    container.innerHTML = '<div class="text-center p-3"><i class="bi bi-hourglass-split ota-spin"></i> Caricamento dettagli…</div>';
+    container.innerHTML = '<div class="text-center p-3"><i class="bi bi-hourglass-split ota2-spinner"></i> Caricamento dettagli…</div>';
 
     try {
       const [detail, diff] = await Promise.all([
@@ -411,7 +424,7 @@
         <div class="ota-progress-bar">
           <div class="ota-progress-fill ota-progress-indeterminate"></div>
         </div>
-        <div class="ota-progress-text"><i class="bi bi-download ota-spin"></i> Download e preparazione di <strong>${esc(tag)}</strong>…</div>`;
+        <div class="ota-progress-text"><i class="bi bi-download ota2-spinner"></i> Download e preparazione di <strong>${esc(tag)}</strong>…</div>`;
     }
     try {
       const data = await TPL.jsonFetch(`/api/ota/prepare/${encodeURIComponent(tag)}`, { method: 'POST' });
@@ -546,28 +559,284 @@
     }
   };
 
-  /* ── Events ────────────────────────────────────────────────── */
+  /* ── Security: Load trust info ─────────────────────────────── */
+  const loadTrustInfo = async () => {
+    try {
+      const data = await TPL.jsonFetch('/api/ota/security/trust-info');
+
+      // Card badge
+      const badge = q('otaSecBadge');
+      if (badge) {
+        if (data.publisher_key_loaded) {
+          badge.className = 'ota2-sec-badge ota2-sec-badge--ok';
+          badge.innerHTML = '<i class="bi bi-shield-fill-check"></i> Protetto';
+        } else {
+          badge.className = 'ota2-sec-badge ota2-sec-badge--err';
+          badge.innerHTML = '<i class="bi bi-shield-fill-exclamation"></i> Chiave mancante';
+        }
+      }
+
+      // Hero security chip
+      const heroBadge = q('otaHeroSecBadge');
+      if (heroBadge) {
+        if (data.publisher_key_loaded) {
+          heroBadge.innerHTML = `<i class="bi bi-shield-lock-fill"></i> Ed25519 · ${data.audit_entries || 0} audit`;
+        } else {
+          heroBadge.innerHTML = '<i class="bi bi-shield-exclamation"></i> Chiave mancante';
+          heroBadge.style.borderColor = 'rgba(239,68,68,.3)';
+          heroBadge.style.color = '#fca5a5';
+        }
+      }
+
+      // Key rows
+      const pubKey = q('otaSecPublisherKey');
+      if (pubKey) pubKey.innerHTML = data.publisher_key_loaded
+        ? `<span class="text-success"><i class="bi bi-check-circle-fill"></i></span> <code>${esc(data.publisher_key_fingerprint || '—')}</code>`
+        : `<span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> Non caricata`;
+
+      const platKey = q('otaSecPlatformKey');
+      if (platKey) platKey.innerHTML = data.platform_key_fingerprint
+        ? `<span class="text-success"><i class="bi bi-check-circle-fill"></i></span> <code>${esc(data.platform_key_fingerprint)}</code>`
+        : `<span class="text-muted">—</span>`;
+
+      const algos = q('otaSecAlgorithms');
+      if (algos && data.algorithms) {
+        algos.innerHTML = `${esc(data.algorithms.signing)} · ${esc(data.algorithms.hashing)}`;
+      }
+
+      const chain = q('otaSecChainInfo');
+      if (chain) {
+        chain.innerHTML = `${data.audit_entries || 0} voci · <code>${esc((data.audit_chain_hash || '—').substring(0, 16))}…</code>`;
+      }
+
+      // Load security config
+      const status = await TPL.jsonFetch('/api/ota/status');
+      if (status) {
+        const cfgSig = q('otaSecCfgSignature');
+        const cfgCheck = q('otaSecCfgChecksum');
+        const cfgQuar = q('otaSecCfgQuarantine');
+        const cfgRisk = q('otaSecCfgMaxRisk');
+        if (cfgSig) cfgSig.checked = status.require_signature !== false;
+        if (cfgCheck) cfgCheck.checked = status.require_checksum !== false;
+        if (cfgQuar) cfgQuar.checked = status.quarantine_suspicious !== false;
+        if (cfgRisk) cfgRisk.value = status.max_risk_score ?? 30;
+      }
+
+      return data;
+    } catch (error) {
+      console.warn('Security trust info load failed:', error);
+      return null;
+    }
+  };
+
+  /* ── Security: Run simulation ──────────────────────────────── */
+  const runSimulation = async () => {
+    const btn = q('otaSecSimulateBtn');
+    const results = q('otaSecResults');
+    if (!results) return;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat ota2-spinner"></i> Simulazione…';
+    }
+    results.className = '';
+    results.innerHTML = '<div class="text-center p-3"><i class="bi bi-hourglass-split ota2-spinner"></i> Esecuzione simulazione di sicurezza…</div>';
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/simulate', { method: 'POST' });
+      const cert = data.certification || {};
+      const scan = data.security_scan || {};
+      const preflight = data.preflight || [];
+
+      const passedPf = preflight.filter(c => c.passed).length;
+      const totalPf = preflight.length;
+      const allPass = cert.certified;
+
+      let html = `<div class="ota2-sec-results">`;
+
+      // Header with certification badge
+      html += `<div class="ota2-sec-result-header">
+        <span class="ota2-cert-badge ${allPass ? 'ota2-cert-badge--pass' : 'ota2-cert-badge--fail'}">
+          <i class="bi bi-${allPass ? 'patch-check-fill' : 'patch-exclamation-fill'}"></i>
+          ${allPass ? 'CERTIFICATO' : 'NON CERTIFICATO'}
+        </span>
+        <h6>Simulazione <code>${esc(data.tag || '—')}</code></h6>
+        <span class="ms-auto small text-muted">${fmtDate(cert.certified_at)}</span>
+      </div>`;
+
+      // Key verification checks (2-col grid)
+      html += `<div class="ota2-sec-checks">
+        <div class="ota2-sec-check">
+          <i class="bi bi-${cert.signature_verified ? 'check-circle-fill text-success' : 'x-circle-fill text-danger'}"></i>
+          <span>Firma Ed25519</span>
+        </div>
+        <div class="ota2-sec-check">
+          <i class="bi bi-${cert.integrity_verified ? 'check-circle-fill text-success' : 'x-circle-fill text-danger'}"></i>
+          <span>Integrità SHA-256</span>
+        </div>
+        <div class="ota2-sec-check">
+          <i class="bi bi-${cert.preflight_passed ? 'check-circle-fill text-success' : 'x-circle-fill text-danger'}"></i>
+          <span>Pre-flight (${passedPf}/${totalPf})</span>
+        </div>
+        <div class="ota2-sec-check">
+          <i class="bi bi-${scan.verdict === 'clean' ? 'check-circle-fill text-success' : 'exclamation-triangle-fill text-warning'}"></i>
+          <span>Scan: ${esc(scan.verdict || '—')} (${scan.risk_score || 0}/100)</span>
+        </div>
+      </div>`;
+
+      // Manifest summary (dl rows)
+      const ms = data.manifest_summary || {};
+      html += `<div class="mb-2">
+        <div class="ota2-sec-dl"><span class="ota2-sec-dl-label">File nel manifest</span><span class="ota2-sec-dl-value">${ms.total_files || 0}</span></div>
+        <div class="ota2-sec-dl"><span class="ota2-sec-dl-label">Dimensione totale</span><span class="ota2-sec-dl-value">${esc(ms.total_size_human || '—')}</span></div>
+        <div class="ota2-sec-dl"><span class="ota2-sec-dl-label">Firma (Ed25519)</span><span class="ota2-sec-dl-value"><code>${esc((data.signature?.signature_preview || '—').substring(0, 40))}…</code></span></div>
+      </div>`;
+
+      // Preflight details (collapsible)
+      if (preflight.length) {
+        const categories = {};
+        preflight.forEach(c => { const cat = c.category || 'other'; if (!categories[cat]) categories[cat] = []; categories[cat].push(c); });
+
+        html += `<details class="ota2-details mt-2"><summary><i class="bi bi-list-check"></i> Pre-flight dettaglio (${passedPf}/${totalPf})</summary><div class="ota2-details-body">`;
+        for (const [cat, checks] of Object.entries(categories)) {
+          const catLabel = { filesystem: 'File System', structure: 'Struttura', system: 'Sistema', crypto: 'Crittografia', security: 'Sicurezza' }[cat] || cat;
+          html += `<div class="mb-2"><strong class="small text-uppercase" style="opacity:.6">${esc(catLabel)}</strong>`;
+          checks.forEach(c => {
+            html += `<div class="ota2-sec-check"><i class="bi bi-${c.passed ? 'check-circle-fill text-success' : 'x-circle-fill text-danger'}"></i><span>${esc(c.name)}</span><span class="ms-auto small text-muted">${esc(c.detail || '')}</span></div>`;
+          });
+          html += `</div>`;
+        }
+        html += `</div></details>`;
+      }
+
+      // Integrity details (collapsible)
+      if (data.integrity?.results?.length) {
+        html += `<details class="ota2-details mt-2"><summary><i class="bi bi-file-earmark-lock2"></i> Integrità file (${data.integrity.files_checked} verificati)</summary><div class="ota2-details-body">`;
+        data.integrity.results.forEach(f => {
+          html += `<div class="ota2-sec-check"><i class="bi bi-${f.passed ? 'check-circle-fill text-success' : 'x-circle-fill text-danger'}"></i><span><code>${esc(f.file)}</code></span><span class="ms-auto small text-muted">${f.size}B</span></div>`;
+        });
+        html += `</div></details>`;
+      }
+
+      html += `</div>`;
+      results.innerHTML = html;
+
+      showToast(allPass ? 'Simulazione completata: CERTIFICATO ✓' : 'Simulazione completata: NON CERTIFICATO ✗', allPass ? 'success' : 'warning');
+      loadTrustInfo();
+    } catch (error) {
+      results.innerHTML = `<div class="ota2-sec-results"><div class="text-danger"><i class="bi bi-exclamation-triangle"></i> Simulazione fallita: ${esc(String(error))}</div></div>`;
+      showToast(`Simulazione fallita: ${error}`, 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-play-circle"></i> Simula sicurezza';
+      }
+    }
+  };
+
+  /* ── Security: Verify audit chain ──────────────────────────── */
+  const verifyChain = async () => {
+    const btn = q('otaSecVerifyChainBtn');
+    const results = q('otaSecResults');
+    if (!results) return;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat ota2-spinner"></i> Verifica…';
+    }
+    results.className = '';
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/security/verify-chain', { method: 'POST' });
+
+      let html = `<div class="ota2-sec-results">
+        <div class="ota2-sec-result-header">
+          <span class="ota2-cert-badge ${data.valid ? 'ota2-cert-badge--pass' : 'ota2-cert-badge--fail'}">
+            <i class="bi bi-${data.valid ? 'link-45deg' : 'unlink'}"></i>
+            ${data.valid ? 'CATENA VALIDA' : 'CATENA COMPROMESSA'}
+          </span>
+          <h6>Verifica Audit Chain</h6>
+        </div>
+        <div class="ota2-sec-dl"><span class="ota2-sec-dl-label">Voci nella catena</span><span class="ota2-sec-dl-value">${data.entries || 0}</span></div>
+        ${!data.valid && data.broken_at !== null ? `<div class="ota2-sec-dl"><span class="ota2-sec-dl-label">Rottura a indice</span><span class="ota2-sec-dl-value text-danger">#${data.broken_at}</span></div>` : ''}
+        ${data.valid ? `<div class="small text-success mt-2"><i class="bi bi-shield-fill-check"></i> Tutti gli hash della catena sono consistenti. Nessuna manomissione rilevata.</div>` :
+            `<div class="small text-danger mt-2"><i class="bi bi-shield-fill-exclamation"></i> La catena di audit è stata alterata. Possibile manomissione dei log.</div>`}
+      </div>`;
+
+      results.innerHTML = html;
+      showToast(data.valid ? 'Audit chain: VALIDA ✓' : 'Audit chain: COMPROMESSA ✗', data.valid ? 'success' : 'danger');
+      loadTrustInfo();
+    } catch (error) {
+      results.innerHTML = `<div class="ota2-sec-results"><div class="text-danger"><i class="bi bi-exclamation-triangle"></i> Verifica fallita: ${esc(String(error))}</div></div>`;
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-link-45deg"></i> Verifica chain';
+      }
+    }
+  };
+
+  /* ── Security: Save security config ────────────────────────── */
+  const saveSecurityConfig = async () => {
+    try {
+      const cfg = {
+        require_signature: q('otaSecCfgSignature')?.checked ?? true,
+        require_checksum: q('otaSecCfgChecksum')?.checked ?? true,
+        quarantine_suspicious: q('otaSecCfgQuarantine')?.checked ?? true,
+        max_risk_score: parseInt(q('otaSecCfgMaxRisk')?.value || '30', 10),
+      };
+      await TPL.jsonFetch('/api/ota/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg),
+      });
+      const res = q('otaSecCfgResult');
+      if (res) {
+        res.innerHTML = '<span class="text-success"><i class="bi bi-check-lg"></i> Policy salvata</span>';
+        setTimeout(() => { res.textContent = ''; }, 2000);
+      }
+    } catch (error) {
+      const res = q('otaSecCfgResult');
+      if (res) res.innerHTML = `<span class="text-danger">${esc(String(error))}</span>`;
+    }
+  };
+
+  /* ── Event listeners ───────────────────────────────────────── */
   q('otaPageCheckBtn')?.addEventListener('click', checkUpdates);
   q('otaPageCfgSaveBtn')?.addEventListener('click', saveConfig);
   q('otaPageBackBtn')?.addEventListener('click', () => {
     q('otaPageDetailPanel')?.classList.add('d-none');
   });
 
-  // Host commands copy buttons
-  document.querySelectorAll('.ota-copy-host').forEach(btn => {
-    btn.addEventListener('click', () => {
-      navigator.clipboard.writeText(btn.dataset.copy).then(() => {
-        btn.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
-        setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 1500);
+  // Security buttons
+  q('otaSecSimulateBtn')?.addEventListener('click', runSimulation);
+  q('otaSecVerifyChainBtn')?.addEventListener('click', verifyChain);
+  q('otaSecRefreshBtn')?.addEventListener('click', loadTrustInfo);
+  q('otaSecCfgSaveBtn')?.addEventListener('click', saveSecurityConfig);
+
+  // Host CLI: click-to-copy on ota2-cmd elements
+  document.querySelectorAll('.ota2-cmd[data-copy]').forEach(cmd => {
+    cmd.style.cursor = 'pointer';
+    cmd.addEventListener('click', () => {
+      const text = cmd.dataset.copy;
+      navigator.clipboard.writeText(text).then(() => {
+        cmd.classList.add('ota2-cmd--copied');
+        setTimeout(() => cmd.classList.remove('ota2-cmd--copied'), 1500);
       }).catch(() => console.warn('Clipboard copy failed'));
     });
   });
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts: R=refresh, C=check, S=simulate, Esc=close detail
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
-    if (e.key === 'r' || e.key === 'R') { e.preventDefault(); loadAll(); }
-    if (e.key === 'c' || e.key === 'C') { e.preventDefault(); checkUpdates(); }
+    switch (e.key.toLowerCase()) {
+      case 'r': e.preventDefault(); loadAll(); break;
+      case 'c': e.preventDefault(); checkUpdates(); break;
+      case 's': e.preventDefault(); runSimulation(); break;
+      case 'escape':
+        q('otaPageDetailPanel')?.classList.add('d-none');
+        break;
+    }
   });
 
   /* ── Load all ──────────────────────────────────────────────── */
@@ -577,6 +846,7 @@
       loadReleases(),
       loadChangelog(),
       loadRollback(),
+      loadTrustInfo(),
     ]);
   };
 
