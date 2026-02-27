@@ -1,18 +1,15 @@
 /**
- * TPL Platform — Diagnostica Sistema  (v3.4.0+)
+ * TPL Platform — Diagnostica Sistema  (v3.5.0)
  *
  * Live health checks, OTA integrity verification,
  * module listing and security summary.
+ *
+ * Requires: app.js, sidebar.js, tpl-nav.js
  */
 (() => {
   'use strict';
 
   const API = '/api';
-  const token = () => localStorage.getItem('tpl_token') || sessionStorage.getItem('tpl_token');
-  const headers = () => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token()}`,
-  });
 
   const log = [];
   const addLog = (msg) => {
@@ -26,16 +23,14 @@
   /* ── Version Info ───────────────────────────────────────── */
   async function loadVersion() {
     try {
-      const r = await fetch(`${API}/ota/status`, { headers: headers() });
-      if (!r.ok) return;
-      const d = await r.json();
+      const d = await TPL.jsonFetch(`${API}/ota/status`);
       document.getElementById('diagVersion').textContent = d.current_version || '—';
       document.getElementById('diagVersionBadge').textContent = `v${d.current_version}`;
 
-      // Try to get full version details from /health
+      // Full version details from /health (public endpoint)
       try {
-        const rh = await fetch(`${API}/health`);
-        const dh = await rh.json();
+        const resp = await fetch(`${API}/health`);
+        const dh = resp.ok ? await resp.json() : {};
         document.getElementById('diagCodename').textContent = dh.codename || d.current_version;
         document.getElementById('diagBuild').textContent = dh.build || '—';
         document.getElementById('diagChannel').textContent = dh.channel || 'stable';
@@ -73,11 +68,10 @@
     addLog('═══ Diagnostica Sistema avviata ═══');
 
     try {
-      // 1. OTA Health Check
+      /* 1. OTA Health — GET (was incorrectly POST) */
       addLog('▸ Esecuzione health check OTA…');
-      const r = await fetch(`${API}/ota/health`, { method: 'POST', headers: headers() });
-      if (r.ok) {
-        const d = await r.json();
+      try {
+        const d = await TPL.jsonFetch(`${API}/ota/health`);
         addLog(`  Health check completato: ${d.passed}/${d.total_checks} controlli superati`);
 
         const checkMap = { api_health: 'Api', ota_engine: 'Ota', filesystem_writable: 'Fs', keys_accessible: 'Keys' };
@@ -94,15 +88,15 @@
         } else {
           addLog('  ⚠ Problemi rilevati!');
         }
-      } else {
-        addLog(`  ✗ Health check fallito (HTTP ${r.status})`);
+      } catch (e) {
+        addLog(`  ✗ Health check fallito: ${e.message}`);
+        setCheck('Api', false, e.message);
       }
 
-      // 2. OTA Status / Security
+      /* 2. OTA Status / Security */
       addLog('▸ Raccolta stato sicurezza OTA…');
-      const rs = await fetch(`${API}/ota/status`, { headers: headers() });
-      if (rs.ok) {
-        const ds = await rs.json();
+      try {
+        const ds = await TPL.jsonFetch(`${API}/ota/status`);
         const sec = ds.security || {};
 
         document.getElementById('securitySummary').innerHTML = `
@@ -150,36 +144,39 @@
         addLog(`  Audit entries: ${sec.audit_entries || 0}, Quarantena: ${sec.quarantine_files || 0}`);
 
         // Enable verify button if an install was done
-        const ri = await fetch(`${API}/ota/install/status`, { headers: headers() });
-        if (ri.ok) {
-          const di = await ri.json();
+        try {
+          const di = await TPL.jsonFetch(`${API}/ota/install/status`);
           if (di.status === 'applied' || di.status === 'finalized') {
             document.getElementById('btnVerifyOta').disabled = false;
             addLog(`  Install status: ${di.status} (tag: ${di.tag}) — verifica disponibile`);
           }
-        }
+        } catch { /* no install active */ }
+      } catch (e) {
+        addLog(`  Stato OTA non disponibile: ${e.message}`);
       }
 
-      // 3. Modules
+      /* 3. Modules — /engines/registry (not /engines) */
       addLog('▸ Elencazione moduli caricati…');
-      const rm = await fetch(`${API}/engines`, { headers: headers() });
-      if (rm.ok) {
-        const dm = await rm.json();
+      try {
+        const dm = await TPL.jsonFetch(`${API}/engines/registry`);
         const engines = dm.engines || dm || [];
         if (Array.isArray(engines) && engines.length > 0) {
           document.getElementById('modulesList').innerHTML = engines
             .map((e) => {
               const name = typeof e === 'string' ? e : e.name || e.id || '?';
-              return `<span class="badge bg-primary me-1 mb-1">${name}</span>`;
+              const status = typeof e === 'object' && e.status ? e.status : 'loaded';
+              const cls = status === 'loaded' ? 'bg-success' : status === 'error' ? 'bg-danger' : 'bg-primary';
+              return `<span class="badge ${cls} me-1 mb-1">${name}</span>`;
             })
             .join('');
           addLog(`  ${engines.length} moduli trovati`);
         } else {
           document.getElementById('modulesList').innerHTML = '<span class="text-body-secondary">Nessun modulo rilevato</span>';
-          addLog('  Nessun modulo rilevato (endpoint /engines potrebbe non essere disponibile)');
+          addLog('  Nessun modulo rilevato');
         }
-      } else {
-        addLog(`  Endpoint moduli non disponibile (HTTP ${rm.status})`);
+      } catch (e) {
+        addLog(`  Endpoint moduli non disponibile: ${e.message}`);
+        document.getElementById('modulesList').innerHTML = `<span class="text-danger">Errore: ${e.message}</span>`;
       }
 
       addLog('═══ Diagnostica completata ═══');
@@ -201,10 +198,9 @@
     addLog('═══ Verifica Integrità OTA ═══');
 
     try {
-      const r = await fetch(`${API}/ota/install/verify`, { method: 'POST', headers: headers() });
-      const d = await r.json();
+      const d = await TPL.jsonFetch(`${API}/ota/install/verify`, { method: 'POST' });
 
-      if (r.ok) {
+      {
         const s = d.summary || {};
         addLog(`  Stato: ${d.status}`);
         addLog(`  File verificati: ${s.verified_ok}/${s.total_files}`);
@@ -224,10 +220,6 @@
             addLog(`    ✗ ${t.file}: atteso ${t.expected_sha256}, trovato ${t.actual_sha256}`);
           });
         }
-      } else {
-        addLog(`  Errore: ${d.detail || r.statusText}`);
-      }
-
       addLog('═══ Verifica completata ═══');
     } catch (e) {
       addLog(`ERRORE: ${e.message}`);
@@ -238,13 +230,10 @@
   };
 
   /* ── Init ───────────────────────────────────────────────── */
-  document.addEventListener('DOMContentLoaded', () => {
-    // Set admin view for sidebar
-    if (window.TPLSidebar) {
-      window.TPLSidebar.setAdmin(true);
-      const user = localStorage.getItem('tpl_username') || sessionStorage.getItem('tpl_username');
-      if (user) window.TPLSidebar.setUser(user);
-    }
-    loadVersion();
-  });
+  // Auth + sidebar handled by tpl-nav.js; load version when ready
+  if (window.TPLNav) {
+    TPLNav.onReady(() => loadVersion());
+  } else {
+    document.addEventListener('DOMContentLoaded', loadVersion);
+  }
 })();

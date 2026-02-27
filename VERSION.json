@@ -1,9 +1,9 @@
 {
-  "version": "3.4.2",
-  "build": 20260227006,
+  "version": "3.5.0",
+  "build": 20260227010,
   "channel": "stable",
-  "codename": "Aurora",
-  "full_version": "3.4.2+20260227006",
+  "codename": "Horizon",
+  "full_version": "3.5.0+20260227010",
   "released_at": "2026-02-27T23:00:00Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
