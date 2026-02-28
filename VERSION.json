@@ -1,10 +1,10 @@
 {
-  "version": "3.5.0",
-  "build": 20260227010,
+  "version": "3.5.1",
+  "build": 20260228011,
   "channel": "stable",
   "codename": "Horizon",
-  "full_version": "3.5.0+20260227010",
-  "released_at": "2026-02-27T23:00:00Z",
+  "full_version": "3.5.1+20260228011",
+  "released_at": "2026-02-28T12:00:00Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
 }

@@ -527,8 +527,8 @@ async def logout_all(token: str) -> dict:
         logger.info("Logout all: user=%s sessions_revoked=%d", sub, count)
         return {"ok": True, "sessions_revoked": count}
 
-    except HTTPException:
-        raise HTTPException(401, "bad_token")
+    except HTTPException as exc:
+        raise exc  # re-raise with original status code and detail
 
 
 def list_sessions(user_id: str) -> list[dict]:

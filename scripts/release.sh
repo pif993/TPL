@@ -21,7 +21,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${TPL_VERSION:-$(date +%Y%m%d)}"
+# Read version from VERSION.json (single source of truth)
+_vj_version=""
+if [ -f "$ROOT/VERSION.json" ] && command -v jq &>/dev/null; then
+  _vj_version="$(jq -r '.version // empty' "$ROOT/VERSION.json" 2>/dev/null || true)"
+fi
+VERSION="${TPL_VERSION:-${_vj_version:-$(date +%Y%m%d)}}"
 DATE="$(date +%Y%m%d-%H%M%S)"
 FMT="tar"
 OUTDIR="$ROOT"

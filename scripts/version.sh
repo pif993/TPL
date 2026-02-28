@@ -177,10 +177,10 @@ bump_version() {
 
   # Update VERSION.json
   jq --arg v "$new_version" \
-     --argjson b "$new_build" \
+     --arg b "$new_build" \
      --arg fv "$full_version" \
      --arg ra "$now" \
-     '.version = $v | .build = $b | .full_version = $fv | .released_at = $ra' \
+     '.version = $v | .build = ($b | tonumber) | .full_version = $fv | .released_at = $ra' \
      "$VERSION_FILE" > "${VERSION_FILE}.tmp" && mv "${VERSION_FILE}.tmp" "$VERSION_FILE"
 
   echo "╔═══════════════════════════════════════════════════════════════╗"
@@ -258,8 +258,9 @@ apply_version() {
 
   for f in "${html_files[@]}"; do
     if [ -f "$f" ]; then
-      # Update footer version (matches v<digits.digits> or v<digits.digits.digits>)
-      sed -i -E "s/v[0-9]+\.[0-9]+(\.[0-9]+)?/v${version}/g" "$f"
+      # Update footer version (matches TPL-specific version markers only)
+      sed -i -E "s/(TPL[[:space:]]+\S*[[:space:]]*)v[0-9]+\.[0-9]+(\.[0-9]+)?/\1v${version}/g" "$f"
+      sed -i -E "s/(Versione[[:space:]]*)v?[0-9]+\.[0-9]+(\.[0-9]+)?/\1v${version}/g" "$f"
       # Update script cache busters
       sed -i -E "s/(sidebar\.js\?v=)[0-9.]+/\1${version}/" "$f"
       sed -i -E "s/(ota\.js\?v=)[0-9.]+/\1${version}/" "$f"

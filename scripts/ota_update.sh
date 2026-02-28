@@ -175,6 +175,15 @@ cmd_apply() {
   [[ -d "$staging" ]] || die "Versione ${tag} non trovata in staging.\nPrepara prima l'aggiornamento dal Centro Aggiornamenti OTA."
 
   check_root
+
+  # Concurrency lock: prevent simultaneous apply runs
+  local lockfile="${OTA_DIR}/.ota_apply.lock"
+  exec 200>"$lockfile"
+  if ! flock -n 200; then
+    die "Un altro aggiornamento OTA è già in esecuzione. Attendere il completamento."
+  fi
+  # Lock is auto-released when fd 200 closes (script exit)
+
   header "Aggiornamento OTA — ${tag}"
 
   # ── Step 1: Pre-flight checks ────────────────────────────────────

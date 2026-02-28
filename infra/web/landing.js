@@ -237,6 +237,8 @@
       }
 
       msg(TPL.t('login.success', 'Accesso riuscito. Reindirizzamento…'), 'success');
+      _loginBusy = false;
+      if (go) { go.disabled = false; go.classList.remove('ov-login-btn--loading'); }
       setTimeout(() => { location.href = TPL.roleRoute(me.roles || []); }, 600);
     } catch (e) {
       msg(`${TPL.t('msg.error', 'Errore')}: ${e.message || String(e)}`, 'danger');

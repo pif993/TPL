@@ -1,7 +1,6 @@
 import hashlib
 import importlib.util
 import ipaddress
-import fcntl
 import json
 import logging
 import os
@@ -10,7 +9,6 @@ import subprocess
 import sys
 import threading
 import time
-from collections import defaultdict, deque
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from uuid import uuid4
@@ -64,7 +62,7 @@ def _load_version_info() -> dict:
                 return _VERSION_INFO
         except (OSError, json.JSONDecodeError, TypeError):
             continue
-    _VERSION_INFO = {"version": "3.1.0", "build": 0, "full_version": "3.1.0", "codename": "Fortress"}
+    _VERSION_INFO = {"version": "3.5.1", "build": 0, "full_version": "3.5.1", "codename": "Horizon"}
     return _VERSION_INFO
 ENGINES_DIR = Path(__file__).resolve().parent / "engines"
 
@@ -132,8 +130,6 @@ def _extract_mod_meta(mod_id: str) -> dict:
         pass
     return {"id": mod_id, "ver": "0.0.0", "desc": "", "deps": []}
 
-_ATTEMPTS: dict[str, list[float]] = defaultdict(list)
-_LOCK = threading.Lock()
 _rate_limiter = RateLimiter(max_attempts=LOGIN_MAX_ATTEMPTS, window_seconds=LOGIN_WINDOW_SECONDS)
 
 # ── Lifespan — non-blocking startup probe for auth backend ────────
@@ -143,7 +139,7 @@ async def _lifespan(app: FastAPI):
     await auth_impl.run_startup_probe()  # fires a daemon thread, returns immediately
     yield
 
-app = FastAPI(title="TPL API", version="2.0.0", root_path="/api", lifespan=_lifespan)
+app = FastAPI(title="TPL API", version=_load_version_info().get("version", "3.5.1"), root_path="/api", lifespan=_lifespan)
 
 # CORS: parse explicit origins from env (comma-separated). Never allow "*" with credentials.
 _cors_origins_raw = os.getenv("CORS_ORIGINS", "")
@@ -262,6 +258,7 @@ def _file_lock(filepath: str, exclusive: bool = True):
     yield
 
 _AUDIT_PREV_HASH = "0" * 64  # genesis hash for audit chain
+_AUDIT_CHAIN_LOCK = threading.Lock()  # protects hash chain computation
 
 def _recover_audit_hash():
   """Recover last audit hash from log file on startup to maintain chain integrity."""
@@ -298,15 +295,16 @@ _recover_audit_hash()
 def _audit(request: Request, action: str, outcome: str, actor: str = "anonymous", details: dict | None = None):
   global _AUDIT_PREV_HASH
   entry = {"ts": int(time.time()),"action": action,"outcome": outcome,"actor": actor,"ip": _client_ip(request),"request_id": request.headers.get("X-Request-ID", ""),"details": details or {}}
-  # Tamper-evident hash chain: each record includes hash of previous record
-  entry["prev_hash"] = _AUDIT_PREV_HASH
-  record_str = json.dumps(entry, separators=(",", ":"), sort_keys=True)
-  entry["hash"] = hashlib.sha256(record_str.encode("utf-8")).hexdigest()
-  _AUDIT_PREV_HASH = entry["hash"]
   try:
-    with _file_lock(AUDIT_LOG, exclusive=True):
-      with open(AUDIT_LOG, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+    with _AUDIT_CHAIN_LOCK:
+      # Tamper-evident hash chain: each record includes hash of previous record
+      entry["prev_hash"] = _AUDIT_PREV_HASH
+      record_str = json.dumps(entry, separators=(",", ":"), sort_keys=True)
+      entry["hash"] = hashlib.sha256(record_str.encode("utf-8")).hexdigest()
+      _AUDIT_PREV_HASH = entry["hash"]
+      with _file_lock(AUDIT_LOG, exclusive=True):
+        with open(AUDIT_LOG, "a", encoding="utf-8") as f:
+          f.write(json.dumps(entry, separators=(",", ":")) + "\n")
   except Exception as e:
     print(f"WARN: audit write failed: {e}", file=sys.stderr)
 
@@ -314,14 +312,15 @@ def _audit_internal(action: str, outcome: str, actor: str = "system", details: d
   """Audit helper for non-request contexts (startup, engine loading, etc.)."""
   global _AUDIT_PREV_HASH
   entry = {"ts": int(time.time()),"action": action,"outcome": outcome,"actor": actor,"ip": "127.0.0.1","request_id": "","details": details or {}}
-  entry["prev_hash"] = _AUDIT_PREV_HASH
-  record_str = json.dumps(entry, separators=(",", ":"), sort_keys=True)
-  entry["hash"] = hashlib.sha256(record_str.encode("utf-8")).hexdigest()
-  _AUDIT_PREV_HASH = entry["hash"]
   try:
-    with _file_lock(AUDIT_LOG, exclusive=True):
-      with open(AUDIT_LOG, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+    with _AUDIT_CHAIN_LOCK:
+      entry["prev_hash"] = _AUDIT_PREV_HASH
+      record_str = json.dumps(entry, separators=(",", ":"), sort_keys=True)
+      entry["hash"] = hashlib.sha256(record_str.encode("utf-8")).hexdigest()
+      _AUDIT_PREV_HASH = entry["hash"]
+      with _file_lock(AUDIT_LOG, exclusive=True):
+        with open(AUDIT_LOG, "a", encoding="utf-8") as f:
+          f.write(json.dumps(entry, separators=(",", ":")) + "\n")
   except Exception as e:
     print(f"WARN: audit write failed: {e}", file=sys.stderr)
 

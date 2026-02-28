@@ -73,7 +73,7 @@
     _cancelRefresh();
     const ttl = expUnix - Math.floor(Date.now() / 1000);
     if (ttl <= 0) return;
-    const delay = Math.max(ttl * 0.8, 10) * 1000;     // at least 10 s
+    const delay = Math.min(ttl * 0.8, Math.max(ttl - 5, 1)) * 1000;
     _refreshTimer = setTimeout(_doRefresh, delay);
   };
 
@@ -190,9 +190,9 @@
   //  Role-based routing
   // ────────────────────────────────────────────────────────────────
   const roleRoute = (roles) => {
-    if (Array.isArray(roles) && roles.includes('admin')) return '/dashboard';
-    if (roles === 'admin') return '/dashboard';
-    return '/dashboard';
+    const r = Array.isArray(roles) ? roles : [roles];
+    if (r.includes('admin')) return '/dashboard';
+    return '/dashboard';  // TODO: add user-specific dashboard when available
   };
 
   // ────────────────────────────────────────────────────────────────

@@ -129,10 +129,9 @@ def get_auth_health() -> dict:
     if AUTH_MODE in ("keycloak", "oidc"):
         from ._auth_keycloak import get_health
         return get_health()
-    if AUTH_MODE not in ("keycloak", "oidc"):
+    else:
         from ._auth_local import get_auth_health
         return get_auth_health()
-    return {"backend": "local", "startup_verified": True}
 
 
 __all__ = [

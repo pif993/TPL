@@ -1,5 +1,5 @@
 /**
- * TPL Platform — Diagnostica Sistema  (v3.5.0)
+ * TPL Platform — Diagnostica Sistema  (v3.5.1)
  *
  * Live health checks, OTA integrity verification,
  * module listing and security summary.
@@ -29,8 +29,7 @@
 
       // Full version details from /health (public endpoint)
       try {
-        const resp = await fetch(`${API}/health`);
-        const dh = resp.ok ? await resp.json() : {};
+        const dh = await TPL.jsonFetch(`${API}/health`);
         document.getElementById('diagCodename').textContent = dh.codename || d.current_version;
         document.getElementById('diagBuild').textContent = dh.build || '—';
         document.getElementById('diagChannel').textContent = dh.channel || 'stable';
@@ -99,6 +98,7 @@
         const ds = await TPL.jsonFetch(`${API}/ota/status`);
         const sec = ds.security || {};
 
+        const _esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         document.getElementById('securitySummary').innerHTML = `
           <div class="row g-3">
             <div class="col-md-4">
@@ -122,19 +122,19 @@
             <div class="col-md-4">
               <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-fingerprint text-info fs-5"></i>
-                <span>Fingerprint: <code>${(sec.publisher_fingerprint || '—').slice(0, 16)}</code></span>
+                <span>Fingerprint: <code>${_esc((sec.publisher_fingerprint || '—').slice(0, 16))}</code></span>
               </div>
             </div>
             <div class="col-md-4">
               <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-journal-text text-warning fs-5"></i>
-                <span>Audit entries: <strong>${sec.audit_entries || 0}</strong></span>
+                <span>Audit entries: <strong>${parseInt(sec.audit_entries, 10) || 0}</strong></span>
               </div>
             </div>
             <div class="col-md-4">
               <div class="d-flex align-items-center gap-2">
                 <i class="bi ${sec.quarantine_files > 0 ? 'bi-exclamation-triangle text-warning' : 'bi-shield-check text-success'} fs-5"></i>
-                <span>File in quarantena: <strong>${sec.quarantine_files || 0}</strong></span>
+                <span>File in quarantena: <strong>${parseInt(sec.quarantine_files, 10) || 0}</strong></span>
               </div>
             </div>
           </div>
@@ -220,6 +220,7 @@
             addLog(`    ✗ ${t.file}: atteso ${t.expected_sha256}, trovato ${t.actual_sha256}`);
           });
         }
+      }
       addLog('═══ Verifica completata ═══');
     } catch (e) {
       addLog(`ERRORE: ${e.message}`);
@@ -230,6 +231,12 @@
   };
 
   /* ── Init ───────────────────────────────────────────────── */
+  // Bind buttons via JS (CSP-safe, no inline onclick)
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btnRunDiag')?.addEventListener('click', runDiagnostics);
+    document.getElementById('btnVerifyOta')?.addEventListener('click', runOtaVerify);
+  });
+
   // Auth + sidebar handled by tpl-nav.js; load version when ready
   if (window.TPLNav) {
     TPLNav.onReady(() => loadVersion());

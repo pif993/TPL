@@ -58,8 +58,12 @@ _log_event() {
   shift 2
   local detail="$*"
   mkdir -p "$(dirname "$TPL_BUNDLE_LOG")"
-  printf '{"ts":%d,"action":"%s","status":"%s","detail":"%s"}\n' \
-    "$(date +%s)" "$action" "$status" "$detail" >> "$TPL_BUNDLE_LOG"
+  # Use python3 for safe JSON serialization (handles special chars)
+  python3 -c "
+import json,time,sys
+entry={'ts':int(time.time()),'action':sys.argv[1],'status':sys.argv[2],'detail':sys.argv[3]}
+print(json.dumps(entry,separators=(',',':')))
+" "$action" "$status" "$detail" >> "$TPL_BUNDLE_LOG"
 }
 
 _ensure_dirs() {
@@ -627,16 +631,18 @@ cmd_keygen() {
   echo -n "$key" > "$TPL_PRIVKEY"
   chmod 600 "$TPL_PRIVKEY"
 
-  # Public key = same key (HMAC is symmetric) but with restricted permissions
+  # Public key = same key (HMAC is symmetric) — restricted permissions
+  # NOTE: HMAC keys must be protected. Verifier needs read access but should
+  # NOT be world-readable to prevent signature forgery.
   echo -n "$key" > "$TPL_PUBKEY"
-  chmod 644 "$TPL_PUBKEY"
+  chmod 600 "$TPL_PUBKEY"
 
   local fingerprint
   fingerprint=$(echo -n "$key" | sha256sum | awk '{print $1}' | head -c 16)
 
   ok "Keypair generato"
   info "Chiave privata: $TPL_PRIVKEY (modo: 600)"
-  info "Chiave pubblica: $TPL_PUBKEY (modo: 644)"
+  info "Chiave pubblica: $TPL_PUBKEY (modo: 600)"
   info "Fingerprint: $fingerprint"
   echo ""
   warn "IMPORTANTE: la chiave privata NON deve mai essere distribuita!"
