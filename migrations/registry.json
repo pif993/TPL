@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "description": "TPL OTA Migration Registry — tracks ordered data/config migrations per version",
+  "documentation": "Each version entry declares optional pre/post-apply hooks. When upgrading from A→C, all migrations for versions >A and <=C are executed in semver order.",
+  "migrations": {
+    "3.2.0": {
+      "description": "Horizon — OTA Manager fully operational",
+      "requires_min": "2.0.0",
+      "has_data_migration": false,
+      "reversible": true,
+      "phases": ["post"],
+      "files_changed": [
+        "apps/api/app/engines/ota_update_engine.py",
+        "infra/web/ota.js",
+        "infra/web/ota.html"
+      ]
+    },
+    "3.3.0": {
+      "description": "Sentinel — Post-install integrity verification",
+      "requires_min": "3.2.0",
+      "has_data_migration": false,
+      "reversible": true,
+      "phases": ["post"],
+      "files_changed": [
+        "apps/api/app/engines/ota_update_engine.py"
+      ]
+    },
+    "3.4.0": {
+      "description": "Aurora — Diagnostics page",
+      "requires_min": "3.3.0",
+      "has_data_migration": false,
+      "reversible": true,
+      "phases": ["post"],
+      "files_changed": [
+        "infra/web/diagnostics.html",
+        "infra/web/diagnostics.js",
+        "infra/web/nginx.conf",
+        "infra/web/sidebar.js"
+      ]
+    },
+    "3.4.1": {
+      "description": "Aurora — Unified Design System",
+      "requires_min": "3.4.0",
+      "has_data_migration": false,
+      "reversible": true,
+      "phases": ["post"],
+      "files_changed": [
+        "infra/web/styles.css",
+        "infra/web/nginx.conf"
+      ]
+    },
+    "3.4.2": {
+      "description": "Aurora — AdminLTE removal, full design system",
+      "requires_min": "3.4.0",
+      "has_data_migration": false,
+      "reversible": true,
+      "phases": ["post"],
+      "files_changed": [
+        "infra/web/styles.css",
+        "infra/web/admin.html",
+        "infra/web/dashboard.html",
+        "infra/web/ota.html",
+        "infra/web/advanced.html"
+      ]
+    },
+    "3.5.0": {
+      "description": "Horizon build refresh",
+      "requires_min": "3.4.0",
+      "has_data_migration": false,
+      "reversible": true,
+      "phases": ["post"],
+      "files_changed": []
+    },
+    "3.5.1": {
+      "description": "Horizon — Security fixes, audit chain lock, migration system",
+      "requires_min": "2.0.0",
+      "has_data_migration": true,
+      "reversible": true,
+      "phases": ["pre", "post"],
+      "files_changed": [
+        "apps/api/app/main.py",
+        "apps/api/app/auth_impl.py",
+        "apps/api/app/_auth_local.py",
+        "apps/api/requirements.txt",
+        "infra/web/diagnostics.js",
+        "infra/web/diagnostics.html",
+        "infra/web/app.js",
+        "infra/web/landing.js",
+        "infra/web/nginx.conf",
+        "scripts/version.sh",
+        "scripts/release.sh",
+        "scripts/tpl-modules",
+        "scripts/ota_update.sh",
+        "migrations/registry.json"
+      ]
+    }
+  }
+}

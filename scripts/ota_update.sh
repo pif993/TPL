@@ -211,6 +211,130 @@ cmd_apply() {
   fi
   log "  Pre-flight checks superati ✓"
 
+  # ── Step 1b: Upgrade path validation (migration gate) ────────────
+  local current_ver target_ver
+  current_ver=$(python3 -c "
+import json
+try:
+    with open('${TPL_ROOT}/data/ota/state.json') as f:
+        s = json.load(f)
+    iv = s.get('installed_version')
+    if iv:
+        print(iv)
+    else:
+        with open('${TPL_ROOT}/VERSION.json') as f:
+            v = json.load(f)
+        print(v.get('version', '0.0.0'))
+except Exception:
+    print('0.0.0')
+" 2>/dev/null || echo "0.0.0")
+
+  # Detect target version from staging VERSION.json
+  if [[ -f "${staging}/VERSION.json" ]]; then
+    target_ver=$(python3 -c "
+import json
+with open('${staging}/VERSION.json') as f:
+    print(json.load(f).get('version', '${tag#v}'))
+" 2>/dev/null || echo "${tag#v}")
+  else
+    target_ver="${tag#v}"
+  fi
+
+  log "  Versione corrente: ${current_ver}"
+  log "  Versione target:   ${target_ver}"
+
+  # Validate min_upgrade_from
+  local min_from=""
+  if [[ -f "${staging}/VERSION.json" ]]; then
+    min_from=$(python3 -c "
+import json
+with open('${staging}/VERSION.json') as f:
+    v = json.load(f)
+print(v.get('min_upgrade_from', ''))
+" 2>/dev/null || echo "")
+  fi
+
+  # Also check migration registry
+  local registry_min=""
+  if [[ -f "${staging}/migrations/registry.json" ]] || [[ -f "${TPL_ROOT}/migrations/registry.json" ]]; then
+    local reg_file="${staging}/migrations/registry.json"
+    [[ -f "$reg_file" ]] || reg_file="${TPL_ROOT}/migrations/registry.json"
+    registry_min=$(python3 -c "
+import json
+with open('${reg_file}') as f:
+    r = json.load(f)
+m = r.get('migrations', {}).get('${target_ver}', {})
+print(m.get('requires_min', ''))
+" 2>/dev/null || echo "")
+  fi
+
+  # Use the most restrictive min_from
+  if [[ -n "$registry_min" ]] && [[ -n "$min_from" ]]; then
+    min_from=$(python3 -c "
+from packaging.version import Version
+try:
+    a, b = Version('${min_from}'), Version('${registry_min}')
+    print('${registry_min}' if b > a else '${min_from}')
+except Exception:
+    v1 = tuple(int(x) for x in '${min_from}'.split('.'))
+    v2 = tuple(int(x) for x in '${registry_min}'.split('.'))
+    print('${registry_min}' if v2 > v1 else '${min_from}')
+" 2>/dev/null || echo "$min_from")
+  elif [[ -n "$registry_min" ]]; then
+    min_from="$registry_min"
+  fi
+
+  if [[ -n "$min_from" ]]; then
+    local upgrade_blocked
+    upgrade_blocked=$(python3 -c "
+v1 = tuple(int(x) for x in '${current_ver}'.split('.')[:3])
+v2 = tuple(int(x) for x in '${min_from}'.split('.')[:3])
+print('yes' if v1 < v2 else 'no')
+" 2>/dev/null || echo "no")
+
+    if [[ "$upgrade_blocked" == "yes" ]]; then
+      die "Upgrade bloccato: versione corrente ${current_ver} è inferiore al minimo richiesto ${min_from} per la versione ${target_ver}.\nAggiornare prima alla versione ${min_from}."
+    fi
+    log "  Vincolo min_upgrade_from (${min_from}): soddisfatto ✓"
+  fi
+
+  # Detect pending migrations
+  local pending_migrations_count=0
+  local pending_migrations_list=""
+  if [[ -f "${TPL_ROOT}/migrations/run_migrations.sh" ]] || [[ -f "${staging}/migrations/run_migrations.sh" ]]; then
+    local runner="${TPL_ROOT}/migrations/run_migrations.sh"
+    [[ -f "${staging}/migrations/run_migrations.sh" ]] && runner="${staging}/migrations/run_migrations.sh"
+
+    local mig_dir="${TPL_ROOT}/migrations"
+    [[ -d "${staging}/migrations" ]] && mig_dir="${staging}/migrations"
+
+    pending_migrations_list=$(python3 -c "
+import json, os
+reg_path = '${mig_dir}/registry.json'
+if not os.path.isfile(reg_path):
+    exit(0)
+with open(reg_path) as f:
+    reg = json.load(f)
+current = tuple(int(x) for x in '${current_ver}'.split('.')[:3])
+target = tuple(int(x) for x in '${target_ver}'.split('.')[:3])
+pending = []
+for ver_str in reg.get('migrations', {}):
+    ver_t = tuple(int(x) for x in ver_str.split('.')[:3])
+    if current < ver_t <= target:
+        pending.append(ver_str)
+pending.sort(key=lambda v: tuple(int(x) for x in v.split('.')[:3]))
+for p in pending:
+    print(p)
+" 2>/dev/null || true)
+
+    if [[ -n "$pending_migrations_list" ]]; then
+      pending_migrations_count=$(echo "$pending_migrations_list" | wc -l)
+      log "  Migrazioni pendenti: ${pending_migrations_count} ($(echo "$pending_migrations_list" | tr '\n' ',' | sed 's/,$//'))"
+    else
+      log "  Nessuna migrazione intermedia necessaria"
+    fi
+  fi
+
   # ── Step 2: Create backup ────────────────────────────────────────
   log "Step 2/6: Creazione backup"
   local backup_dir
@@ -227,6 +351,54 @@ cmd_apply() {
     log "  Servizi arrestati ✓"
   else
     log "  Nessun servizio in esecuzione"
+  fi
+
+  # ── Step 3b: Pre-apply migrations ───────────────────────────────
+  if [[ "$pending_migrations_count" -gt 0 ]]; then
+    log "Step 3b: Migrazioni pre-apply (${current_ver} → ${target_ver})"
+
+    # Prefer staged runner/migrations (they may contain new migration scripts)
+    local run_mig_script="${TPL_ROOT}/migrations/run_migrations.sh"
+    local run_mig_root="${TPL_ROOT}"
+
+    # If the staged release includes newer migrations, use those
+    if [[ -d "${staging}/migrations" ]]; then
+      # Temporarily copy staged migrations to a working location
+      local mig_workdir="${OTA_DIR}/install/.migrations_work"
+      rm -rf "$mig_workdir"
+      cp -a "${staging}/migrations" "$mig_workdir"
+      # Also merge current migrations (staged may not include ALL version dirs)
+      if [[ -d "${TPL_ROOT}/migrations" ]]; then
+        for d in "${TPL_ROOT}/migrations"/*/; do
+          local vname
+          vname=$(basename "$d")
+          if [[ ! -d "${mig_workdir}/${vname}" ]] && [[ "$vname" =~ ^[0-9] ]]; then
+            cp -a "$d" "${mig_workdir}/${vname}"
+          fi
+        done
+      fi
+      # Use staging registry (more up to date)
+      if [[ -f "${staging}/migrations/registry.json" ]]; then
+        cp -a "${staging}/migrations/registry.json" "${mig_workdir}/registry.json"
+      fi
+      run_mig_script="${mig_workdir}/run_migrations.sh"
+      chmod +x "$run_mig_script" 2>/dev/null || true
+    fi
+
+    if [[ -f "$run_mig_script" ]]; then
+      local pre_result
+      if pre_result=$(bash "$run_mig_script" "$current_ver" "$target_ver" pre "$run_mig_root" 2>&1); then
+        echo "$pre_result" | while IFS= read -r line; do log "    $line"; done
+        log "  Pre-apply migrations completate ✓"
+      else
+        echo "$pre_result" | while IFS= read -r line; do err "    $line"; done
+        err "Pre-apply migration fallita!"
+        warn "Ripristino backup consigliato: $0 --rollback"
+        die "Aggiornamento interrotto per errore di migrazione."
+      fi
+    else
+      warn "  Runner migrazioni non trovato — skip pre-apply"
+    fi
   fi
 
   # ── Step 4: Apply files ──────────────────────────────────────────
@@ -293,6 +465,43 @@ cmd_apply() {
     log "  Versione propagata ✓"
   fi
 
+  # ── Step 4c: Post-apply migrations ──────────────────────────────
+  if [[ "$pending_migrations_count" -gt 0 ]]; then
+    log "Step 4c: Migrazioni post-apply (${current_ver} → ${target_ver})"
+
+    # Use the newly-installed migration runner (files already in place)
+    local post_runner="${TPL_ROOT}/migrations/run_migrations.sh"
+    if [[ -f "$post_runner" ]]; then
+      chmod +x "$post_runner" 2>/dev/null || true
+      local post_result
+      if post_result=$(bash "$post_runner" "$current_ver" "$target_ver" post "$TPL_ROOT" 2>&1); then
+        echo "$post_result" | while IFS= read -r line; do log "    $line"; done
+        log "  Post-apply migrations completate ✓"
+      else
+        echo "$post_result" | while IFS= read -r line; do err "    $line"; done
+        warn "Post-apply migration parzialmente fallita — i files sono già applicati."
+        warn "Verificare manualmente e rilanciare se necessario."
+      fi
+    else
+      warn "  Runner migrazioni non trovato dopo apply — skip post-apply"
+    fi
+  fi
+
+  # ── Step 4d: Update installed_version in OTA state ──────────────
+  if [[ -f "${TPL_ROOT}/data/ota/state.json" ]]; then
+    python3 -c "
+import json, time
+with open('${TPL_ROOT}/data/ota/state.json') as f:
+    s = json.load(f)
+s['installed_version'] = '${target_ver}'
+s['last_upgrade_from'] = '${current_ver}'
+s['last_upgrade_at'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+s['update_available'] = False
+with open('${TPL_ROOT}/data/ota/state.json', 'w') as f:
+    json.dump(s, f, indent=2)
+" 2>/dev/null && log "  installed_version aggiornata a ${target_ver}" || warn "  Impossibile aggiornare installed_version"
+  fi
+
   # ── Step 5: Rebuild containers ───────────────────────────────────
   log "Step 5/6: Rebuild container"
   cd "$TPL_ROOT"
@@ -332,7 +541,9 @@ cmd_apply() {
   # ── Summary ──────────────────────────────────────────────────────
   echo ""
   header "Aggiornamento completato"
-  echo -e "  Versione applicata:  ${BOLD}${tag}${NC}"
+  echo -e "  Versione precedente: ${BOLD}${current_ver}${NC}"
+  echo -e "  Versione applicata:  ${BOLD}${tag}${NC} (${target_ver})"
+  echo -e "  Migrazioni eseguite: ${pending_migrations_count}"
   echo -e "  Backup disponibile:  ${backup_dir}"
   echo -e "  Container attivi:    ${running}"
   if [[ $health_ok == false ]]; then

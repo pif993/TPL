@@ -3976,6 +3976,274 @@ echo "=== Security smoke completato ==="
         }
 
     # ═══════════════════════════════════════════════════════════════════
+    # ── OTA Migration System — Cumulative Patch Engine ────────────────
+    # ═══════════════════════════════════════════════════════════════════
+
+    MIGRATIONS_DIR_CANDIDATES = [
+        os.path.join(OTA_PROJECT_ROOT, "migrations"),          # Docker project mount
+        os.path.join(root, "..", "migrations"),                 # Relative from /data
+        os.path.join(os.environ.get("TPL_ROOT", ""), "migrations"),
+        Path(__file__).resolve().parents[3] / "migrations",    # From engine source
+    ]
+
+    def _find_migrations_dir() -> Optional[str]:
+        """Locate the migrations/ directory from available paths."""
+        for candidate in MIGRATIONS_DIR_CANDIDATES:
+            p = str(candidate)
+            if os.path.isdir(p) and os.path.isfile(os.path.join(p, "registry.json")):
+                return p
+        return None
+
+    def _load_migration_registry() -> dict:
+        """Load migrations/registry.json — returns empty dict if unavailable."""
+        mdir = _find_migrations_dir()
+        if not mdir:
+            return {}
+        try:
+            with open(os.path.join(mdir, "registry.json")) as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Cannot load migration registry: {e}")
+            return {}
+
+    def _get_installed_version() -> str:
+        """Get currently installed version from state.json or VERSION.json."""
+        state = _load_state()
+        iv = state.get("installed_version")
+        if iv:
+            return iv
+        # Fallback: read VERSION.json
+        return PLATFORM_VERSION
+
+    def _find_pending_migrations(current_ver: str, target_ver: str) -> List[dict]:
+        """Find all migrations between current and target version, ordered by semver.
+
+        Returns list of dicts: [{"version": "3.4.1", "meta": {...}, "dir": "/path/to/3.4.1"}, ...]
+        Only includes versions where: current < version <= target
+        """
+        registry = _load_migration_registry()
+        migrations_section = registry.get("migrations", {})
+        mdir = _find_migrations_dir()
+        if not mdir or not migrations_section:
+            return []
+
+        current_t = _version_tuple(current_ver)
+        target_t = _version_tuple(target_ver)
+        pending = []
+
+        for ver_str, meta in migrations_section.items():
+            ver_t = _version_tuple(ver_str)
+            if current_t < ver_t <= target_t:
+                ver_dir = os.path.join(mdir, ver_str)
+                pending.append({
+                    "version": ver_str,
+                    "version_tuple": ver_t,
+                    "meta": meta,
+                    "dir": ver_dir if os.path.isdir(ver_dir) else None,
+                })
+
+        # Sort by semver ascending
+        pending.sort(key=lambda x: x["version_tuple"])
+        return pending
+
+    def _validate_min_upgrade_from(current_ver: str, target_ver: str) -> dict:
+        """Check if the upgrade path is supported (min_upgrade_from gate).
+
+        Reads min_upgrade_from from:
+          1. The staged release's VERSION.json
+          2. The migration registry entry for the target version
+        Returns {"allowed": bool, "reason": str, "min_version": str}
+        """
+        # Check registry
+        registry = _load_migration_registry()
+        migrations_section = registry.get("migrations", {})
+        target_clean = target_ver.lstrip("v")
+
+        min_from = None
+        if target_clean in migrations_section:
+            min_from = migrations_section[target_clean].get("requires_min")
+
+        # Also check staged VERSION.json
+        safe_tag = _sanitize_tag(target_ver)
+        staged_version_file = os.path.join(OTA_STAGING, safe_tag, "VERSION.json")
+        if os.path.isfile(staged_version_file):
+            try:
+                with open(staged_version_file) as f:
+                    vdata = json.load(f)
+                file_min = vdata.get("min_upgrade_from")
+                if file_min:
+                    # Use the most restrictive (highest) min_upgrade_from
+                    if not min_from or _version_compare(file_min, min_from) > 0:
+                        min_from = file_min
+            except Exception:
+                pass
+
+        if not min_from:
+            return {"allowed": True, "reason": "no minimum version constraint", "min_version": None}
+
+        if _version_compare(current_ver, min_from) < 0:
+            return {
+                "allowed": False,
+                "reason": f"Current version {current_ver} is below minimum {min_from} "
+                          f"required for upgrade to {target_clean}. "
+                          f"Upgrade to {min_from} first.",
+                "min_version": min_from,
+            }
+
+        return {"allowed": True, "reason": "version constraint satisfied", "min_version": min_from}
+
+    def _run_migration_phase(phase: str, current_ver: str, target_ver: str,
+                             project_root: str = None) -> dict:
+        """Execute all pending migrations for a given phase (pre or post).
+
+        Uses migrations/run_migrations.sh if available (subprocess),
+        or falls back to Python-native execution.
+
+        Returns: {
+            "status": "ok"|"failed"|"skipped",
+            "migrations_run": int,
+            "versions": [...],
+            "errors": [...]
+        }
+        """
+        pending = _find_pending_migrations(current_ver, target_ver)
+        if not pending:
+            return {"status": "ok", "migrations_run": 0, "versions": [], "errors": []}
+
+        # Filter by phase
+        phase_migrations = []
+        for m in pending:
+            phases = m["meta"].get("phases", ["post"])
+            if phase in phases and m["dir"]:
+                phase_migrations.append(m)
+
+        if not phase_migrations:
+            return {"status": "ok", "migrations_run": 0, "versions": [], "errors": []}
+
+        if not project_root:
+            project_root = OTA_PROJECT_ROOT
+
+        results = {
+            "status": "ok",
+            "migrations_run": 0,
+            "versions": [],
+            "errors": [],
+        }
+
+        for m in phase_migrations:
+            ver = m["version"]
+            migrate_script = os.path.join(m["dir"], "migrate.sh")
+
+            if not os.path.isfile(migrate_script):
+                logger.info(f"Migration {ver} [{phase}]: no migrate.sh, skip")
+                continue
+
+            logger.info(f"Migration {ver} [{phase}]: executing...")
+            try:
+                import subprocess
+                proc = subprocess.run(
+                    ["bash", migrate_script, phase, project_root],
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                    cwd=project_root,
+                )
+                output = proc.stdout.strip()
+                if proc.returncode != 0:
+                    error_msg = proc.stderr.strip() or output or f"exit code {proc.returncode}"
+                    logger.error(f"Migration {ver} [{phase}] FAILED: {error_msg}")
+                    results["status"] = "failed"
+                    results["errors"].append({
+                        "version": ver,
+                        "phase": phase,
+                        "error": error_msg[:500],
+                        "exit_code": proc.returncode,
+                    })
+                    # Stop on first failure — don't run further migrations
+                    break
+                else:
+                    logger.info(f"Migration {ver} [{phase}]: OK — {output[:200]}")
+                    results["migrations_run"] += 1
+                    results["versions"].append(ver)
+
+            except subprocess.TimeoutExpired:
+                logger.error(f"Migration {ver} [{phase}]: TIMEOUT (120s)")
+                results["status"] = "failed"
+                results["errors"].append({
+                    "version": ver, "phase": phase, "error": "Timeout (120s)"
+                })
+                break
+            except Exception as e:
+                logger.error(f"Migration {ver} [{phase}]: Exception: {e}")
+                results["status"] = "failed"
+                results["errors"].append({
+                    "version": ver, "phase": phase, "error": str(e)[:500]
+                })
+                break
+
+        # Record in state
+        try:
+            ota_state = _load_state()
+            hist = ota_state.get("migration_history", [])
+            hist.append({
+                "phase": phase,
+                "from_version": current_ver,
+                "to_version": target_ver,
+                "versions_run": results["versions"],
+                "status": results["status"],
+                "ts": datetime.now().isoformat(),
+            })
+            ota_state["migration_history"] = hist
+            _save_state(ota_state)
+        except Exception as e:
+            logger.warning(f"Cannot save migration history: {e}")
+
+        return results
+
+    # ── Migration status endpoint ─────────────────────────────────────
+
+    @app.get("/ota/migrations/pending")
+    async def ota_migrations_pending(_u=Depends(require_admin)):
+        """Show pending migrations between installed version and a target."""
+        current = _get_installed_version()
+        state = _load_state()
+        latest = state.get("latest_version", current)
+
+        pending = _find_pending_migrations(current, latest)
+        upgrade_check = _validate_min_upgrade_from(current, latest)
+
+        return {
+            "installed_version": current,
+            "target_version": latest,
+            "upgrade_allowed": upgrade_check["allowed"],
+            "upgrade_reason": upgrade_check["reason"],
+            "min_upgrade_from": upgrade_check.get("min_version"),
+            "pending_migrations": [
+                {
+                    "version": m["version"],
+                    "description": m["meta"].get("description", ""),
+                    "phases": m["meta"].get("phases", ["post"]),
+                    "has_data_migration": m["meta"].get("has_data_migration", False),
+                    "has_script": m["dir"] is not None and os.path.isfile(
+                        os.path.join(m["dir"], "migrate.sh")) if m["dir"] else False,
+                    "files_changed": m["meta"].get("files_changed", []),
+                    "reversible": m["meta"].get("reversible", True),
+                }
+                for m in pending
+            ],
+            "total_pending": len(pending),
+        }
+
+    @app.get("/ota/migrations/history")
+    async def ota_migrations_history(_u=Depends(require_admin)):
+        """Show migration execution history."""
+        state = _load_state()
+        return {
+            "installed_version": _get_installed_version(),
+            "history": state.get("migration_history", []),
+        }
+
+    # ═══════════════════════════════════════════════════════════════════
     # ── OTA Install System — Auto-Update Installation Engine ──────────
     # ═══════════════════════════════════════════════════════════════════
 
@@ -4039,6 +4307,55 @@ echo "=== Security smoke completato ==="
             "total_steps": 5,
             "error": None,
         }
+        _save_install_state(state)
+
+        # ── Step 0: Upgrade path validation (migration gate) ─────────
+        current_ver = _get_installed_version()
+        target_ver = safe_tag.lstrip("v")
+        pending_migrations = []
+
+        if not is_test:
+            upgrade_check = _validate_min_upgrade_from(current_ver, target_ver)
+            if not upgrade_check["allowed"]:
+                _add_install_step(state, "upgrade_gate", "failed", upgrade_check["reason"])
+                state["status"] = "failed"
+                state["error"] = upgrade_check["reason"]
+                _save_install_state(state)
+                sec.audit_log("ota.install.blocked", "upgrade_gate_failed", user, {
+                    "tag": safe_tag, "current": current_ver, "reason": upgrade_check["reason"]
+                })
+                raise HTTPException(
+                    409,
+                    f"Upgrade blocked: {upgrade_check['reason']}"
+                )
+
+            pending_migrations = _find_pending_migrations(current_ver, target_ver)
+            state["migrations_pending"] = len(pending_migrations)
+            state["migrations_versions"] = [m["version"] for m in pending_migrations]
+            state["current_version"] = current_ver
+            state["target_version"] = target_ver
+
+            if pending_migrations:
+                state["total_steps"] = 7  # 5 base + pre-migrate + post-migrate
+                _add_install_step(
+                    state, "upgrade_gate", "ok",
+                    f"Upgrade path {current_ver} → {target_ver}: "
+                    f"{len(pending_migrations)} migration(s) pending "
+                    f"({', '.join(m['version'] for m in pending_migrations)})"
+                )
+                logger.info(
+                    f"OTA install {safe_tag}: {len(pending_migrations)} pending migrations "
+                    f"from {current_ver}: {[m['version'] for m in pending_migrations]}"
+                )
+            else:
+                _add_install_step(
+                    state, "upgrade_gate", "ok",
+                    f"Upgrade path {current_ver} → {target_ver}: no intermediate migrations"
+                )
+        else:
+            state["current_version"] = current_ver
+            state["target_version"] = target_ver
+
         _save_install_state(state)
 
         # ── Step 1: Pre-flight checks ────────────────────────────────
@@ -4240,6 +4557,42 @@ echo "=== Security smoke completato ==="
         _add_install_step(state, "apply", "running", "Applying update files to project...")
         _save_install_state(state)
 
+        # ── Pre-apply migrations ─────────────────────────────────────
+        current_ver = state.get("current_version", _get_installed_version())
+        target_ver = state.get("target_version", safe_tag.lstrip("v"))
+        is_test = state.get("is_test", False)
+
+        if not is_test and state.get("migrations_pending", 0) > 0:
+            _add_install_step(state, "migrate_pre", "running",
+                              f"Running pre-apply migrations ({current_ver} → {target_ver})...")
+            _save_install_state(state)
+            try:
+                pre_result = _run_migration_phase("pre", current_ver, target_ver,
+                                                  OTA_PROJECT_ROOT)
+                if pre_result["status"] == "failed":
+                    err_detail = "; ".join(
+                        e.get("error", "unknown") for e in pre_result.get("errors", [])
+                    )[:300]
+                    _add_install_step(state, "migrate_pre", "failed",
+                                      f"Pre-migration failed: {err_detail}")
+                    state["status"] = "failed"
+                    state["error"] = f"Pre-migration failed: {err_detail}"
+                    _save_install_state(state)
+                    raise HTTPException(500, f"Pre-migration failed: {err_detail}")
+                else:
+                    _add_install_step(state, "migrate_pre", "ok",
+                                      f"Pre-migrations OK: {pre_result['migrations_run']} executed "
+                                      f"({', '.join(pre_result.get('versions', []))})")
+                    _save_install_state(state)
+            except HTTPException:
+                raise
+            except Exception as e:
+                _add_install_step(state, "migrate_pre", "failed", f"Pre-migration error: {e}")
+                state["status"] = "failed"
+                state["error"] = f"Pre-migration error: {str(e)[:200]}"
+                _save_install_state(state)
+                raise HTTPException(500, f"Pre-migration error: {str(e)[:100]}")
+
         # ── Direct file copy via project root mount ──────────────────
         try:
             with open(os.path.join(install_pkg_dir, "MANIFEST.json")) as f:
@@ -4365,6 +4718,45 @@ echo "=== Security smoke completato ==="
             _save_install_state(state)
             raise HTTPException(500, f"Apply failed: {str(e)[:100]}")
 
+        # ── Post-apply migrations ────────────────────────────────────
+        if not is_test and state.get("migrations_pending", 0) > 0:
+            _add_install_step(state, "migrate_post", "running",
+                              f"Running post-apply migrations ({current_ver} → {target_ver})...")
+            _save_install_state(state)
+            try:
+                post_result = _run_migration_phase("post", current_ver, target_ver,
+                                                   OTA_PROJECT_ROOT)
+                if post_result["status"] == "failed":
+                    err_detail = "; ".join(
+                        e.get("error", "unknown") for e in post_result.get("errors", [])
+                    )[:300]
+                    _add_install_step(state, "migrate_post", "warning",
+                                      f"Post-migration issue: {err_detail} "
+                                      "(files already applied, manual review needed)")
+                    logger.error(f"Post-migration failed but files already applied: {err_detail}")
+                    # Don't fail the entire apply — files are already in place
+                    # The admin should review and re-run if needed
+                else:
+                    _add_install_step(state, "migrate_post", "ok",
+                                      f"Post-migrations OK: {post_result['migrations_run']} executed "
+                                      f"({', '.join(post_result.get('versions', []))})")
+                    _save_install_state(state)
+            except Exception as e:
+                _add_install_step(state, "migrate_post", "warning",
+                                  f"Post-migration error: {str(e)[:200]} (files already applied)")
+                logger.error(f"Post-migration exception (non-fatal): {e}")
+
+        # ── Update installed version in OTA state ────────────────────
+        if not is_test:
+            try:
+                ota_state = _load_state()
+                ota_state["installed_version"] = target_ver
+                ota_state["last_upgrade_from"] = current_ver
+                ota_state["last_upgrade_at"] = datetime.now().isoformat()
+                _save_state(ota_state)
+            except Exception as e:
+                logger.warning(f"Cannot update installed_version in OTA state: {e}")
+
         state["status"] = "applied"
         state["applied_at"] = datetime.now().isoformat()
         state["applied_files"] = len(applied_files)
@@ -4431,6 +4823,19 @@ echo "=== Security smoke completato ==="
         _add_install_step(state, "finalize", "ok",
                           "Update finalized" + (" — scheduling API restart" if restart_needed else ""))
         _save_install_state(state)
+
+        # ── Final installed_version confirmation ─────────────────────
+        if not is_test:
+            try:
+                ota_state = _load_state()
+                target_ver = state.get("target_version", state.get("tag", "").lstrip("v"))
+                if target_ver:
+                    ota_state["installed_version"] = target_ver
+                    ota_state["update_available"] = False
+                    _save_state(ota_state)
+                    logger.info(f"OTA finalize: installed_version confirmed as {target_ver}")
+            except Exception as e:
+                logger.warning(f"Cannot confirm installed_version in OTA state: {e}")
 
         sec.audit_log("ota.install.finalize", "ok", user, {
             "tag": state.get("tag"), "restart_needed": restart_needed
