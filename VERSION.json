@@ -1,10 +1,10 @@
 {
-  "version": "3.5.1",
-  "build": 20260228011,
+  "version": "3.5.2",
+  "build": 20260228012,
   "channel": "stable",
-  "codename": "Horizon",
-  "full_version": "3.5.1+20260228011",
-  "released_at": "2026-02-28T12:00:00Z",
+  "codename": "Nebula",
+  "full_version": "3.5.2+20260228012",
+  "released_at": "2026-02-28T23:00:00Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
 }

@@ -1,29 +1,25 @@
 /**
- * TPL Platform — Unified Navigation Module (v3.5.0)
+ * TPL Platform — Unified Navigation Module v4.0  «Nebula»
  *
- * Centralised platform navigation: top navbar, footer, auth bootstrap.
+ * Futuristic top navbar with:
+ *   • Frosted-glass surface with animated gradient underline
+ *   • Status pulse indicator (live system health)
+ *   • Identity capsule with gradient role badge
+ *   • Notification bell placeholder
+ *   • Contextual breadcrumb integration
+ *   • Auth bootstrap (auto /api/me)
+ *   • Footer auto-render
  *
  * Usage:
- *   <!-- Empty placeholders → auto-rendered -->
  *   <nav id="tplNavbar"></nav>
  *   <footer id="tplFooter"></footer>
  *   <script src="/tpl-nav.js"></script>
- *
- *   Pages that handle their own navbar (e.g. dashboard) omit #tplNavbar.
- *   Footer is always auto-rendered when the placeholder exists.
- *
- * Auth bootstrap (auto):
- *   - Calls /api/me
- *   - Sets sidebar admin/user via TPLSidebar
- *   - Sets identity display  + version badge
- *   - Redirects to / on auth failure
- *   - Fires 'tpl:auth-ready' CustomEvent on window
  *
  * Public API (window.TPLNav):
  *   .currentUser   – user obj from /api/me (null until ready)
  *   .isAdmin       – boolean
  *   .page          – detected page id
- *   .onReady(fn)   – register callback; fires immediately if already authed
+ *   .onReady(fn)   – register callback
  */
 (() => {
   'use strict';
@@ -47,32 +43,52 @@
   const _autoNav = !!(navEl && navEl.childElementCount === 0);
 
   if (_autoNav) {
-    navEl.className = 'app-header navbar navbar-expand bg-body';
-    navEl.innerHTML = [
-      '<div class="container-fluid">',
-      '  <ul class="navbar-nav">',
-      '    <li class="nav-item">',
-      '      <a class="nav-link" id="sidebarToggle" href="#" role="button"',
-      '         aria-label="Toggle sidebar"><i class="bi bi-list"></i></a>',
-      '    </li>',
-      '  </ul>',
-      '  <ul class="navbar-nav ms-auto align-items-center">',
-      '    <li class="nav-item">',
-      '      <span class="nav-link text-muted small" id="tplIdentityBox">',
-      '        <i class="bi bi-hourglass-split me-1"></i>caricamento…',
-      '      </span>',
-      '    </li>',
-      '    <li class="nav-item">',
-      '      <a class="nav-link text-danger" href="#" id="tplLogoutBtn"',
-      '         role="button" title="Logout"><i class="bi bi-box-arrow-right"></i></a>',
-      '    </li>',
-      '  </ul>',
-      '</div>',
-    ].join('\n');
+    navEl.className = 'app-header navbar navbar-expand';
+    navEl.innerHTML = `
+      <div class="container-fluid">
 
-    /* Sidebar toggle (sidebar.js can't bind — element didn't exist yet) */
-    document.getElementById('sidebarToggle')?.addEventListener('click', (e) => {
+        <!-- Left cluster -->
+        <div class="nb-left">
+          <button class="nb-toggle" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
+            <span class="nb-toggle-bar"></span>
+            <span class="nb-toggle-bar"></span>
+            <span class="nb-toggle-bar"></span>
+          </button>
+
+          <div class="nb-status" id="nbStatus" title="System status">
+            <span class="nb-status-dot nb-status-dot--ok"></span>
+            <span class="nb-status-label">Online</span>
+          </div>
+        </div>
+
+        <!-- Right cluster -->
+        <div class="nb-right">
+          <div class="nb-identity" id="tplIdentityBox">
+            <span class="nb-identity-icon"><i class="bi bi-hourglass-split"></i></span>
+            <span class="nb-identity-text">caricamento…</span>
+          </div>
+
+          <button class="nb-icon-btn nb-notifications" id="nbNotifications" type="button" title="Notifiche" aria-label="Notifications">
+            <i class="bi bi-bell"></i>
+            <span class="nb-notif-badge" style="display:none">0</span>
+          </button>
+
+          <button class="nb-icon-btn nb-logout" id="tplLogoutBtn" type="button" title="Logout" aria-label="Logout">
+            <i class="bi bi-box-arrow-right"></i>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Animated gradient underline -->
+      <div class="nb-glow-line"></div>
+    `;
+
+    /* Sidebar toggle */
+    const toggleBtn = document.getElementById('sidebarToggle');
+    toggleBtn?.addEventListener('click', (e) => {
       e.preventDefault();
+      toggleBtn.classList.toggle('is-open');
       if (window.TPLSidebar) TPLSidebar.toggle();
     });
 
@@ -88,17 +104,16 @@
   const footerEl = document.getElementById('tplFooter');
   if (footerEl && footerEl.childElementCount === 0) {
     footerEl.className = 'app-footer';
-    footerEl.innerHTML = [
-      '<div class="float-end d-none d-sm-inline">',
-      '  <span class="tpl-version-badge" id="tplVersionBadge">v—</span>',
-      '</div>',
-      '<strong>&copy; TPL Fortress</strong>',
-    ].join('\n');
+    footerEl.innerHTML = `
+      <div class="nb-footer-inner">
+        <span class="nb-footer-copy">&copy; TPL Fortress</span>
+        <span class="tpl-version-badge tpl-version-badge--dark" id="tplVersionBadge">v—</span>
+      </div>
+    `;
   }
 
   /* ── Auth Bootstrap ─────────────────────────────────────── */
   const _bootstrap = async () => {
-    /* Only bootstrap pages using auto-nav; dashboard handles its own auth */
     if (!_autoNav) return;
 
     if (!window.TPL?.jsonFetch) {
@@ -110,36 +125,46 @@
       _user = await TPL.jsonFetch('/api/me');
       _admin = !!(_user.roles?.includes('admin'));
 
-      /* Force password change redirect */
       if (_user.must_change_password) { location.href = '/'; return; }
 
       /* Sidebar */
       if (window.TPLSidebar) {
         TPLSidebar.setAdmin(_admin);
-        TPLSidebar.setUser(_user.sub || _user.username || '—');
+        TPLSidebar.setUser(_user.sub || _user.username || '—', _admin ? 'admin' : 'user');
       }
 
-      /* Identity box */
+      /* Identity capsule */
       const box = document.getElementById('tplIdentityBox');
       if (box) {
         const r = _admin ? 'admin' : 'user';
-        box.innerHTML =
-          '<i class="bi bi-person-check-fill me-1"></i>' +
-          (_user.sub || '—') +
-          ' <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:.6rem">' + r + '</span>';
+        const roleClass = _admin ? 'nb-role--admin' : 'nb-role--user';
+        box.innerHTML = `
+          <span class="nb-identity-icon"><i class="bi bi-person-check-fill"></i></span>
+          <span class="nb-identity-text">${_user.sub || '—'}</span>
+          <span class="nb-role-badge ${roleClass}">${r}</span>
+        `;
       }
+
+      /* System status indicator */
+      const dot = document.querySelector('.nb-status-dot');
+      const label = document.querySelector('.nb-status-label');
+      if (dot) { dot.classList.add('nb-status-dot--ok'); }
+      if (label) { label.textContent = 'Online'; }
 
       /* i18n + version badge */
       try { if (TPL.applyI18n) await TPL.applyI18n(); } catch (_) { /* noop */ }
       try { if (TPL.populateVersionBadge) TPL.populateVersionBadge(); } catch (_) { /* noop */ }
 
-      /* Notify registered callbacks */
+      /* Notify callbacks */
       _cbs.forEach(fn => { try { fn(_user); } catch (_) { /* noop */ } });
-
-      /* DOM event — page-specific handlers can listen */
       window.dispatchEvent(new CustomEvent('tpl:auth-ready', { detail: _user }));
     } catch (e) {
       console.warn('[TPL Nav] auth failed:', e.message);
+      /* Update status indicator to error */
+      const dot = document.querySelector('.nb-status-dot');
+      const label = document.querySelector('.nb-status-label');
+      if (dot) { dot.className = 'nb-status-dot nb-status-dot--error'; }
+      if (label) { label.textContent = 'Offline'; }
       location.href = '/';
     }
   };

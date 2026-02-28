@@ -211,14 +211,25 @@
   --tpl-glass-border-strong: rgba(255, 255, 255, .2);
   --tpl-glass-blur:   blur(12px);
 
-  /* ══ SIDEBAR TOKENS ═══════════════════════════════════════════════════ */
-  --tpl-sidebar-bg:      #151929;
-  --tpl-sidebar-width:   250px;
-  --tpl-sidebar-text:    var(--tpl-slate-400);
-  --tpl-sidebar-hover:   rgba(255, 255, 255, .06);
-  --tpl-sidebar-active:  rgba(59, 130, 246, .14);
-  --tpl-sidebar-accent:  var(--tpl-blue-500);
-  --tpl-sidebar-divider: rgba(255, 255, 255, .07);
+  /* ══ SIDEBAR TOKENS (Nebula v4.0) ══════════════════════════════════════ */
+  --tpl-sidebar-width:       260px;
+  --tpl-sidebar-collapsed:   64px;
+  --tpl-sidebar-bg:          linear-gradient(180deg, rgba(13,17,35,.97), rgba(15,20,50,.98), rgba(10,12,30,.99));
+  --tpl-sidebar-text:        var(--tpl-slate-400);
+  --tpl-sidebar-hover:       rgba(255, 255, 255, .04);
+  --tpl-sidebar-active:      linear-gradient(135deg, rgba(96,165,250,.1), rgba(129,140,248,.08));
+  --tpl-sidebar-accent:      linear-gradient(180deg, #60a5fa, #818cf8);
+  --tpl-sidebar-divider:     rgba(255, 255, 255, .04);
+  --tpl-sidebar-glow:        rgba(129, 140, 248, .08);
+  --tpl-sidebar-blur:        blur(24px) saturate(1.6);
+
+  /* ══ NAVBAR TOKENS (Nebula v4.0) ══════════════════════════════════════ */
+  --tpl-navbar-height:       56px;
+  --tpl-navbar-bg:           linear-gradient(135deg, rgba(15,20,45,.92), rgba(25,20,65,.9), rgba(12,15,35,.93));
+  --tpl-navbar-blur:         blur(20px) saturate(1.5);
+  --tpl-navbar-border:       rgba(129, 140, 248, .06);
+  --tpl-navbar-text:         rgba(255, 255, 255, .75);
+  --tpl-navbar-text-hover:   #ffffff;
 
   /* ══ INPUT TOKENS ═════════════════════════════════════════════════════ */
   --tpl-input-bg:         var(--tpl-surface);
