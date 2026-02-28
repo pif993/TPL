@@ -49,15 +49,18 @@ def _load_version_info() -> dict:
     global _VERSION_INFO
     if _VERSION_INFO:
         return _VERSION_INFO
+    # parents[3] reaches project root on host; inside Docker the path is
+    # shallower so we guard with a length check.
+    _p = Path(__file__).resolve().parents
     candidates = [
-        Path(__file__).resolve().parents[3] / "VERSION.json",
+        _p[3] / "VERSION.json" if len(_p) > 3 else None,
         Path("/app/VERSION.json"),
         Path(os.environ.get("TPL_ROOT", "")) / "VERSION.json",
         Path(DATA) / "VERSION.json",
     ]
     for p in candidates:
         try:
-            if p.is_file():
+            if p and p.is_file():
                 _VERSION_INFO = json.loads(p.read_text(encoding="utf-8"))
                 return _VERSION_INFO
         except (OSError, json.JSONDecodeError, TypeError):
