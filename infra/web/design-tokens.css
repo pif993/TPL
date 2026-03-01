@@ -211,25 +211,25 @@
   --tpl-glass-border-strong: rgba(255, 255, 255, .2);
   --tpl-glass-blur:   blur(12px);
 
-  /* ══ SIDEBAR TOKENS (Aurora v5.0) ══════════════════════════════════════ */
+  /* ═══ SIDEBAR TOKENS (Fusion v6.0) ══════════════════════════════════════════ */
   --tpl-sidebar-width:       260px;
   --tpl-sidebar-collapsed:   64px;
-  --tpl-sidebar-bg:          linear-gradient(180deg, #0b0f1e, #0e1229, #080b18);
-  --tpl-sidebar-text:        #c1cad8;
-  --tpl-sidebar-hover:       rgba(99, 102, 241, .055);
-  --tpl-sidebar-active:      linear-gradient(135deg, rgba(99,102,241,.09), rgba(139,92,246,.06), rgba(6,182,212,.04));
-  --tpl-sidebar-accent:      linear-gradient(180deg, #818cf8, #06b6d4);
-  --tpl-sidebar-divider:     rgba(255, 255, 255, .03);
-  --tpl-sidebar-glow:        rgba(99, 102, 241, .06);
+  --tpl-sidebar-bg:          linear-gradient(170deg, #1a1545, #151040, #120d38, #0a0826);
+  --tpl-sidebar-text:        #dde1ec;
+  --tpl-sidebar-hover:       rgba(99, 102, 241, .12);
+  --tpl-sidebar-active:      linear-gradient(135deg, rgba(99,102,241,.18), rgba(139,92,246,.14), rgba(99,102,241,.1));
+  --tpl-sidebar-accent:      linear-gradient(180deg, #818cf8, #c084fc, #06b6d4);
+  --tpl-sidebar-divider:     rgba(139, 92, 246, .12);
+  --tpl-sidebar-glow:        rgba(139, 92, 246, .1);
   --tpl-sidebar-blur:        none;
 
-  /* ══ NAVBAR TOKENS (Aurora v5.0) ══════════════════════════════════════ */
-  --tpl-navbar-height:       52px;
-  --tpl-navbar-bg:           linear-gradient(105deg, rgba(11,15,30,.97), rgba(14,18,38,.95), rgba(10,13,28,.97));
-  --tpl-navbar-blur:         blur(22px) saturate(1.5);
-  --tpl-navbar-border:       rgba(99, 102, 241, .05);
-  --tpl-navbar-text:         rgba(193, 206, 224, .75);
-  --tpl-navbar-text-hover:   #c7d2fe;
+  /* ═══ NAVBAR TOKENS (Fusion v6.0) ══════════════════════════════════════════ */
+  --tpl-navbar-height:       54px;
+  --tpl-navbar-bg:           linear-gradient(105deg, rgba(26,21,69,.98), rgba(21,16,64,.97), rgba(14,10,48,.99));
+  --tpl-navbar-blur:         blur(24px) saturate(1.6);
+  --tpl-navbar-border:       rgba(139, 92, 246, .12);
+  --tpl-navbar-text:         #cdd3e2;
+  --tpl-navbar-text-hover:   #c4b5fd;
 
   /* ══ INPUT TOKENS ═════════════════════════════════════════════════════ */
   --tpl-input-bg:         var(--tpl-surface);
