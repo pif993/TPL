@@ -1271,6 +1271,18 @@ class OTAFileRegistry:
         ".env",
     })
 
+    VALID_CHANNELS = frozenset({"stable", "beta", "dev"})
+
+    SECRET_PATTERNS = [
+        "password", "secret", "api_key", "apikey", "private_key",
+        "access_token", "refresh_token", "jwt_secret", "db_pass",
+        "-----BEGIN", "AKIA", "ghp_", "gho_", "sk-",
+    ]
+
+    MAX_SINGLE_FILE_BYTES = 50 * 1024 * 1024     # 50 MB bloccante
+    WARN_SINGLE_FILE_BYTES = 10 * 1024 * 1024    # 10 MB warning
+    WARN_MAX_FILES_PER_RELEASE = 50               # warning soglia
+
     def __init__(self, ota_dir: str, project_root: str):
         self.ota_dir = ota_dir
         self.project_root = project_root
@@ -1564,6 +1576,44 @@ class OTAFileRegistry:
         if "VERSION.json" not in staged:
             staged.append("VERSION.json")
 
+        # ── Guidelines Validation ────────────────────────────────────
+        validation = self._validate_release_guidelines(
+            staged=staged,
+            manifest_files=manifest_files,
+            new_version=new_version,
+            current_version=current_version,
+            vdata=vdata,
+            codename=codename,
+            bump=bump,
+            previous_build=old_build,
+        )
+        if not validation["passed"]:
+            # Cleanup staging dir
+            shutil.rmtree(staging_dir, ignore_errors=True)
+            # Revert VERSION.json
+            try:
+                vdata["version"] = current_version
+                vdata["build"] = old_build
+                with open(version_path, "w") as f:
+                    json.dump(vdata, f, indent=2)
+            except Exception:
+                pass
+            logger.warning(
+                f"FileRegistry release BLOCKED by guidelines: "
+                f"{len(validation['blocking'])} violations"
+            )
+            return {
+                "status": "guidelines_failed",
+                "version": new_version,
+                "blocking": validation["blocking"],
+                "warnings": validation["warnings"],
+                "message": (
+                    f"Release {new_version} BLOCCATA: "
+                    f"{len(validation['blocking'])} violazioni vincolanti. "
+                    f"Correggere e riprovare."
+                ),
+            }
+
         # ── MANIFEST.json ────────────────────────────────────────────
         manifest = {"tag": new_version, "files": manifest_files}
         with open(os.path.join(staging_dir, "MANIFEST.json"), "w") as f:
@@ -1615,8 +1665,14 @@ class OTAFileRegistry:
             "files_count": len(staged),
             "categories": cat_counts,
             "staging_dir": staging_dir,
+            "guidelines": {
+                "passed": validation["passed"],
+                "warnings": validation["warnings"],
+                "checked_rules": validation["checked_rules"],
+            },
             "message": (
                 f"Release {new_version} pronta: {len(staged)} file staged. "
+                f"{'⚠ ' + str(len(validation['warnings'])) + ' warning. ' if validation['warnings'] else ''}"
                 f"Esegui POST /ota/install/start/{new_version} per installare."
             ),
         }
@@ -1643,6 +1699,233 @@ class OTAFileRegistry:
         else:  # patch
             parts[2] += 1
         return ".".join(str(p) for p in parts)
+
+    # ── Guidelines enforcement ─────────────────────────────────────────
+
+    def _validate_release_guidelines(
+        self,
+        staged: list,
+        manifest_files: dict,
+        new_version: str,
+        current_version: str,
+        vdata: dict,
+        codename: str = None,
+        bump: str = "patch",
+        previous_build: int = None,
+    ) -> dict:
+        """
+        Validate a release against binding development guidelines.
+
+        Returns dict:
+          {
+            "passed": bool,          # True if all BLOCKING checks pass
+            "blocking": [{id, msg}], # MUST fix before release
+            "warnings": [{id, msg}], # SHOULD fix but not blocking
+          }
+
+        See docs/development-guidelines.md for full reference.
+        """
+        blocking = []
+        warnings = []
+
+        # ── G-01: VERSION.json present and parsable ──────────────
+        if not vdata:
+            blocking.append({"id": "G-01", "msg": "VERSION.json mancante o corrotto."})
+
+        # ── G-02: SemVer valid ───────────────────────────────────
+        try:
+            parts = new_version.split(".")
+            if len(parts) != 3 or not all(p.isdigit() for p in parts):
+                raise ValueError()
+        except Exception:
+            blocking.append({"id": "G-02", "msg": f"Versione '{new_version}' non è SemVer valido (atteso X.Y.Z)."})
+
+        # ── G-03: Build incremental ──────────────────────────────
+        old_build = previous_build if previous_build is not None else 0
+        if old_build == 0:
+            try:
+                vpath = os.path.join(self.project_root, "VERSION.json")
+                if os.path.isfile(vpath):
+                    with open(vpath) as f:
+                        old_build = json.load(f).get("build", 0)
+            except Exception:
+                pass
+        new_build = vdata.get("build", 0) if vdata else 0
+        if new_build > 0 and new_build <= old_build:
+            blocking.append({"id": "G-03", "msg": f"Build {new_build} non è incrementale (precedente: {old_build})."})
+
+        # ── G-04: Valid channel ──────────────────────────────────
+        channel = vdata.get("channel", "stable") if vdata else "stable"
+        if channel not in self.VALID_CHANNELS:
+            blocking.append({"id": "G-04", "msg": f"Channel '{channel}' non valido. Ammessi: {', '.join(sorted(self.VALID_CHANNELS))}."})
+
+        # ── G-05: No protected files in release ──────────────────
+        protected_found = [p for p in staged if p in self.PROTECTED_FILES]
+        if protected_found:
+            blocking.append({"id": "G-05", "msg": f"File protetti inclusi nel rilascio: {', '.join(protected_found)}."})
+
+        # ── G-06: No path traversal ──────────────────────────────
+        traversal_found = [p for p in staged if ".." in p or p.startswith("/")]
+        if traversal_found:
+            blocking.append({"id": "G-06", "msg": f"Path traversal rilevato: {', '.join(traversal_found)}."})
+
+        # ── G-07: SHA-256 valid for every file ───────────────────
+        for rel_path, info in manifest_files.items():
+            sha = info.get("sha256", "")
+            if not sha or len(sha) != 64:
+                blocking.append({"id": "G-07", "msg": f"SHA-256 non valido per '{rel_path}'."})
+                break  # one is enough to block
+
+        # ── G-08: Version tag not duplicated in history ──────────
+        history = self._data.get("history", [])
+        past_versions = {h.get("version") for h in history}
+        if new_version in past_versions:
+            blocking.append({"id": "G-08", "msg": f"Versione {new_version} già rilasciata in precedenza."})
+
+        # ── G-09: No secrets in staged files ─────────────────────
+        staging_dir = os.path.join(self.ota_dir, "staging", new_version)
+        secret_hits = []
+        for rel_path in staged:
+            fpath = os.path.join(staging_dir, rel_path)
+            if not os.path.isfile(fpath):
+                continue
+            # Skip binary files
+            try:
+                with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read(256_000)  # first 256KB
+            except Exception:
+                continue
+            content_lower = content.lower()
+            for pat in self.SECRET_PATTERNS:
+                if pat.lower() in content_lower:
+                    # Skip false positives: config variable names in Python code are OK
+                    # Only flag if it looks like an assignment with a value
+                    import re as _re
+                    # Simple heuristic: pattern followed by = and a quoted string
+                    pattern = _re.compile(
+                        rf'{_re.escape(pat)}\s*[=:]\s*["\'][^"\']{{8,}}',
+                        _re.IGNORECASE,
+                    )
+                    if pattern.search(content):
+                        secret_hits.append(f"{rel_path} (pattern: {pat})")
+                        break
+        if secret_hits:
+            blocking.append({
+                "id": "G-09",
+                "msg": f"Possibili segreti rilevati in: {'; '.join(secret_hits[:5])}.",
+            })
+
+        # ── G-10: No file exceeds absolute max size ──────────────
+        for rel_path, info in manifest_files.items():
+            if info.get("size", 0) > self.MAX_SINGLE_FILE_BYTES:
+                blocking.append({
+                    "id": "G-10",
+                    "msg": f"File '{rel_path}' supera 50MB ({info['size']} bytes).",
+                })
+
+        # ── W-01: Large file warning ─────────────────────────────
+        for rel_path, info in manifest_files.items():
+            sz = info.get("size", 0)
+            if self.WARN_SINGLE_FILE_BYTES < sz <= self.MAX_SINGLE_FILE_BYTES:
+                warnings.append({
+                    "id": "W-01",
+                    "msg": f"File '{rel_path}' è grande ({sz // (1024*1024)}MB).",
+                })
+
+        # ── W-02: Too many files in one release ──────────────────
+        if len(staged) > self.WARN_MAX_FILES_PER_RELEASE:
+            warnings.append({
+                "id": "W-02",
+                "msg": f"{len(staged)} file in un singolo rilascio (soglia: {self.WARN_MAX_FILES_PER_RELEASE}).",
+            })
+
+        # ── W-03: Codename missing for minor/major ───────────────
+        if bump in ("minor", "major") and not codename:
+            warnings.append({
+                "id": "W-03",
+                "msg": f"Codename mancante per release {bump}. Consigliato fornire un codename.",
+            })
+
+        # ── W-04 / W-05: docs/tests not updated with api changes ─
+        categories = set(self._categorize(p) for p in staged)
+        if "api" in categories:
+            if "docs" not in categories:
+                warnings.append({
+                    "id": "W-04",
+                    "msg": "Modifiche API senza aggiornamento documentazione (docs/).",
+                })
+            if "tests" not in categories:
+                warnings.append({
+                    "id": "W-05",
+                    "msg": "Modifiche API senza aggiornamento test (tests/).",
+                })
+
+        passed = len(blocking) == 0
+        return {
+            "passed": passed,
+            "blocking": blocking,
+            "warnings": warnings,
+            "checked_rules": 10 + 5,  # 10 blocking + 5 warning rules
+        }
+
+    def validate_current(self) -> dict:
+        """
+        Run guidelines validation on current working tree differences
+        without creating a release. Returns validation report.
+        """
+        diff = self.scan()
+        if not diff["has_changes"]:
+            return {
+                "status": "no_changes",
+                "passed": True,
+                "blocking": [],
+                "warnings": [],
+                "message": "Nessuna modifica rilevata — niente da validare.",
+            }
+
+        # Simulate what release() would do
+        release_paths = []
+        for f in diff["changed"]:
+            if f["path"] not in self.PROTECTED_FILES:
+                release_paths.append(f["path"])
+        for f in diff["new"]:
+            if f["path"] not in self.PROTECTED_FILES:
+                release_paths.append(f["path"])
+
+        current_version = self._get_current_version()
+        fake_version = self._bump_version(current_version, "patch")
+
+        # Build manifest-like info from scan
+        manifest_files = {}
+        for p in release_paths:
+            abs_p = os.path.join(self.project_root, p)
+            if os.path.isfile(abs_p):
+                sha, sz = self._hash_file(abs_p)
+                manifest_files[p] = {"sha256": sha, "size": sz}
+
+        vpath = os.path.join(self.project_root, "VERSION.json")
+        vdata = {}
+        try:
+            with open(vpath) as f:
+                vdata = json.load(f)
+        except Exception:
+            pass
+
+        # Simulate build bump for dry-run (avoids false positive G-03)
+        simulated_vdata = {**vdata}
+        simulated_vdata["build"] = vdata.get("build", 0) + 1
+
+        result = self._validate_release_guidelines(
+            staged=release_paths,
+            manifest_files=manifest_files,
+            new_version=fake_version,
+            current_version=current_version,
+            vdata=simulated_vdata,
+        )
+        result["status"] = "ok"
+        result["files_checked"] = len(release_paths)
+        result["simulated_version"] = fake_version
+        return result
 
     # ── Public getters ────────────────────────────────────────────────
 
@@ -5869,6 +6152,69 @@ echo "=== Security smoke completato ==="
             "status": "ok",
             "tracked_paths": file_registry._data["tracked_paths"],
             "excluded_patterns": file_registry._data["excluded_patterns"],
+        }
+
+    @app.post("/ota/registry/validate")
+    async def ota_registry_validate(_u=Depends(require_admin)):
+        """Validate current working tree changes against binding development guidelines.
+
+        Runs all guideline checks (blocking + warnings) WITHOUT creating a release.
+        Use this before /ota/registry/release to preview guideline compliance.
+
+        Returns:
+          - passed: true/false
+          - blocking: list of violations that would block the release
+          - warnings: list of non-blocking issues
+        """
+        user = _u.get("sub", "admin")
+        result = file_registry.validate_current()
+        sec.audit_log("ota.registry.validate", result.get("status", "ok"), user, {
+            "passed": result.get("passed"),
+            "blocking_count": len(result.get("blocking", [])),
+            "warnings_count": len(result.get("warnings", [])),
+        })
+        sec.record_metric(OTA_DIR, "registry_validate", {
+            "passed": result.get("passed"),
+            "blocking": len(result.get("blocking", [])),
+            "warnings": len(result.get("warnings", [])),
+        })
+        return result
+
+    @app.get("/ota/guidelines")
+    async def ota_guidelines(_u=Depends(require_admin)):
+        """Return a summary of binding development guidelines enforced by the OTA system.
+
+        Provides machine-readable guideline rules with IDs, descriptions,
+        and enforcement levels (blocking vs warning).
+        """
+        return {
+            "version": "1.0",
+            "enforced": True,
+            "document": "docs/development-guidelines.md",
+            "blocking_rules": [
+                {"id": "G-01", "description": "VERSION.json presente e parsabile", "level": "blocking"},
+                {"id": "G-02", "description": "Versione SemVer valida (X.Y.Z)", "level": "blocking"},
+                {"id": "G-03", "description": "Build incrementale", "level": "blocking"},
+                {"id": "G-04", "description": "Channel valido (stable/beta/dev)", "level": "blocking"},
+                {"id": "G-05", "description": "Nessun file protetto nel rilascio", "level": "blocking"},
+                {"id": "G-06", "description": "Nessun path traversal", "level": "blocking"},
+                {"id": "G-07", "description": "SHA-256 valido per ogni file", "level": "blocking"},
+                {"id": "G-08", "description": "Tag versione non duplicato", "level": "blocking"},
+                {"id": "G-09", "description": "Nessun segreto nei file staged", "level": "blocking"},
+                {"id": "G-10", "description": "Nessun file > 50MB", "level": "blocking"},
+            ],
+            "warning_rules": [
+                {"id": "W-01", "description": "File singolo > 10MB", "level": "warning"},
+                {"id": "W-02", "description": "> 50 file in un singolo rilascio", "level": "warning"},
+                {"id": "W-03", "description": "Codename mancante per minor/major", "level": "warning"},
+                {"id": "W-04", "description": "Modifiche API senza aggiornamento docs/", "level": "warning"},
+                {"id": "W-05", "description": "Modifiche API senza aggiornamento tests/", "level": "warning"},
+            ],
+            "protected_files": sorted(OTAFileRegistry.PROTECTED_FILES),
+            "valid_channels": sorted(OTAFileRegistry.VALID_CHANNELS),
+            "max_file_size_mb": OTAFileRegistry.MAX_SINGLE_FILE_BYTES // (1024 * 1024),
+            "warn_file_size_mb": OTAFileRegistry.WARN_SINGLE_FILE_BYTES // (1024 * 1024),
+            "warn_max_files": OTAFileRegistry.WARN_MAX_FILES_PER_RELEASE,
         }
 
     # ═══════════════════════════════════════════════════════════════════
