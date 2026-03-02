@@ -1,10 +1,10 @@
 {
-  "version": "3.5.4",
-  "build": 20260301002,
+  "version": "3.6.0",
+  "build": 20260301003,
   "channel": "stable",
   "codename": "Fusion",
-  "full_version": "3.5.4+20260301002",
-  "released_at": "2026-03-02T20:29:28Z",
+  "full_version": "3.6.0+20260301003",
+  "released_at": "2026-03-02T21:02:05Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
 }

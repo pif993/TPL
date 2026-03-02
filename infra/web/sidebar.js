@@ -72,11 +72,11 @@
               <defs>
                 <linearGradient id="aG1" x1="3" y1="3" x2="25" y2="14">
                   <stop offset="0%" stop-color="#6366f1"/>
-                  <stop offset="100%" stop-color="#06b6d4"/>
+                  <stop offset="100%" stop-color="#0ea5e9"/>
                 </linearGradient>
                 <linearGradient id="aG2" x1="3" y1="14" x2="25" y2="24">
                   <stop offset="0%" stop-color="#818cf8"/>
-                  <stop offset="100%" stop-color="#22d3ee"/>
+                  <stop offset="100%" stop-color="#38bdf8"/>
                 </linearGradient>
               </defs>
             </svg>

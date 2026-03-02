@@ -1,8 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   TPL FORTRESS — Design Token System v1.0
+   TPL FORTRESS — Design Token System v2.0  (Fusion v7.0)
    ═══════════════════════════════════════════════════════════════════════════
    Single source of truth for the entire platform visual language.
    Derived from the login form's design DNA: modern, secure, premium.
+   
+   v2.0 — Full color-scale coverage, dark-surface tokens, gradient aliases,
+          warm sky accent replacing raw cyan, structured semantic overlays.
    
    Usage:  <link href="/design-tokens.css" rel="stylesheet">  (BEFORE styles.css)
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -51,6 +54,16 @@
   --tpl-brand-navy:        #1e3a5f;
   --tpl-brand-indigo:      #2d1b69;
 
+  /* ── Dark Surface Scale (sidebar/navbar deep palette) ── */
+  --tpl-dark-950:  #06041a;
+  --tpl-dark-900:  #0a0826;
+  --tpl-dark-850:  #0e0a30;
+  --tpl-dark-800:  #120d38;
+  --tpl-dark-750:  #151040;
+  --tpl-dark-700:  #1a1545;
+  --tpl-dark-600:  #221c5c;
+  --tpl-dark-500:  #2d2470;
+
   /* ── Accent — Blue (Primary Action) ── */
   --tpl-blue-50:   #eff6ff;
   --tpl-blue-100:  #dbeafe;
@@ -60,6 +73,8 @@
   --tpl-blue-500:  #3b82f6;
   --tpl-blue-600:  #2563eb;
   --tpl-blue-700:  #1d4ed8;
+  --tpl-blue-800:  #1e40af;
+  --tpl-blue-900:  #1e3a8a;
 
   /* ── Accent — Indigo (Secondary Action) ── */
   --tpl-indigo-50:  #eef2ff;
@@ -70,26 +85,55 @@
   --tpl-indigo-500: #6366f1;
   --tpl-indigo-600: #4f46e5;
   --tpl-indigo-700: #4338ca;
+  --tpl-indigo-800: #3730a3;
+  --tpl-indigo-900: #312e81;
 
-  /* ── Accent — Violet (Tertiary) ── */
+  /* ── Accent — Violet (Tertiary — full scale) ── */
+  --tpl-violet-50:  #f5f3ff;
+  --tpl-violet-100: #ede9fe;
+  --tpl-violet-200: #ddd6fe;
+  --tpl-violet-300: #c4b5fd;
   --tpl-violet-400: #a78bfa;
   --tpl-violet-500: #8b5cf6;
   --tpl-violet-600: #7c3aed;
   --tpl-violet-700: #6d28d9;
+  --tpl-violet-800: #5b21b6;
+  --tpl-violet-900: #4c1d95;
+
+  /* ── Accent — Sky (warm info accent, replacing raw cyan) ── */
+  --tpl-sky-50:   #f0f9ff;
+  --tpl-sky-100:  #e0f2fe;
+  --tpl-sky-200:  #bae6fd;
+  --tpl-sky-300:  #7dd3fc;
+  --tpl-sky-400:  #38bdf8;
+  --tpl-sky-500:  #0ea5e9;
+  --tpl-sky-600:  #0284c7;
+  --tpl-sky-700:  #0369a1;
 
   /* ── Accent Gradients ── */
   --tpl-accent-gradient:     linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
   --tpl-accent-gradient-vivid: linear-gradient(135deg, var(--tpl-blue-600), var(--tpl-indigo-600));
   --tpl-accent-gradient-soft: linear-gradient(135deg, var(--tpl-blue-400), var(--tpl-violet-400));
 
+  /* ── Composite Gradient Tokens (reusable shortcuts) ── */
+  --tpl-gradient-sidebar:    linear-gradient(170deg, var(--tpl-dark-700), var(--tpl-dark-750), var(--tpl-dark-800), var(--tpl-dark-900));
+  --tpl-gradient-navbar:     linear-gradient(105deg, rgba(26,21,69,.98), rgba(21,16,64,.97), rgba(14,10,48,.99));
+  --tpl-gradient-aurora:     linear-gradient(180deg, var(--tpl-indigo-400), var(--tpl-violet-400), var(--tpl-sky-400));
+  --tpl-gradient-success:    linear-gradient(135deg, var(--tpl-success-500), var(--tpl-success-600));
+  --tpl-gradient-danger:     linear-gradient(135deg, var(--tpl-danger-500), var(--tpl-danger-600));
+  --tpl-gradient-warning:    linear-gradient(135deg, var(--tpl-warning-500), var(--tpl-warning-600));
+  --tpl-gradient-edge:       linear-gradient(90deg, transparent, var(--tpl-violet-500), var(--tpl-indigo-400), transparent);
+
   /* ── Semantic — Success ── */
   --tpl-success-50:  #f0fdf4;
   --tpl-success-100: #dcfce7;
   --tpl-success-200: #bbf7d0;
+  --tpl-success-300: #86efac;
   --tpl-success-400: #4ade80;
   --tpl-success-500: #22c55e;
   --tpl-success-600: #16a34a;
   --tpl-success-700: #15803d;
+  --tpl-success-800: #166534;
 
   /* ── Semantic — Warning ── */
   --tpl-warning-50:  #fffbeb;
@@ -110,13 +154,17 @@
   --tpl-danger-500: #ef4444;
   --tpl-danger-600: #dc2626;
   --tpl-danger-700: #b91c1c;
+  --tpl-danger-800: #991b1b;
 
-  /* ── Semantic — Info ── */
-  --tpl-info-50:  #ecfeff;
-  --tpl-info-100: #cffafe;
-  --tpl-info-400: #22d3ee;
-  --tpl-info-500: #06b6d4;
-  --tpl-info-600: #0891b2;
+  /* ── Semantic — Info (warm sky-tinted) ── */
+  --tpl-info-50:  #f0f9ff;
+  --tpl-info-100: #e0f2fe;
+  --tpl-info-200: #bae6fd;
+  --tpl-info-300: #7dd3fc;
+  --tpl-info-400: #38bdf8;
+  --tpl-info-500: #0ea5e9;
+  --tpl-info-600: #0284c7;
+  --tpl-info-700: #0369a1;
 
   /* ── Neutrals (Slate scale) ── */
   --tpl-slate-50:  #f8fafc;
@@ -211,25 +259,49 @@
   --tpl-glass-border-strong: rgba(255, 255, 255, .2);
   --tpl-glass-blur:   blur(12px);
 
-  /* ═══ SIDEBAR TOKENS (Fusion v6.0) ══════════════════════════════════════════ */
+  /* ═══ SIDEBAR TOKENS (Fusion v7.0) ══════════════════════════════════════════ */
   --tpl-sidebar-width:       260px;
   --tpl-sidebar-collapsed:   64px;
-  --tpl-sidebar-bg:          linear-gradient(170deg, #1a1545, #151040, #120d38, #0a0826);
+  --tpl-sidebar-bg:          var(--tpl-gradient-sidebar);
   --tpl-sidebar-text:        #dde1ec;
+  --tpl-sidebar-text-faint:  rgba(205,211,226,.45);
   --tpl-sidebar-hover:       rgba(99, 102, 241, .12);
   --tpl-sidebar-active:      linear-gradient(135deg, rgba(99,102,241,.18), rgba(139,92,246,.14), rgba(99,102,241,.1));
-  --tpl-sidebar-accent:      linear-gradient(180deg, #818cf8, #c084fc, #06b6d4);
+  --tpl-sidebar-accent:      var(--tpl-gradient-aurora);
   --tpl-sidebar-divider:     rgba(139, 92, 246, .12);
   --tpl-sidebar-glow:        rgba(139, 92, 246, .1);
   --tpl-sidebar-blur:        none;
 
-  /* ═══ NAVBAR TOKENS (Fusion v6.0) ══════════════════════════════════════════ */
+  /* ═══ NAVBAR TOKENS (Fusion v7.0) ══════════════════════════════════════════ */
   --tpl-navbar-height:       54px;
-  --tpl-navbar-bg:           linear-gradient(105deg, rgba(26,21,69,.98), rgba(21,16,64,.97), rgba(14,10,48,.99));
+  --tpl-navbar-bg:           var(--tpl-gradient-navbar);
   --tpl-navbar-blur:         blur(24px) saturate(1.6);
   --tpl-navbar-border:       rgba(139, 92, 246, .12);
   --tpl-navbar-text:         #cdd3e2;
-  --tpl-navbar-text-hover:   #c4b5fd;
+  --tpl-navbar-text-hover:   var(--tpl-violet-300);
+
+  /* ═══ OVERLAY TOKENS (structured rgba) ═══════════════════════════════════ */
+  --tpl-overlay-indigo-4:    rgba(99,102,241,.04);
+  --tpl-overlay-indigo-6:    rgba(99,102,241,.06);
+  --tpl-overlay-indigo-12:   rgba(99,102,241,.12);
+  --tpl-overlay-indigo-15:   rgba(99,102,241,.15);
+  --tpl-overlay-indigo-20:   rgba(99,102,241,.20);
+  --tpl-overlay-indigo-25:   rgba(99,102,241,.25);
+  --tpl-overlay-violet-10:   rgba(139,92,246,.10);
+  --tpl-overlay-violet-12:   rgba(139,92,246,.12);
+  --tpl-overlay-violet-14:   rgba(139,92,246,.14);
+  --tpl-overlay-white-4:     rgba(255,255,255,.04);
+  --tpl-overlay-white-6:     rgba(255,255,255,.06);
+  --tpl-overlay-white-8:     rgba(255,255,255,.08);
+  --tpl-overlay-white-10:    rgba(255,255,255,.10);
+  --tpl-overlay-white-12:    rgba(255,255,255,.12);
+  --tpl-overlay-white-20:    rgba(255,255,255,.20);
+  --tpl-overlay-black-4:     rgba(0,0,0,.04);
+  --tpl-overlay-black-6:     rgba(0,0,0,.06);
+  --tpl-overlay-blue-10:     rgba(59,130,246,.10);
+  --tpl-overlay-blue-15:     rgba(59,130,246,.15);
+  --tpl-overlay-blue-20:     rgba(59,130,246,.20);
+  --tpl-overlay-blue-25:     rgba(59,130,246,.25);
 
   /* ══ INPUT TOKENS ═════════════════════════════════════════════════════ */
   --tpl-input-bg:         var(--tpl-surface);
@@ -267,7 +339,7 @@
   /* ══ ORBS (ambient animation) ═════════════════════════════════════════ */
   --tpl-orb-blue:    radial-gradient(circle, var(--tpl-blue-500) 0%, transparent 70%);
   --tpl-orb-violet:  radial-gradient(circle, var(--tpl-violet-500) 0%, transparent 70%);
-  --tpl-orb-cyan:    radial-gradient(circle, var(--tpl-info-500) 0%, transparent 70%);
+  --tpl-orb-sky:     radial-gradient(circle, var(--tpl-sky-500) 0%, transparent 70%);
   --tpl-orb-blur:    80px;
   --tpl-orb-opacity: .35;
 }
