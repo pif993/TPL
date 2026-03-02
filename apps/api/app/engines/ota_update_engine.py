@@ -1207,6 +1207,453 @@ class OTAHealthChecker:
         return report
 
 
+# ── File Registry: Change Tracking & Auto-Release ──────────────────────
+
+class OTAFileRegistry:
+    """
+    Persistent file registry for automatic change tracking and OTA releases.
+
+    Tracks SHA-256 hashes for all project files under configured paths.
+    Detects changes since the last baseline snapshot and can automatically
+    stage OTA releases from detected differences.
+
+    Workflow:
+      1. snapshot() → record current state as baseline
+      2. (developer edits files)
+      3. scan()     → diff working tree against baseline
+      4. release()  → auto-stage changed files, generate MANIFEST, bump version
+      5. (install/start → apply → finalize via existing OTA pipeline)
+      6. snapshot() → new baseline after install (auto-called by finalize hook)
+
+    Tracked paths (configurable):
+      infra/web/, apps/api/app/, modules/, compose.yml, compose.d/,
+      scripts/, VERSION.json, infra/traefik/, infra/vault/, docs/, migrations/
+
+    Excluded:
+      __pycache__, .pyc, .bak, .tmp, node_modules, .git, data/, logs/
+    """
+
+    DEFAULT_TRACKED_PATHS = [
+        "infra/web/",
+        "apps/api/app/",
+        "modules/",
+        "compose.yml",
+        "compose.d/",
+        "scripts/",
+        "VERSION.json",
+        "infra/traefik/",
+        "infra/vault/config.hcl",
+        "infra/vault/policies/",
+        "infra/vault/agent-api.hcl",
+        "docs/",
+        "migrations/",
+        "ruff.toml",
+        "tests/",
+    ]
+
+    DEFAULT_EXCLUDED = [
+        "__pycache__",
+        ".pyc",
+        ".bak",
+        ".tmp",
+        ".swp",
+        "node_modules",
+        ".git",
+        ".env",
+        "data/",
+        "logs/",
+    ]
+
+    PROTECTED_FILES = frozenset({
+        "apps/api/app/engines/ota_update_engine.py",
+        "compose.d/40-api.yml",
+        "run.sh",
+        ".env",
+    })
+
+    def __init__(self, ota_dir: str, project_root: str):
+        self.ota_dir = ota_dir
+        self.project_root = project_root
+        self.registry_path = os.path.join(ota_dir, "file_registry.json")
+        self._data = self._load()
+
+    # ── Persistence ───────────────────────────────────────────────────
+
+    def _load(self) -> dict:
+        if os.path.isfile(self.registry_path):
+            try:
+                with open(self.registry_path) as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError):
+                logger.warning("File registry corrupted — starting fresh")
+        return self._empty()
+
+    def _empty(self) -> dict:
+        return {
+            "schema_version": 1,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "baseline_version": None,
+            "tracked_paths": list(self.DEFAULT_TRACKED_PATHS),
+            "excluded_patterns": list(self.DEFAULT_EXCLUDED),
+            "files": {},
+            "history": [],
+        }
+
+    def _save(self):
+        self._data["updated_at"] = datetime.now().isoformat()
+        tmp = self.registry_path + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(self._data, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, self.registry_path)
+
+    # ── Path matching ─────────────────────────────────────────────────
+
+    def _is_excluded(self, rel_path: str) -> bool:
+        excluded = self._data.get("excluded_patterns", self.DEFAULT_EXCLUDED)
+        for pat in excluded:
+            if pat in rel_path:
+                return True
+        return False
+
+    def _is_tracked(self, rel_path: str) -> bool:
+        if self._is_excluded(rel_path):
+            return False
+        tracked = self._data.get("tracked_paths", self.DEFAULT_TRACKED_PATHS)
+        for glob in tracked:
+            if glob.endswith("/"):
+                if rel_path.startswith(glob):
+                    return True
+            elif rel_path == glob or rel_path.startswith(glob + "/"):
+                return True
+        return False
+
+    @staticmethod
+    def _categorize(path: str) -> str:
+        if path.startswith("infra/web/"):
+            return "web"
+        if path.startswith("apps/api/"):
+            return "api"
+        if path.startswith("modules/") or path.startswith("data/modules/"):
+            return "modules"
+        if path.startswith("infra/"):
+            return "infra"
+        if path.startswith("scripts/"):
+            return "scripts"
+        if path.startswith("docs/") or path.startswith("migrations/"):
+            return "docs"
+        if path.startswith("tests/"):
+            return "tests"
+        return "other"
+
+    # ── Hashing & scanning ────────────────────────────────────────────
+
+    @staticmethod
+    def _hash_file(abs_path: str) -> tuple:
+        """Return (sha256_hex, size_bytes)."""
+        h = hashlib.sha256()
+        size = 0
+        with open(abs_path, "rb") as f:
+            while True:
+                chunk = f.read(65536)
+                if not chunk:
+                    break
+                h.update(chunk)
+                size += len(chunk)
+        return h.hexdigest(), size
+
+    def _scan_project(self) -> dict:
+        """Walk project root, hash every tracked file. Returns {rel_path: info}."""
+        result = {}
+        root = self.project_root
+        if not os.path.isdir(root):
+            logger.warning(f"FileRegistry: project root not found: {root}")
+            return result
+
+        skip_dirs = {"__pycache__", ".git", "node_modules", ".mypy_cache"}
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if d not in skip_dirs and not d.endswith(".bak")]
+            for fname in filenames:
+                abs_path = os.path.join(dirpath, fname)
+                rel_path = os.path.relpath(abs_path, root)
+                if self._is_tracked(rel_path):
+                    try:
+                        sha, size = self._hash_file(abs_path)
+                        mtime = os.path.getmtime(abs_path)
+                        result[rel_path] = {
+                            "sha256": sha,
+                            "size": size,
+                            "mtime": datetime.fromtimestamp(mtime).isoformat(),
+                        }
+                    except (OSError, PermissionError):
+                        continue
+        return result
+
+    # ── Diff engine ───────────────────────────────────────────────────
+
+    def scan(self) -> dict:
+        """Scan project files and diff against baseline registry."""
+        current = self._scan_project()
+        baseline = self._data.get("files", {})
+
+        changed, new_files, deleted, unchanged = [], [], [], 0
+
+        for path, info in sorted(current.items()):
+            if path in baseline:
+                if info["sha256"] != baseline[path].get("sha256"):
+                    changed.append({
+                        "path": path,
+                        "old_sha256": baseline[path]["sha256"][:16],
+                        "new_sha256": info["sha256"][:16],
+                        "old_size": baseline[path].get("size", 0),
+                        "new_size": info["size"],
+                        "size_delta": info["size"] - baseline[path].get("size", 0),
+                        "category": self._categorize(path),
+                    })
+                else:
+                    unchanged += 1
+            else:
+                new_files.append({
+                    "path": path,
+                    "sha256": info["sha256"][:16],
+                    "size": info["size"],
+                    "category": self._categorize(path),
+                })
+
+        for path in sorted(baseline):
+            if path not in current:
+                deleted.append({
+                    "path": path,
+                    "category": self._categorize(path),
+                })
+
+        # Category summary
+        all_paths = [f["path"] for f in changed] + [f["path"] for f in new_files]
+        cat_counts = {}
+        for p in all_paths:
+            c = self._categorize(p)
+            cat_counts[c] = cat_counts.get(c, 0) + 1
+
+        return {
+            "baseline_version": self._data.get("baseline_version"),
+            "changed": changed,
+            "new": new_files,
+            "deleted": deleted,
+            "unchanged_count": unchanged,
+            "total_current": len(current),
+            "total_baseline": len(baseline),
+            "has_changes": bool(changed or new_files or deleted),
+            "summary": {
+                "changed": len(changed),
+                "new": len(new_files),
+                "deleted": len(deleted),
+                "by_category": cat_counts,
+            },
+        }
+
+    # ── Snapshot (baseline update) ────────────────────────────────────
+
+    def snapshot(self, version: str = None) -> int:
+        """Update baseline to current project state. Returns file count."""
+        current = self._scan_project()
+        now = datetime.now().isoformat()
+
+        for path, info in current.items():
+            prev = self._data.get("files", {}).get(path, {})
+            info["tracked_since"] = prev.get("tracked_since", now)
+            info["installed_by"] = version or self._data.get("baseline_version", "unknown")
+            info["category"] = self._categorize(path)
+            info["snapshot_at"] = now
+
+        self._data["files"] = current
+        if version:
+            self._data["baseline_version"] = version
+        self._save()
+        return len(current)
+
+    # ── Auto-release ──────────────────────────────────────────────────
+
+    def release(self, codename: str = None, bump: str = "patch") -> dict:
+        """
+        Create an OTA release from detected project changes.
+
+        1. Scans for changed/new files vs baseline
+        2. Bumps VERSION.json (patch/minor/major)
+        3. Stages all changed files + VERSION.json to staging/{version}
+        4. Generates MANIFEST.json (dict format)
+        5. Updates state.json (latest_available = new version)
+        6. Records release in registry history
+
+        Returns dict with release info, ready for install/start.
+        """
+        diff = self.scan()
+        if not diff["has_changes"]:
+            return {"status": "no_changes", "message": "Nessuna modifica rilevata rispetto al baseline."}
+
+        # Collect eligible files (skip protected)
+        release_paths = []
+        for f in diff["changed"]:
+            if f["path"] not in self.PROTECTED_FILES:
+                release_paths.append(f["path"])
+        for f in diff["new"]:
+            if f["path"] not in self.PROTECTED_FILES:
+                release_paths.append(f["path"])
+
+        if not release_paths:
+            return {"status": "no_eligible", "message": "Tutte le modifiche sono in file protetti."}
+
+        # Version bump
+        current_version = self._get_current_version()
+        new_version = self._bump_version(current_version, bump)
+
+        # ── Stage files ──────────────────────────────────────────────
+        staging_dir = os.path.join(self.ota_dir, "staging", new_version)
+        if os.path.isdir(staging_dir):
+            shutil.rmtree(staging_dir)
+        os.makedirs(staging_dir, exist_ok=True)
+
+        staged = []
+        manifest_files = {}
+        for rel_path in sorted(release_paths):
+            src = os.path.join(self.project_root, rel_path)
+            if not os.path.isfile(src):
+                continue
+            dst = os.path.join(staging_dir, rel_path)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(src, "rb") as fs:
+                data = fs.read()
+            with open(dst, "wb") as fd:
+                fd.write(data)
+            manifest_files[rel_path] = {
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "size": len(data),
+            }
+            staged.append(rel_path)
+
+        # ── Bump & stage VERSION.json ────────────────────────────────
+        version_path = os.path.join(self.project_root, "VERSION.json")
+        vdata = {}
+        if os.path.isfile(version_path):
+            try:
+                with open(version_path) as f:
+                    vdata = json.load(f)
+            except Exception:
+                vdata = {}
+
+        old_build = vdata.get("build", 0)
+        vdata["version"] = new_version
+        vdata["build"] = old_build + 1
+        if codename:
+            vdata["codename"] = codename
+        vdata["full_version"] = f"{new_version}+{vdata['build']}"
+        vdata["released_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # Write to project root
+        with open(version_path, "w") as f:
+            json.dump(vdata, f, indent=2)
+
+        # Stage it
+        vdata_bytes = json.dumps(vdata, indent=2).encode()
+        vdst = os.path.join(staging_dir, "VERSION.json")
+        with open(vdst, "wb") as f:
+            f.write(vdata_bytes)
+        manifest_files["VERSION.json"] = {
+            "sha256": hashlib.sha256(vdata_bytes).hexdigest(),
+            "size": len(vdata_bytes),
+        }
+        if "VERSION.json" not in staged:
+            staged.append("VERSION.json")
+
+        # ── MANIFEST.json ────────────────────────────────────────────
+        manifest = {"tag": new_version, "files": manifest_files}
+        with open(os.path.join(staging_dir, "MANIFEST.json"), "w") as f:
+            json.dump(manifest, f, indent=2)
+        with open(os.path.join(self.ota_dir, ".ota_manifest.json"), "w") as f:
+            json.dump(manifest, f, indent=2)
+
+        # ── Update OTA state.json ────────────────────────────────────
+        state_path = os.path.join(self.ota_dir, "state.json")
+        try:
+            if os.path.isfile(state_path):
+                with open(state_path) as f:
+                    ota_state = json.load(f)
+            else:
+                ota_state = {}
+            ota_state["current_version"] = current_version
+            ota_state["latest_available"] = new_version
+            ota_state["install"] = None
+            with open(state_path, "w") as f:
+                json.dump(ota_state, f, indent=2)
+        except Exception as e:
+            logger.warning(f"FileRegistry release: state.json update failed: {e}")
+
+        # ── Category breakdown ───────────────────────────────────────
+        cat_counts = {}
+        for p in staged:
+            c = self._categorize(p)
+            cat_counts[c] = cat_counts.get(c, 0) + 1
+
+        # ── Record in history ────────────────────────────────────────
+        self._data["history"].append({
+            "version": new_version,
+            "from_version": current_version,
+            "released_at": datetime.now().isoformat(),
+            "codename": codename or vdata.get("codename"),
+            "files": staged,
+            "files_count": len(staged),
+            "categories": cat_counts,
+            "deleted": [f["path"] for f in diff["deleted"]],
+        })
+        self._save()
+
+        return {
+            "status": "staged",
+            "version": new_version,
+            "from_version": current_version,
+            "codename": codename or vdata.get("codename"),
+            "files_staged": staged,
+            "files_count": len(staged),
+            "categories": cat_counts,
+            "staging_dir": staging_dir,
+            "message": (
+                f"Release {new_version} pronta: {len(staged)} file staged. "
+                f"Esegui POST /ota/install/start/{new_version} per installare."
+            ),
+        }
+
+    # ── Version helpers ───────────────────────────────────────────────
+
+    def _get_current_version(self) -> str:
+        vpath = os.path.join(self.project_root, "VERSION.json")
+        try:
+            with open(vpath) as f:
+                return json.load(f).get("version", "0.0.0")
+        except Exception:
+            return self._data.get("baseline_version", "0.0.0")
+
+    @staticmethod
+    def _bump_version(ver: str, bump: str = "patch") -> str:
+        parts = list(_version_tuple(ver))
+        while len(parts) < 3:
+            parts.append(0)
+        if bump == "major":
+            parts[0] += 1; parts[1] = 0; parts[2] = 0
+        elif bump == "minor":
+            parts[1] += 1; parts[2] = 0
+        else:  # patch
+            parts[2] += 1
+        return ".".join(str(p) for p in parts)
+
+    # ── Public getters ────────────────────────────────────────────────
+
+    def get_registry(self) -> dict:
+        return {
+            **self._data,
+            "files_count": len(self._data.get("files", {})),
+            "history_count": len(self._data.get("history", [])),
+        }
+
+
 # ── Engine Registration ────────────────────────────────────────────────
 
 def register(app: FastAPI):
@@ -4841,6 +5288,15 @@ echo "=== Security smoke completato ==="
             "tag": state.get("tag"), "restart_needed": restart_needed
         })
 
+        # ── Post-finalize: auto-update file registry baseline ────────
+        try:
+            target_ver = state.get("target_version", state.get("tag", "").lstrip("v"))
+            if hasattr(app.state, "ota_file_registry") and target_ver:
+                count = app.state.ota_file_registry.snapshot(target_ver)
+                logger.info(f"OTA finalize: file registry baseline updated to {target_ver} ({count} files)")
+        except Exception as e:
+            logger.warning(f"OTA finalize: file registry update failed: {e}")
+
         if restart_needed:
             def _delayed_restart():
                 import time
@@ -4858,6 +5314,148 @@ echo "=== Security smoke completato ==="
                 if restart_needed
                 else "Update finalized. All changes are already active."
             ),
+        }
+
+    # ═══════════════════════════════════════════════════════════════════
+    # ── FILE REGISTRY: CHANGE TRACKING & AUTO-RELEASE ─────────────────
+    # ═══════════════════════════════════════════════════════════════════
+
+    file_registry = OTAFileRegistry(OTA_DIR, OTA_PROJECT_ROOT)
+    # Store on app.state for cross-engine access
+    app.state.ota_file_registry = file_registry
+    logger.info(
+        f"OTA FileRegistry initialized: {len(file_registry._data.get('files', {}))} "
+        f"files tracked, baseline {file_registry._data.get('baseline_version', 'none')}"
+    )
+
+    class RegistryReleaseRequest(BaseModel):
+        codename: Optional[str] = Field(None, max_length=50, description="Release codename")
+        bump: str = Field(
+            default="patch",
+            pattern=r"^(patch|minor|major)$",
+            description="Version bump type",
+        )
+
+    @app.get("/ota/registry")
+    async def ota_registry_get(_u=Depends(require_admin)):
+        """Full file registry with all tracked files, history, and metadata."""
+        return file_registry.get_registry()
+
+    @app.get("/ota/registry/status")
+    async def ota_registry_status(_u=Depends(require_admin)):
+        """Quick summary: how many files tracked, changed, new, deleted."""
+        reg = file_registry.get_registry()
+        diff = file_registry.scan()
+        return {
+            "baseline_version": reg.get("baseline_version"),
+            "total_tracked": diff["total_current"],
+            "total_baseline": diff["total_baseline"],
+            "changed": diff["summary"]["changed"],
+            "new": diff["summary"]["new"],
+            "deleted": diff["summary"]["deleted"],
+            "has_changes": diff["has_changes"],
+            "categories": diff["summary"].get("by_category", {}),
+            "last_release": reg["history"][-1] if reg.get("history") else None,
+        }
+
+    @app.post("/ota/registry/scan")
+    async def ota_registry_scan(_u=Depends(require_admin)):
+        """Scan project files and return detailed diff against baseline."""
+        user = _u.get("sub", "admin")
+        diff = file_registry.scan()
+        sec.audit_log("ota.registry.scan", "ok", user, {
+            "changed": diff["summary"]["changed"],
+            "new": diff["summary"]["new"],
+            "deleted": diff["summary"]["deleted"],
+        })
+        return diff
+
+    @app.post("/ota/registry/snapshot")
+    async def ota_registry_snapshot(_u=Depends(require_admin)):
+        """Take a new baseline snapshot of all currently tracked project files.
+        This resets the diff: after a snapshot, scan() returns no changes."""
+        user = _u.get("sub", "admin")
+        version = file_registry._get_current_version()
+        count = file_registry.snapshot(version)
+        sec.audit_log("ota.registry.snapshot", "ok", user, {
+            "files": count, "version": version,
+        })
+        return {
+            "status": "ok",
+            "files_tracked": count,
+            "baseline_version": version,
+            "message": f"Baseline snapshot creato: {count} file tracciati alla versione {version}.",
+        }
+
+    @app.post("/ota/registry/release")
+    async def ota_registry_release(
+        req: RegistryReleaseRequest = RegistryReleaseRequest(),
+        _u=Depends(require_admin),
+    ):
+        """Automatically create an OTA release from detected file changes.
+
+        Steps performed:
+          1. Scans for changes vs baseline
+          2. Bumps VERSION.json (patch/minor/major)
+          3. Stages changed files to staging/{new_version}
+          4. Generates MANIFEST.json
+          5. Updates state.json (latest_available)
+          6. Records in registry history
+
+        After this call, run the standard install pipeline:
+          POST /ota/install/start/{version}
+          POST /ota/install/apply
+          POST /ota/install/finalize
+        """
+        user = _u.get("sub", "admin")
+        result = file_registry.release(codename=req.codename, bump=req.bump)
+        sec.audit_log("ota.registry.release", result["status"], user, {
+            "version": result.get("version"),
+            "files": result.get("files_count", 0),
+            "codename": result.get("codename"),
+        })
+        sec.record_metric(OTA_DIR, "registry_release", {
+            "version": result.get("version"),
+            "files": result.get("files_count", 0),
+        })
+        return result
+
+    @app.get("/ota/registry/history")
+    async def ota_registry_history(_u=Depends(require_admin)):
+        """Complete release history from the file registry."""
+        history = file_registry._data.get("history", [])
+        return {
+            "history": history,
+            "total": len(history),
+            "latest": history[-1] if history else None,
+        }
+
+    @app.get("/ota/registry/diff")
+    async def ota_registry_diff(_u=Depends(require_admin)):
+        """Alias for /ota/registry/scan — returns diff of changed files."""
+        return file_registry.scan()
+
+    @app.post("/ota/registry/config")
+    async def ota_registry_config(
+        tracked_paths: Optional[List[str]] = None,
+        excluded_patterns: Optional[List[str]] = None,
+        _u=Depends(require_admin),
+    ):
+        """Update tracked paths and exclusion patterns for the file registry."""
+        user = _u.get("sub", "admin")
+        if tracked_paths is not None:
+            file_registry._data["tracked_paths"] = tracked_paths
+        if excluded_patterns is not None:
+            file_registry._data["excluded_patterns"] = excluded_patterns
+        file_registry._save()
+        sec.audit_log("ota.registry.config", "ok", user, {
+            "tracked_paths": len(file_registry._data["tracked_paths"]),
+            "excluded_patterns": len(file_registry._data["excluded_patterns"]),
+        })
+        return {
+            "status": "ok",
+            "tracked_paths": file_registry._data["tracked_paths"],
+            "excluded_patterns": file_registry._data["excluded_patterns"],
         }
 
     # ═══════════════════════════════════════════════════════════════════
