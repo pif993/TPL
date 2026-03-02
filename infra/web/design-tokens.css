@@ -46,69 +46,69 @@
 
   /* ══ COLOR PALETTE ════════════════════════════════════════════════════ */
 
-  /* ── Brand Gradient (login DNA) ── */
-  --tpl-brand-gradient:    linear-gradient(160deg, #1e3a5f 0%, #2d1b69 50%, #1a1a2e 100%);
-  --tpl-brand-gradient-135: linear-gradient(135deg, #1e3a5f 0%, #2d1b69 55%, #1a1a2e 100%);
-  --tpl-brand-dark:        #0f172a;
-  --tpl-brand-deep:        #1a1a2e;
-  --tpl-brand-navy:        #1e3a5f;
-  --tpl-brand-indigo:      #2d1b69;
+  /* ── Brand Gradient (Fusion v7.0 — custom palette) ── */
+  --tpl-brand-gradient:    linear-gradient(160deg, #1a3b6d 0%, #321c6b 50%, #181432 100%);
+  --tpl-brand-gradient-135: linear-gradient(135deg, #1a3b6d 0%, #321c6b 55%, #181432 100%);
+  --tpl-brand-dark:        #0d1526;
+  --tpl-brand-deep:        #181432;
+  --tpl-brand-navy:        #1a3b6d;
+  --tpl-brand-indigo:      #321c6b;
 
-  /* ── Dark Surface Scale (sidebar/navbar deep palette) ── */
-  --tpl-dark-950:  #06041a;
-  --tpl-dark-900:  #0a0826;
-  --tpl-dark-850:  #0e0a30;
-  --tpl-dark-800:  #120d38;
-  --tpl-dark-750:  #151040;
-  --tpl-dark-700:  #1a1545;
-  --tpl-dark-600:  #221c5c;
-  --tpl-dark-500:  #2d2470;
+  /* ── Dark Surface Scale (richer plum-indigo depth) ── */
+  --tpl-dark-950:  #07041e;
+  --tpl-dark-900:  #0c0828;
+  --tpl-dark-850:  #110b34;
+  --tpl-dark-800:  #160f3e;
+  --tpl-dark-750:  #1b1248;
+  --tpl-dark-700:  #211752;
+  --tpl-dark-600:  #2c2068;
+  --tpl-dark-500:  #3a2d80;
 
-  /* ── Accent — Blue (Primary Action) ── */
-  --tpl-blue-50:   #eff6ff;
-  --tpl-blue-100:  #dbeafe;
-  --tpl-blue-200:  #bfdbfe;
-  --tpl-blue-300:  #93c5fd;
-  --tpl-blue-400:  #60a5fa;
-  --tpl-blue-500:  #3b82f6;
-  --tpl-blue-600:  #2563eb;
-  --tpl-blue-700:  #1d4ed8;
-  --tpl-blue-800:  #1e40af;
-  --tpl-blue-900:  #1e3a8a;
+  /* ── Accent — Azure (Primary Action — custom warm blue) ── */
+  --tpl-blue-50:   #edf3ff;
+  --tpl-blue-100:  #d6e4ff;
+  --tpl-blue-200:  #b5ccff;
+  --tpl-blue-300:  #84aaff;
+  --tpl-blue-400:  #5588ff;
+  --tpl-blue-500:  #3366ff;
+  --tpl-blue-600:  #1a4fef;
+  --tpl-blue-700:  #143ecc;
+  --tpl-blue-800:  #1535a5;
+  --tpl-blue-900:  #142d78;
 
-  /* ── Accent — Indigo (Secondary Action) ── */
-  --tpl-indigo-50:  #eef2ff;
-  --tpl-indigo-100: #e0e7ff;
-  --tpl-indigo-200: #c7d2fe;
-  --tpl-indigo-300: #a5b4fc;
-  --tpl-indigo-400: #818cf8;
-  --tpl-indigo-500: #6366f1;
-  --tpl-indigo-600: #4f46e5;
-  --tpl-indigo-700: #4338ca;
-  --tpl-indigo-800: #3730a3;
-  --tpl-indigo-900: #312e81;
+  /* ── Accent — Amethyst (Secondary Action — custom royal) ── */
+  --tpl-indigo-50:  #f0edff;
+  --tpl-indigo-100: #e2dbff;
+  --tpl-indigo-200: #c9baff;
+  --tpl-indigo-300: #a790ff;
+  --tpl-indigo-400: #8568ff;
+  --tpl-indigo-500: #6b42ff;
+  --tpl-indigo-600: #5828f0;
+  --tpl-indigo-700: #4918d4;
+  --tpl-indigo-800: #3c15ab;
+  --tpl-indigo-900: #321188;
 
-  /* ── Accent — Violet (Tertiary — full scale) ── */
-  --tpl-violet-50:  #f5f3ff;
-  --tpl-violet-100: #ede9fe;
-  --tpl-violet-200: #ddd6fe;
-  --tpl-violet-300: #c4b5fd;
-  --tpl-violet-400: #a78bfa;
-  --tpl-violet-500: #8b5cf6;
-  --tpl-violet-600: #7c3aed;
-  --tpl-violet-700: #6d28d9;
-  --tpl-violet-800: #5b21b6;
-  --tpl-violet-900: #4c1d95;
+  /* ── Accent — Orchid (Tertiary — warm violet) ── */
+  --tpl-violet-50:  #faf4ff;
+  --tpl-violet-100: #f2e5ff;
+  --tpl-violet-200: #e6ccff;
+  --tpl-violet-300: #d4a6ff;
+  --tpl-violet-400: #be7afc;
+  --tpl-violet-500: #a651f5;
+  --tpl-violet-600: #9234e0;
+  --tpl-violet-700: #7b24bd;
+  --tpl-violet-800: #671e9c;
+  --tpl-violet-900: #551a7e;
 
-  /* ── Accent — Sky (warm info accent, replacing raw cyan) ── */
-  --tpl-sky-50:   #f0f9ff;
-  --tpl-sky-100:  #e0f2fe;
-  --tpl-sky-200:  #bae6fd;
-  --tpl-sky-300:  #7dd3fc;
-  --tpl-sky-400:  #38bdf8;
-  --tpl-sky-500:  #0ea5e9;
-  --tpl-sky-600:  #0284c7;
-  --tpl-sky-700:  #0369a1;
+  /* ── Accent — Cerulean (warm sky, distinctive teal-blue) ── */
+  --tpl-sky-50:   #effbff;
+  --tpl-sky-100:  #d8f4ff;
+  --tpl-sky-200:  #b5ebff;
+  --tpl-sky-300:  #7adcff;
+  --tpl-sky-400:  #36c6f4;
+  --tpl-sky-500:  #10a8de;
+  --tpl-sky-600:  #0488ba;
+  --tpl-sky-700:  #066e98;
 
   /* ── Accent Gradients ── */
   --tpl-accent-gradient:     linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
@@ -117,7 +117,7 @@
 
   /* ── Composite Gradient Tokens (reusable shortcuts) ── */
   --tpl-gradient-sidebar:    linear-gradient(170deg, var(--tpl-dark-700), var(--tpl-dark-750), var(--tpl-dark-800), var(--tpl-dark-900));
-  --tpl-gradient-navbar:     linear-gradient(105deg, rgba(26,21,69,.98), rgba(21,16,64,.97), rgba(14,10,48,.99));
+  --tpl-gradient-navbar:     linear-gradient(105deg, rgba(33,23,82,.98), rgba(27,18,72,.97), rgba(17,11,52,.99));
   --tpl-gradient-aurora:     linear-gradient(180deg, var(--tpl-indigo-400), var(--tpl-violet-400), var(--tpl-sky-400));
   --tpl-gradient-success:    linear-gradient(135deg, var(--tpl-success-500), var(--tpl-success-600));
   --tpl-gradient-danger:     linear-gradient(135deg, var(--tpl-danger-500), var(--tpl-danger-600));
@@ -166,17 +166,17 @@
   --tpl-info-600: #0284c7;
   --tpl-info-700: #0369a1;
 
-  /* ── Neutrals (Slate scale) ── */
-  --tpl-slate-50:  #f8fafc;
-  --tpl-slate-100: #f1f5f9;
-  --tpl-slate-200: #e2e8f0;
-  --tpl-slate-300: #cbd5e1;
-  --tpl-slate-400: #94a3b8;
-  --tpl-slate-500: #64748b;
-  --tpl-slate-600: #475569;
-  --tpl-slate-700: #334155;
-  --tpl-slate-800: #1e293b;
-  --tpl-slate-900: #0f172a;
+  /* ── Neutrals (Lavender-Slate — warm-cool hybrid) ── */
+  --tpl-slate-50:  #f7f8fc;
+  --tpl-slate-100: #eef0f7;
+  --tpl-slate-200: #dde2ee;
+  --tpl-slate-300: #c5cde0;
+  --tpl-slate-400: #8f9bba;
+  --tpl-slate-500: #5f6d8e;
+  --tpl-slate-600: #434e6a;
+  --tpl-slate-700: #303952;
+  --tpl-slate-800: #1c2438;
+  --tpl-slate-900: #0e1322;
 
   /* ── Surface & Background ── */
   --tpl-bg:          var(--tpl-slate-100);
@@ -188,7 +188,7 @@
   --tpl-border-light:  var(--tpl-slate-100);
   --tpl-border:        var(--tpl-slate-200);
   --tpl-border-strong: var(--tpl-slate-300);
-  --tpl-border-accent: rgba(59, 130, 246, .2);
+  --tpl-border-accent: rgba(51, 102, 255, .2);
   --tpl-border-focus:  var(--tpl-blue-500);
 
   /* ── Text ── */
@@ -225,8 +225,8 @@
   --tpl-shadow-md:   0 4px 14px rgba(0, 0, 0, .08);
   --tpl-shadow-lg:   0 8px 24px rgba(0, 0, 0, .1);
   --tpl-shadow-xl:   0 16px 48px rgba(0, 0, 0, .12);
-  --tpl-shadow-glow-blue:   0 0 0 3.5px rgba(59, 130, 246, .1), 0 1px 3px rgba(0, 0, 0, .04);
-  --tpl-shadow-glow-indigo: 0 0 0 4px rgba(99, 102, 241, .12);
+  --tpl-shadow-glow-blue:   0 0 0 3.5px rgba(51, 102, 255, .12), 0 1px 3px rgba(0, 0, 0, .04);
+  --tpl-shadow-glow-indigo: 0 0 0 4px rgba(107, 66, 255, .14);
 
   /* ══ TRANSITIONS ══════════════════════════════════════════════════════ */
   --tpl-ease-default: cubic-bezier(.4, 0, .2, 1);
@@ -263,33 +263,33 @@
   --tpl-sidebar-width:       260px;
   --tpl-sidebar-collapsed:   64px;
   --tpl-sidebar-bg:          var(--tpl-gradient-sidebar);
-  --tpl-sidebar-text:        #dde1ec;
-  --tpl-sidebar-text-faint:  rgba(205,211,226,.45);
-  --tpl-sidebar-hover:       rgba(99, 102, 241, .12);
-  --tpl-sidebar-active:      linear-gradient(135deg, rgba(99,102,241,.18), rgba(139,92,246,.14), rgba(99,102,241,.1));
+  --tpl-sidebar-text:        #e0e4f0;
+  --tpl-sidebar-text-faint:  rgba(210,215,232,.42);
+  --tpl-sidebar-hover:       rgba(107, 66, 255, .14);
+  --tpl-sidebar-active:      linear-gradient(135deg, rgba(107,66,255,.20), rgba(166,81,245,.16), rgba(107,66,255,.12));
   --tpl-sidebar-accent:      var(--tpl-gradient-aurora);
-  --tpl-sidebar-divider:     rgba(139, 92, 246, .12);
-  --tpl-sidebar-glow:        rgba(139, 92, 246, .1);
+  --tpl-sidebar-divider:     rgba(166, 81, 245, .14);
+  --tpl-sidebar-glow:        rgba(166, 81, 245, .12);
   --tpl-sidebar-blur:        none;
 
   /* ═══ NAVBAR TOKENS (Fusion v7.0) ══════════════════════════════════════════ */
   --tpl-navbar-height:       54px;
   --tpl-navbar-bg:           var(--tpl-gradient-navbar);
   --tpl-navbar-blur:         blur(24px) saturate(1.6);
-  --tpl-navbar-border:       rgba(139, 92, 246, .12);
-  --tpl-navbar-text:         #cdd3e2;
+  --tpl-navbar-border:       rgba(166, 81, 245, .14);
+  --tpl-navbar-text:         #d0d6e6;
   --tpl-navbar-text-hover:   var(--tpl-violet-300);
 
   /* ═══ OVERLAY TOKENS (structured rgba) ═══════════════════════════════════ */
-  --tpl-overlay-indigo-4:    rgba(99,102,241,.04);
-  --tpl-overlay-indigo-6:    rgba(99,102,241,.06);
-  --tpl-overlay-indigo-12:   rgba(99,102,241,.12);
-  --tpl-overlay-indigo-15:   rgba(99,102,241,.15);
-  --tpl-overlay-indigo-20:   rgba(99,102,241,.20);
-  --tpl-overlay-indigo-25:   rgba(99,102,241,.25);
-  --tpl-overlay-violet-10:   rgba(139,92,246,.10);
-  --tpl-overlay-violet-12:   rgba(139,92,246,.12);
-  --tpl-overlay-violet-14:   rgba(139,92,246,.14);
+  --tpl-overlay-indigo-4:    rgba(107,66,255,.04);
+  --tpl-overlay-indigo-6:    rgba(107,66,255,.06);
+  --tpl-overlay-indigo-12:   rgba(107,66,255,.12);
+  --tpl-overlay-indigo-15:   rgba(107,66,255,.15);
+  --tpl-overlay-indigo-20:   rgba(107,66,255,.20);
+  --tpl-overlay-indigo-25:   rgba(107,66,255,.25);
+  --tpl-overlay-violet-10:   rgba(166,81,245,.10);
+  --tpl-overlay-violet-12:   rgba(166,81,245,.12);
+  --tpl-overlay-violet-14:   rgba(166,81,245,.14);
   --tpl-overlay-white-4:     rgba(255,255,255,.04);
   --tpl-overlay-white-6:     rgba(255,255,255,.06);
   --tpl-overlay-white-8:     rgba(255,255,255,.08);
@@ -298,10 +298,10 @@
   --tpl-overlay-white-20:    rgba(255,255,255,.20);
   --tpl-overlay-black-4:     rgba(0,0,0,.04);
   --tpl-overlay-black-6:     rgba(0,0,0,.06);
-  --tpl-overlay-blue-10:     rgba(59,130,246,.10);
-  --tpl-overlay-blue-15:     rgba(59,130,246,.15);
-  --tpl-overlay-blue-20:     rgba(59,130,246,.20);
-  --tpl-overlay-blue-25:     rgba(59,130,246,.25);
+  --tpl-overlay-blue-10:     rgba(51,102,255,.10);
+  --tpl-overlay-blue-15:     rgba(51,102,255,.15);
+  --tpl-overlay-blue-20:     rgba(51,102,255,.20);
+  --tpl-overlay-blue-25:     rgba(51,102,255,.25);
 
   /* ══ INPUT TOKENS ═════════════════════════════════════════════════════ */
   --tpl-input-bg:         var(--tpl-surface);
@@ -316,8 +316,8 @@
   /* ══ BUTTON TOKENS ════════════════════════════════════════════════════ */
   --tpl-btn-primary-bg:     var(--tpl-accent-gradient);
   --tpl-btn-primary-bg-hover: var(--tpl-accent-gradient-vivid);
-  --tpl-btn-primary-shadow: 0 4px 14px rgba(59, 130, 246, .2), 0 1px 3px rgba(0, 0, 0, .05);
-  --tpl-btn-primary-shadow-hover: 0 8px 24px rgba(59, 130, 246, .3), 0 2px 6px rgba(0, 0, 0, .06);
+  --tpl-btn-primary-shadow: 0 4px 14px rgba(51, 102, 255, .22), 0 1px 3px rgba(0, 0, 0, .05);
+  --tpl-btn-primary-shadow-hover: 0 8px 24px rgba(51, 102, 255, .32), 0 2px 6px rgba(0, 0, 0, .06);
   --tpl-btn-radius:         var(--tpl-radius-lg);
 
   /* ══ CARD TOKENS ══════════════════════════════════════════════════════ */
@@ -331,7 +331,7 @@
   --tpl-hero-bg:       var(--tpl-brand-gradient-135);
   --tpl-hero-radius:   var(--tpl-radius-xl);
   --tpl-hero-text:     var(--tpl-text-inverse);
-  --tpl-hero-glow:     radial-gradient(circle, rgba(99, 102, 241, .15) 0%, transparent 70%);
+  --tpl-hero-glow:     radial-gradient(circle, rgba(107, 66, 255, .18) 0%, transparent 70%);
 
   /* ══ PILL / BADGE TOKENS ══════════════════════════════════════════════ */
   --tpl-pill-radius:   var(--tpl-radius-full);
@@ -368,7 +368,7 @@ body {
 
 /* ── Selection ─────────────────────────────────────────────────────────── */
 ::selection {
-  background: rgba(59, 130, 246, .15);
+  background: rgba(51, 102, 255, .18);
   color: var(--tpl-text);
 }
 
@@ -458,7 +458,7 @@ body {
 .tpl-version-badge--accent {
   background: var(--tpl-indigo-50);
   color: var(--tpl-indigo-600);
-  border: 1px solid rgba(99, 102, 241, .12);
+  border: 1px solid rgba(107, 66, 255, .12);
 }
 .tpl-version-badge--dark {
   background: rgba(255, 255, 255, .1);

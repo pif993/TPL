@@ -71,12 +71,12 @@
               <path d="M3 14l11 5 11-5" stroke="url(#aG2)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".8"/>
               <defs>
                 <linearGradient id="aG1" x1="3" y1="3" x2="25" y2="14">
-                  <stop offset="0%" stop-color="#6366f1"/>
-                  <stop offset="100%" stop-color="#0ea5e9"/>
+                  <stop offset="0%" stop-color="#6b42ff"/>
+                  <stop offset="100%" stop-color="#10a8de"/>
                 </linearGradient>
                 <linearGradient id="aG2" x1="3" y1="14" x2="25" y2="24">
-                  <stop offset="0%" stop-color="#818cf8"/>
-                  <stop offset="100%" stop-color="#38bdf8"/>
+                  <stop offset="0%" stop-color="#8568ff"/>
+                  <stop offset="100%" stop-color="#36c6f4"/>
                 </linearGradient>
               </defs>
             </svg>

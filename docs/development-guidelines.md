@@ -1,9 +1,13 @@
 # TPL — Linee Guida Vincolanti per Sviluppo Aggiornamenti
 
-> **Versione:** 1.0 · **Data:** 2 marzo 2026 · **Stato:** VINCOLANTE  
+> **Versione:** 2.0 · **Data:** 2 marzo 2026 · **Stato:** VINCOLANTE  
 > Questo documento definisce le regole obbligatorie per lo sviluppo, il rilascio
 > e la distribuzione di aggiornamenti nella piattaforma TPL. Ogni violazione
 > viene bloccata automaticamente dalla pipeline OTA.
+>
+> **Changelog v2.0:** Aggiunta sezione Design Token System, regole CSS
+> token-first, governance palette custom, branch fallback GitHub,
+> regole overlay/gradient strutturate.
 
 ---
 
@@ -38,13 +42,15 @@ MAJOR.MINOR.PATCH[+BUILD]
 
 | Tipo modifica | Bump richiesto | Esempio |
 |---|---|---|
-| Fix CSS/typo | `patch` | 3.5.4 → 3.5.5 |
-| Nuova pagina UI | `minor` | 3.5.4 → 3.6.0 |
-| Nuovo engine API | `minor` | 3.5.4 → 3.6.0 |
-| Redesign completo UI | `major` | 3.5.4 → 4.0.0 |
-| Cambio schema DB/config | `major` | 3.5.4 → 4.0.0 |
-| Aggiunta endpoint API | `minor` | 3.5.4 → 3.6.0 |
-| Fix sicurezza critico | `patch` | 3.5.4 → 3.5.5 |
+| Fix CSS/typo | `patch` | 3.6.0 → 3.6.1 |
+| Nuova pagina UI | `minor` | 3.6.0 → 3.7.0 |
+| Nuovo engine API | `minor` | 3.6.0 → 3.7.0 |
+| Redesign completo UI | `major` | 3.6.0 → 4.0.0 |
+| Cambio schema DB/config | `major` | 3.6.0 → 4.0.0 |
+| Aggiunta endpoint API | `minor` | 3.6.0 → 3.7.0 |
+| Fix sicurezza critico | `patch` | 3.6.0 → 3.6.1 |
+| Cambio palette/design tokens | `patch` | 3.6.0 → 3.6.1 |
+| Aggiunta nuova scala colori | `patch` | 3.6.0 → 3.6.1 |
 
 ### 2.3 Regole codename
 
@@ -57,12 +63,12 @@ MAJOR.MINOR.PATCH[+BUILD]
 
 ```json
 {
-  "version": "3.5.4",           // ← OBBLIGATORIO, SemVer
-  "build": 20260301002,         // ← OBBLIGATORIO, incrementale
+  "version": "3.6.0",           // ← OBBLIGATORIO, SemVer
+  "build": 20260301003,         // ← OBBLIGATORIO, incrementale
   "channel": "stable",          // ← OBBLIGATORIO: "stable" | "beta" | "dev"
   "codename": "Fusion",         // ← OBBLIGATORIO per minor/major
-  "full_version": "3.5.4+20260301002",
-  "released_at": "2026-03-01T14:00:00Z",
+  "full_version": "3.6.0+20260301003",
+  "released_at": "2026-03-02T21:02:05Z",
   "min_upgrade_from": "2.0.0",  // ← Versione minima da cui si può aggiornare
   "schema_version": 1
 }
@@ -356,8 +362,10 @@ Prima di creare una release:
 | Python API | Docstring per ogni funzione pubblica |
 | JavaScript | Strict mode obbligatorio (`'use strict'`) |
 | JavaScript | Nessun `var`, solo `const`/`let` |
-| CSS | Design tokens in `design-tokens.css` |
+| CSS | Design tokens in `design-tokens.css` — **VEDI SEZIONE 7.6** |
 | CSS | Prefisso classi per componente (es. `ota-pipe-*`) |
+| CSS | **MAI** usare hex/rgba hardcoded in `styles.css` |
+| CSS | Sempre `var(--tpl-*)` per colori, spaziature, raggi |
 | Bash modules | Header standard con versione e descrizione |
 | Bash modules | `set -euo pipefail` obbligatorio |
 
@@ -367,6 +375,120 @@ Ogni modifica DEVE essere accompagnata da:
 1. Descrizione chiara nel changelog (`/api/version/changelog`)
 2. Categoria corretta nel registry (web, api, modules, infra, etc.)
 3. Codename per release minor/major
+
+### 7.6 Design Token System — Regole CSS (VINCOLANTI)
+
+> **Riferimento:** `infra/web/design-tokens.css` v2.0 (Fusion v7.0)
+
+#### 7.6.1 Regola fondamentale: Token-First
+
+**OGNI colore in `styles.css` DEVE usare `var(--tpl-*)`.** Nessun valore hex
+o rgba hardcoded è ammesso nel foglio di stile principale.
+
+```css
+/* ✅ CORRETTO */
+color: var(--tpl-indigo-500);
+background: var(--tpl-accent-gradient);
+border-color: var(--tpl-slate-200);
+
+/* ❌ VIETATO */
+color: #6b42ff;
+background: linear-gradient(135deg, #3366ff, #6b42ff);
+border-color: #dde2ee;
+```
+
+**Eccezioni ammesse:**
+- SVG `stop-color` attributes (non supportano CSS var() in tutti i browser)
+- Valori calcolati in JavaScript (usare i token come reference)
+
+#### 7.6.2 Palette Custom — Governance
+
+La piattaforma TPL usa una **palette custom** (NON Tailwind CSS defaults).
+Ogni modifica ai valori cromatici DEVE avvenire SOLO in `design-tokens.css`.
+
+| Scala | Ruolo | Token Prefix |
+|-------|-------|--------------|
+| Azure | Primary Action (bottoni, link, focus) | `--tpl-blue-*` |
+| Amethyst | Secondary Action (accenti, badge) | `--tpl-indigo-*` |
+| Orchid | Tertiary (gradients, glow) | `--tpl-violet-*` |
+| Cerulean | Info accent (badge info, sky) | `--tpl-sky-*` |
+| Lavender-Slate | Neutrali (testi, bordi, bg) | `--tpl-slate-*` |
+| Dark Surface | Sidebar/Navbar profondità | `--tpl-dark-*` |
+| Success | Stato positivo | `--tpl-success-*` |
+| Warning | Stato attenzione | `--tpl-warning-*` |
+| Danger | Stato errore/critico | `--tpl-danger-*` |
+| Info | Stato informativo | `--tpl-info-*` |
+
+#### 7.6.3 Gradients — Token Compositi
+
+I gradienti ripetuti DEVONO usare token compositi:
+
+```css
+/* ✅ CORRETTO */
+background: var(--tpl-accent-gradient);
+background: var(--tpl-gradient-sidebar);
+
+/* ❌ VIETATO — ripetere la stessa definizione */
+background: linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
+```
+
+Token compositi disponibili:
+- `--tpl-accent-gradient` — Azure → Amethyst (135deg)
+- `--tpl-accent-gradient-vivid` — Azure-600 → Amethyst-600
+- `--tpl-accent-gradient-soft` — Azure-400 → Orchid-400
+- `--tpl-gradient-sidebar` — Dark surface sidebar (170deg)
+- `--tpl-gradient-navbar` — Dark surface navbar (105deg)
+- `--tpl-gradient-aurora` — Amethyst → Orchid → Cerulean (180deg)
+- `--tpl-gradient-edge` — Edge line accent
+- `--tpl-gradient-success/danger/warning` — Semantic gradients
+
+#### 7.6.4 Overlay / Trasparenze
+
+Per overlay e trasparenze, usare i token strutturati `--tpl-overlay-*`:
+
+```css
+/* ✅ CORRETTO */
+background: var(--tpl-overlay-indigo-12);
+box-shadow: 0 0 0 4px var(--tpl-overlay-blue-15);
+
+/* ❌ VIETATO */
+background: rgba(107, 66, 255, .12);
+```
+
+Overlay disponibili: `indigo-{4,6,12,15,20,25}`, `violet-{10,12,14}`,
+`white-{4,6,8,10,12,20}`, `black-{4,6}`, `blue-{10,15,20,25}`.
+
+#### 7.6.5 Validazione colori
+
+| Controllo | Livello | Errore |
+|-----------|---------|--------|
+| Hex hardcoded in styles.css | **WARNING** | `GUIDELINE_WARN: hex hardcoded` |
+| rgba hardcoded senza token | **WARNING** | `GUIDELINE_WARN: rgba senza overlay token` |
+| Colore Tailwind default usato | **WARNING** | `GUIDELINE_WARN: usare palette custom` |
+| Modifica design-tokens.css senza review | **BLOCCANTE** | Non rilasciabile |
+
+### 7.7 Aggiornamento Remoto — Branch Fallback
+
+Quando un tag OTA non esiste sul repository GitHub (es. release locale),
+il sistema di download automaticamente:
+
+1. Tenta il download da `refs/tags/{tag}.tar.gz`
+2. Se **404** → fallback a `refs/heads/{branch}.tar.gz` (default: `main`)
+3. Il campo `branch_fallback: true` nella risposta segnala il fallback
+4. Evento registrato nell'audit trail: `ota.download.tag_fallback`
+
+**Regola:** Il branch di fallback è configurabile in `/ota/remote/config`.
+Il default è `main`. Solo branch protetti sono ammessi come fallback.
+
+```
+  Tag check (GitHub)         Branch fallback
+  ─────────────────         ────────────────
+  refs/tags/3.6.1    ──►   ✓ Download da tag
+       │
+       └─ 404?  ──►  refs/heads/main  ──►  ✓ Download da branch
+                          │
+                          └─ 404?  ──►  ✗ Errore definitivo
+```
 
 ---
 
@@ -389,6 +511,7 @@ pre-rilascio. La funzione `_validate_release_guidelines()` controlla:
 | G-08 | SHA-256 valido per ogni file | `GUIDELINE_FAIL: integrity check failed` |
 | G-09 | Tag versione non duplicato | `GUIDELINE_FAIL: versione già rilasciata` |
 | G-10 | Nessun segreto nei file staged | `GUIDELINE_FAIL: possibile segreto rilevato` |
+| G-11 | Colori in styles.css usano var(--tpl-*) | `GUIDELINE_WARN: hex hardcoded rilevato` |
 
 ### 8.2 Controlli warning (SHOULD FIX)
 
@@ -399,6 +522,8 @@ pre-rilascio. La funzione `_validate_release_guidelines()` controlla:
 | W-03 | Codename mancante per minor/major | `GUIDELINE_WARN: codename consigliato` |
 | W-04 | docs/ non aggiornato in release con API changes | `GUIDELINE_WARN: documentazione non aggiornata` |
 | W-05 | tests/ non aggiornato in release con API changes | `GUIDELINE_WARN: test non aggiornati` |
+| W-06 | design-tokens.css modificato senza docs | `GUIDELINE_WARN: documentare cambio palette` |
+| W-07 | rgba hardcoded senza overlay token | `GUIDELINE_WARN: usare --tpl-overlay-*` |
 
 ---
 
@@ -469,10 +594,19 @@ L'engine `ota_update_engine.py` è un file protetto. Per aggiornarlo:
 ║  ○ Usare tpl-release.sh full per rilasci completi                ║
 ║  ○ Verificare post-install con /ota/install/verify               ║
 ║  ○ Controllare GitHub prima di rilasciare localmente             ║
+║                                                                  ║
+║  CSS / DESIGN TOKENS:                                            ║
+║  ✓ SEMPRE var(--tpl-*) per colori in styles.css                  ║
+║  ✓ Palette custom — MAI Tailwind defaults                        ║
+║  ✓ Gradienti ripetuti → token compositi                          ║
+║  ✓ Trasparenze → overlay tokens strutturati                      ║
+║  ✗ MAI hex/rgba hardcoded in styles.css                          ║
+║  ✗ MAI modificare valori colore fuori da design-tokens.css       ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-> **Documento vincolante** — Approvato il 2 marzo 2026  
-> Enforcement automatico tramite `_validate_release_guidelines()` nell'OTA engine.
+> **Documento vincolante** — v2.0, aggiornato il 2 marzo 2026  
+> Enforcement automatico tramite `_validate_release_guidelines()` nell'OTA engine.  
+> Design Token System v2.0, palette Fusion v7.0, branch fallback GitHub.
