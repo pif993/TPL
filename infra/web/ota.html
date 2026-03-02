@@ -212,6 +212,46 @@
                 </div>
               </div>
 
+              <!-- ═══ GitHub Remote ═════════════════════════════════ -->
+              <div class="ota-pipe-card">
+                <div class="ota-pipe-card-head">
+                  <span class="ota-pipe-card-title"><i class="bi bi-github"></i> GitHub Remote</span>
+                  <span class="ota-pipe-pill" id="otaRemotePill">—</span>
+                </div>
+                <div class="ota-pipe-card-body">
+                  <div class="ota-pipe-sec-keys">
+                    <div class="ota-pipe-sec-row"><i class="bi bi-box-arrow-up-right"></i><span>Repo</span><span id="otaRemoteRepo">—</span></div>
+                    <div class="ota-pipe-sec-row"><i class="bi bi-diagram-2-fill"></i><span>Branch</span><span id="otaRemoteBranch">—</span></div>
+                    <div class="ota-pipe-sec-row"><i class="bi bi-tag-fill"></i><span>Locale</span><span id="otaRemoteLocal">—</span></div>
+                    <div class="ota-pipe-sec-row"><i class="bi bi-cloud-arrow-down-fill"></i><span>Remoto</span><span id="otaRemoteVer">—</span></div>
+                    <div class="ota-pipe-sec-row"><i class="bi bi-clock-history"></i><span>Ultimo check</span><span id="otaRemoteLastCheck">mai</span></div>
+                    <div class="ota-pipe-sec-row"><i class="bi bi-files"></i><span>File tracciati</span><span id="otaRemoteFiles">—</span></div>
+                  </div>
+                  <div id="otaRemoteStatus" class="mt-2 small"></div>
+                  <div class="d-flex gap-1 flex-wrap mt-2">
+                    <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaRemoteCheckBtn" type="button">
+                      <i class="bi bi-arrow-clockwise"></i> Controlla
+                    </button>
+                    <button class="ota-pipe-btn ota-pipe-btn--sm ota-pipe-btn--primary" id="otaRemoteUpgradeBtn" type="button" disabled>
+                      <i class="bi bi-cloud-arrow-down-fill"></i> Aggiorna da GitHub
+                    </button>
+                  </div>
+
+                  <details class="ota-pipe-details mt-2">
+                    <summary><i class="bi bi-gear"></i> Configurazione Remota</summary>
+                    <div class="ota-pipe-details-body">
+                      <label class="ota-pipe-cfg-field"><span>Repository</span><input type="text" class="form-control form-control-sm" id="otaRemoteCfgRepo" value="pif993/TPL" style="width:140px"></label>
+                      <label class="ota-pipe-cfg-field"><span>Branch</span><input type="text" class="form-control form-control-sm" id="otaRemoteCfgBranch" value="main" style="width:80px"></label>
+                      <label class="ota-pipe-toggle"><span>Auto-upgrade</span><input class="form-check-input" type="checkbox" id="otaRemoteCfgAuto"></label>
+                      <div class="ota-pipe-details-actions">
+                        <button class="ota-pipe-btn ota-pipe-btn--sm" id="otaRemoteCfgSaveBtn" type="button"><i class="bi bi-check-lg"></i> Salva</button>
+                        <span id="otaRemoteCfgResult" class="small"></span>
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              </div>
+
               <!-- Config -->
               <div class="ota-pipe-card">
                 <div class="ota-pipe-card-head">
@@ -283,7 +323,7 @@
           <div id="otaToast" class="d-none" role="alert" aria-live="polite"></div>
 
           <div class="ota-pipe-shortcuts">
-            <kbd>R</kbd> aggiorna <kbd>C</kbd> verifica <kbd>S</kbd> simula <kbd>U</kbd> aggiorna <kbd>Esc</kbd> chiudi
+            <kbd>R</kbd> aggiorna <kbd>C</kbd> verifica <kbd>S</kbd> simula <kbd>U</kbd> aggiorna <kbd>G</kbd> GitHub <kbd>Esc</kbd> chiudi
           </div>
 
         </div>

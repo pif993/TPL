@@ -641,6 +641,151 @@
   };
 
   /* ═══════════════════════════════════════════════════════════════
+   *  GITHUB REMOTE — Version Check & Upgrade
+   * ═══════════════════════════════════════════════════════════════ */
+
+  let _remoteData = null;
+
+  const loadRemoteStatus = async () => {
+    try {
+      const data = await TPL.jsonFetch('/api/ota/remote/check');
+      _remoteData = data;
+
+      const pill = q('otaRemotePill');
+      const repoEl = q('otaRemoteRepo');
+      const branchEl = q('otaRemoteBranch');
+      const localEl = q('otaRemoteLocal');
+      const remoteEl = q('otaRemoteVer');
+      const lastCheckEl = q('otaRemoteLastCheck');
+      const filesEl = q('otaRemoteFiles');
+      const statusEl = q('otaRemoteStatus');
+      const upgradeBtn = q('otaRemoteUpgradeBtn');
+
+      if (repoEl) repoEl.innerHTML = `<a href="https://github.com/${esc(data.repo || '')}" target="_blank" rel="noopener" class="text-decoration-none">${esc(data.repo || '—')}</a>`;
+      if (branchEl) branchEl.textContent = data.branch || '—';
+      if (localEl) localEl.innerHTML = `<code>v${esc(data.local_version || '?')}</code>`;
+      if (remoteEl) remoteEl.innerHTML = `<code>v${esc(data.remote_version || '?')}</code>${data.remote_codename ? ` <small class="text-muted">${esc(data.remote_codename)}</small>` : ''}`;
+      if (lastCheckEl) lastCheckEl.textContent = data.checked_at ? fmtDateShort(data.checked_at) : 'mai';
+      if (filesEl) filesEl.textContent = `${data.remote_tracked_files || 0} remoti / ${data.local_tracked_files || 0} locali`;
+
+      if (data.status === 'upgrade_available') {
+        if (pill) { pill.textContent = 'Upgrade!'; pill.className = 'ota-pipe-pill ota-pipe-pill--ok'; }
+        if (statusEl) statusEl.innerHTML = `<div class="alert alert-success py-1 px-2 mb-0"><i class="bi bi-cloud-arrow-down-fill"></i> Versione <strong>v${esc(data.remote_version)}</strong> disponibile su GitHub!</div>`;
+        if (upgradeBtn) upgradeBtn.disabled = false;
+      } else if (data.status === 'up_to_date') {
+        if (pill) { pill.textContent = 'Aggiornato'; pill.className = 'ota-pipe-pill'; }
+        if (statusEl) statusEl.innerHTML = `<div class="text-success"><i class="bi bi-check-circle-fill"></i> Versione locale aggiornata.</div>`;
+        if (upgradeBtn) upgradeBtn.disabled = true;
+      } else if (data.status === 'repo_not_found') {
+        if (pill) { pill.textContent = 'N/A'; pill.className = 'ota-pipe-pill ota-pipe-pill--warn'; }
+        if (statusEl) statusEl.innerHTML = `<div class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Repository non trovato.</div>`;
+        if (upgradeBtn) upgradeBtn.disabled = true;
+      } else {
+        if (pill) { pill.textContent = 'Errore'; pill.className = 'ota-pipe-pill ota-pipe-pill--err'; }
+        if (statusEl) statusEl.innerHTML = `<div class="text-danger"><i class="bi bi-x-circle-fill"></i> ${esc(data.message || 'Errore')}</div>`;
+        if (upgradeBtn) upgradeBtn.disabled = true;
+      }
+
+      // Fill config fields
+      try {
+        const cfg = await TPL.jsonFetch('/api/ota/remote/config');
+        const cfgRepo = q('otaRemoteCfgRepo');
+        const cfgBranch = q('otaRemoteCfgBranch');
+        const cfgAuto = q('otaRemoteCfgAuto');
+        if (cfgRepo) cfgRepo.value = cfg.repo || 'pif993/TPL';
+        if (cfgBranch) cfgBranch.value = cfg.branch || 'main';
+        if (cfgAuto) cfgAuto.checked = !!cfg.auto_upgrade;
+      } catch {}
+
+      return data;
+    } catch (e) {
+      console.warn('Remote check failed:', e);
+      const pill = q('otaRemotePill');
+      if (pill) { pill.textContent = 'Offline'; pill.className = 'ota-pipe-pill ota-pipe-pill--warn'; }
+      return null;
+    }
+  };
+
+  const remoteCheck = async () => {
+    const btn = q('otaRemoteCheckBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat ota-pipe-spin"></i>'; }
+    try {
+      const data = await loadRemoteStatus();
+      if (data?.upgrade_available) {
+        showToast(`GitHub: v${data.remote_version} disponibile (locale: v${data.local_version})`, 'success');
+      } else if (data?.status === 'up_to_date') {
+        showToast('GitHub: versione locale aggiornata.', 'info');
+      } else {
+        showToast(`GitHub: ${data?.message || 'controllo fallito'}`, 'warning');
+      }
+    } catch (e) { showToast('Errore check GitHub: ' + e, 'danger'); }
+    finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Controlla'; } }
+  };
+
+  const remoteUpgrade = async () => {
+    if (!_remoteData?.upgrade_available) return;
+
+    const upgradeBtn = q('otaRemoteUpgradeBtn');
+    const statusEl = q('otaRemoteStatus');
+
+    if (upgradeBtn) { upgradeBtn.disabled = true; upgradeBtn.innerHTML = '<i class="bi bi-arrow-repeat ota-pipe-spin"></i> Download…'; }
+    if (statusEl) statusEl.innerHTML = `<div class="text-primary"><i class="bi bi-arrow-repeat ota-pipe-spin"></i> Scaricamento file da GitHub…</div>`;
+
+    try {
+      const data = await TPL.jsonFetch('/api/ota/remote/upgrade', { method: 'POST' });
+
+      if (data.status === 'staged') {
+        if (statusEl) statusEl.innerHTML = `<div class="alert alert-success py-1 px-2 mb-0">
+          <i class="bi bi-check-circle-fill"></i> <strong>${data.files_count}</strong> file scaricati e staged
+          (${data.changed || 0} modificati, ${data.new || 0} nuovi).
+          <br><small>Avvio pipeline di installazione…</small>
+        </div>`;
+        showToast(`Upgrade v${data.remote_version} scaricato: ${data.files_count} file. Avvio installazione…`, 'success');
+
+        // Auto-run the install pipeline
+        await sleep(500);
+        runPipeline(data.remote_version);
+
+      } else if (data.status === 'up_to_date') {
+        if (statusEl) statusEl.innerHTML = `<div class="text-success"><i class="bi bi-check-circle-fill"></i> ${esc(data.message)}</div>`;
+        showToast(data.message, 'info');
+      } else if (data.status === 'no_file_changes') {
+        if (statusEl) statusEl.innerHTML = `<div class="text-info"><i class="bi bi-info-circle-fill"></i> ${esc(data.message)}</div>`;
+        showToast(data.message, 'info');
+      } else {
+        if (statusEl) statusEl.innerHTML = `<div class="text-danger"><i class="bi bi-x-circle-fill"></i> ${esc(data.message || 'Errore')}</div>`;
+        showToast(`Upgrade fallito: ${data.message || data.status}`, 'danger');
+      }
+    } catch (e) {
+      if (statusEl) statusEl.innerHTML = `<div class="text-danger"><i class="bi bi-x-circle-fill"></i> ${esc(String(e))}</div>`;
+      showToast('Errore upgrade GitHub: ' + e, 'danger');
+    } finally {
+      if (upgradeBtn) { upgradeBtn.disabled = false; upgradeBtn.innerHTML = '<i class="bi bi-cloud-arrow-down-fill"></i> Aggiorna da GitHub'; }
+    }
+  };
+
+  const saveRemoteConfig = async () => {
+    try {
+      const body = {
+        repo: q('otaRemoteCfgRepo')?.value || 'pif993/TPL',
+        branch: q('otaRemoteCfgBranch')?.value || 'main',
+        auto_upgrade: q('otaRemoteCfgAuto')?.checked ?? false,
+      };
+      await TPL.jsonFetch('/api/ota/remote/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const res = q('otaRemoteCfgResult');
+      if (res) { res.innerHTML = '<span class="text-success"><i class="bi bi-check-lg"></i></span>'; setTimeout(() => { res.textContent = ''; }, 2000); }
+      showToast('Configurazione remota salvata', 'success');
+    } catch (e) {
+      const res = q('otaRemoteCfgResult');
+      if (res) res.innerHTML = `<span class="text-danger">${esc(String(e))}</span>`;
+    }
+  };
+
+  /* ═══════════════════════════════════════════════════════════════
    *  TEST UPDATE DELIVERY
    * ═══════════════════════════════════════════════════════════════ */
 
@@ -987,6 +1132,11 @@
   // Snapshots
   q('otaSnapCreateBtn')?.addEventListener('click', createSnapshot);
 
+  // GitHub Remote
+  q('otaRemoteCheckBtn')?.addEventListener('click', remoteCheck);
+  q('otaRemoteUpgradeBtn')?.addEventListener('click', remoteUpgrade);
+  q('otaRemoteCfgSaveBtn')?.addEventListener('click', saveRemoteConfig);
+
   // Install controls
   q('otaPipeRollbackBtn')?.addEventListener('click', rollbackInstall);
   q('otaPipeCancelBtn')?.addEventListener('click', cancelInstall);
@@ -1011,6 +1161,7 @@
       case 'c': e.preventDefault(); checkUpdates(); break;
       case 's': e.preventDefault(); runSimulation(); break;
       case 'u': e.preventDefault(); handleCtaClick(); break;
+      case 'g': e.preventDefault(); remoteCheck(); break;
       case 'escape': q('otaDetailPanel')?.classList.add('d-none'); break;
     }
   });
@@ -1030,6 +1181,7 @@
       loadTofuStatus(),
       loadSnapshots(),
       loadTestUpdateInfo(),
+      loadRemoteStatus(),
     ]);
   };
 
