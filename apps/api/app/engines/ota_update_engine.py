@@ -2682,6 +2682,12 @@ def register(app: FastAPI):
                 "download_checksum": sec.sha256_file(dest_file),
             }
 
+        # Fallback URL: if the tag doesn't exist on GitHub (local-only release),
+        # download from the default branch instead.
+        branch = config.get("branch", "main")
+        fallback_url = f"{GITHUB_DOWNLOAD}/{owner}/{repo}/archive/refs/heads/{branch}.tar.gz"
+        actually_used_url = download_url
+
         sec.audit_log("ota.download.start", "started", "system", {"tag": safe_tag, "url": download_url})
 
         try:
@@ -2689,6 +2695,20 @@ def register(app: FastAPI):
                 timeout=120.0, follow_redirects=True
             ) as client:
                 resp = await client.get(download_url)
+
+                # If tag not found on GitHub, fall back to branch head
+                if resp.status_code == 404:
+                    logger.warning(
+                        f"OTA download: tag '{safe_tag}' not found on GitHub "
+                        f"(404). Falling back to branch '{branch}'."
+                    )
+                    sec.audit_log("ota.download.tag_fallback", "warning", "system", {
+                        "tag": safe_tag, "branch": branch,
+                        "reason": "Tag not found on remote — using branch head",
+                    })
+                    resp = await client.get(fallback_url)
+                    actually_used_url = fallback_url
+
                 resp.raise_for_status()
 
                 # Security: check size before writing
@@ -2741,7 +2761,10 @@ def register(app: FastAPI):
             file_count = sum(1 for _ in Path(staging_dir).rglob("*") if _.is_file())
 
             sec.audit_log("ota.download.complete", "ok", "system", {
-                "tag": safe_tag, "size": size, "files": file_count, "sha256": download_checksum
+                "tag": safe_tag, "size": size, "files": file_count,
+                "sha256": download_checksum,
+                "url": actually_used_url,
+                "branch_fallback": actually_used_url != download_url,
             })
 
             return {
@@ -2753,6 +2776,7 @@ def register(app: FastAPI):
                 "size_human": _fmt_size(size),
                 "file_count": file_count,
                 "download_checksum": download_checksum,
+                "branch_fallback": actually_used_url != download_url,
             }
         except HTTPException:
             raise
