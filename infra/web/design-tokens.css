@@ -1,11 +1,13 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   TPL FORTRESS — Design Token System v2.0  (Fusion v7.0)
+   TPL FORTRESS — Design Token System v3.0  (Prism v8.0)
    ═══════════════════════════════════════════════════════════════════════════
    Single source of truth for the entire platform visual language.
-   Derived from the login form's design DNA: modern, secure, premium.
+   Midnight-sapphire core, steel-teal accents, rose-danger system.
+   Professional-grade chromatic system — zero Tailwind defaults.
    
-   v2.0 — Full color-scale coverage, dark-surface tokens, gradient aliases,
-          warm sky accent replacing raw cyan, structured semantic overlays.
+   v3.0 — Complete palette redesign: Sapphire primary, Indigo-Plum secondary,
+          Lavender tertiary, Steel-Teal sky, midnight dark surfaces,
+          steel-slate neutrals, emerald success, rose danger.
    
    Usage:  <link href="/design-tokens.css" rel="stylesheet">  (BEFORE styles.css)
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -46,69 +48,69 @@
 
   /* ══ COLOR PALETTE ════════════════════════════════════════════════════ */
 
-  /* ── Brand Gradient (Fusion v7.0 — custom palette) ── */
-  --tpl-brand-gradient:    linear-gradient(160deg, #1a3b6d 0%, #321c6b 50%, #181432 100%);
-  --tpl-brand-gradient-135: linear-gradient(135deg, #1a3b6d 0%, #321c6b 55%, #181432 100%);
-  --tpl-brand-dark:        #0d1526;
-  --tpl-brand-deep:        #181432;
-  --tpl-brand-navy:        #1a3b6d;
-  --tpl-brand-indigo:      #321c6b;
+  /* ── Brand Gradient (Prism v8.0 — midnight sapphire) ── */
+  --tpl-brand-gradient:    linear-gradient(160deg, #163078 0%, #331f72 50%, #111620 100%);
+  --tpl-brand-gradient-135: linear-gradient(135deg, #163078 0%, #331f72 55%, #111620 100%);
+  --tpl-brand-dark:        #0a0e1c;
+  --tpl-brand-deep:        #111620;
+  --tpl-brand-navy:        #163078;
+  --tpl-brand-indigo:      #331f72;
 
-  /* ── Dark Surface Scale (richer plum-indigo depth) ── */
-  --tpl-dark-950:  #07041e;
-  --tpl-dark-900:  #0c0828;
-  --tpl-dark-850:  #110b34;
-  --tpl-dark-800:  #160f3e;
-  --tpl-dark-750:  #1b1248;
-  --tpl-dark-700:  #211752;
-  --tpl-dark-600:  #2c2068;
-  --tpl-dark-500:  #3a2d80;
+  /* ── Dark Surface Scale (midnight-sapphire depth) ── */
+  --tpl-dark-950:  #060a18;
+  --tpl-dark-900:  #0a1025;
+  --tpl-dark-850:  #0e152f;
+  --tpl-dark-800:  #121a39;
+  --tpl-dark-750:  #162043;
+  --tpl-dark-700:  #1a264d;
+  --tpl-dark-600:  #233362;
+  --tpl-dark-500:  #2e4278;
 
-  /* ── Accent — Azure (Primary Action — custom warm blue) ── */
-  --tpl-blue-50:   #edf3ff;
-  --tpl-blue-100:  #d6e4ff;
-  --tpl-blue-200:  #b5ccff;
-  --tpl-blue-300:  #84aaff;
-  --tpl-blue-400:  #5588ff;
-  --tpl-blue-500:  #3366ff;
-  --tpl-blue-600:  #1a4fef;
-  --tpl-blue-700:  #143ecc;
-  --tpl-blue-800:  #1535a5;
-  --tpl-blue-900:  #142d78;
+  /* ── Accent — Sapphire (Primary Action) ── */
+  --tpl-blue-50:   #eef4ff;
+  --tpl-blue-100:  #d9e7ff;
+  --tpl-blue-200:  #bdd5ff;
+  --tpl-blue-300:  #90baff;
+  --tpl-blue-400:  #5c93fa;
+  --tpl-blue-500:  #3570f0;
+  --tpl-blue-600:  #1b55e6;
+  --tpl-blue-700:  #1445c4;
+  --tpl-blue-800:  #15399e;
+  --tpl-blue-900:  #163078;
 
-  /* ── Accent — Amethyst (Secondary Action — custom royal) ── */
-  --tpl-indigo-50:  #f0edff;
-  --tpl-indigo-100: #e2dbff;
-  --tpl-indigo-200: #c9baff;
-  --tpl-indigo-300: #a790ff;
-  --tpl-indigo-400: #8568ff;
-  --tpl-indigo-500: #6b42ff;
-  --tpl-indigo-600: #5828f0;
-  --tpl-indigo-700: #4918d4;
-  --tpl-indigo-800: #3c15ab;
-  --tpl-indigo-900: #321188;
+  /* ── Accent — Indigo-Plum (Secondary Action) ── */
+  --tpl-indigo-50:  #f0eeff;
+  --tpl-indigo-100: #e3dfff;
+  --tpl-indigo-200: #ccc3ff;
+  --tpl-indigo-300: #ae9fff;
+  --tpl-indigo-400: #8e74f5;
+  --tpl-indigo-500: #7050e8;
+  --tpl-indigo-600: #5a38d0;
+  --tpl-indigo-700: #4a2cad;
+  --tpl-indigo-800: #3e258d;
+  --tpl-indigo-900: #331f72;
 
-  /* ── Accent — Orchid (Tertiary — warm violet) ── */
-  --tpl-violet-50:  #faf4ff;
-  --tpl-violet-100: #f2e5ff;
-  --tpl-violet-200: #e6ccff;
-  --tpl-violet-300: #d4a6ff;
-  --tpl-violet-400: #be7afc;
-  --tpl-violet-500: #a651f5;
-  --tpl-violet-600: #9234e0;
-  --tpl-violet-700: #7b24bd;
-  --tpl-violet-800: #671e9c;
-  --tpl-violet-900: #551a7e;
+  /* ── Accent — Lavender (Tertiary — premium soft) ── */
+  --tpl-violet-50:  #faf5ff;
+  --tpl-violet-100: #f3e8ff;
+  --tpl-violet-200: #e8d2ff;
+  --tpl-violet-300: #d5b1fd;
+  --tpl-violet-400: #c08ef0;
+  --tpl-violet-500: #a86adb;
+  --tpl-violet-600: #8f4ec0;
+  --tpl-violet-700: #783da0;
+  --tpl-violet-800: #643383;
+  --tpl-violet-900: #53296b;
 
-  /* ── Accent — Cerulean (warm sky, distinctive teal-blue) ── */
-  --tpl-sky-50:   #effbff;
-  --tpl-sky-100:  #d8f4ff;
-  --tpl-sky-200:  #b5ebff;
-  --tpl-sky-300:  #7adcff;
-  --tpl-sky-400:  #36c6f4;
-  --tpl-sky-500:  #10a8de;
-  --tpl-sky-600:  #0488ba;
-  --tpl-sky-700:  #066e98;
+  /* ── Accent — Steel-Teal (sky/info accent) ── */
+  --tpl-sky-50:   #eefaff;
+  --tpl-sky-100:  #d7f3ff;
+  --tpl-sky-200:  #b8e9ff;
+  --tpl-sky-300:  #86d9fc;
+  --tpl-sky-400:  #46c0f0;
+  --tpl-sky-500:  #1da3d8;
+  --tpl-sky-600:  #0884b6;
+  --tpl-sky-700:  #086c96;
 
   /* ── Accent Gradients ── */
   --tpl-accent-gradient:     linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
@@ -117,23 +119,23 @@
 
   /* ── Composite Gradient Tokens (reusable shortcuts) ── */
   --tpl-gradient-sidebar:    linear-gradient(170deg, var(--tpl-dark-700), var(--tpl-dark-750), var(--tpl-dark-800), var(--tpl-dark-900));
-  --tpl-gradient-navbar:     linear-gradient(105deg, rgba(33,23,82,.98), rgba(27,18,72,.97), rgba(17,11,52,.99));
+  --tpl-gradient-navbar:     linear-gradient(105deg, rgba(26,38,77,.98), rgba(22,32,67,.97), rgba(14,21,47,.99));
   --tpl-gradient-aurora:     linear-gradient(180deg, var(--tpl-indigo-400), var(--tpl-violet-400), var(--tpl-sky-400));
   --tpl-gradient-success:    linear-gradient(135deg, var(--tpl-success-500), var(--tpl-success-600));
   --tpl-gradient-danger:     linear-gradient(135deg, var(--tpl-danger-500), var(--tpl-danger-600));
   --tpl-gradient-warning:    linear-gradient(135deg, var(--tpl-warning-500), var(--tpl-warning-600));
   --tpl-gradient-edge:       linear-gradient(90deg, transparent, var(--tpl-violet-500), var(--tpl-indigo-400), transparent);
 
-  /* ── Semantic — Success ── */
-  --tpl-success-50:  #f0fdf4;
-  --tpl-success-100: #dcfce7;
-  --tpl-success-200: #bbf7d0;
-  --tpl-success-300: #86efac;
-  --tpl-success-400: #4ade80;
-  --tpl-success-500: #22c55e;
-  --tpl-success-600: #16a34a;
-  --tpl-success-700: #15803d;
-  --tpl-success-800: #166534;
+  /* ── Semantic — Success (emerald) ── */
+  --tpl-success-50:  #ecfdf5;
+  --tpl-success-100: #d1fae5;
+  --tpl-success-200: #a7f3d0;
+  --tpl-success-300: #6ee7b7;
+  --tpl-success-400: #34d399;
+  --tpl-success-500: #10b981;
+  --tpl-success-600: #059669;
+  --tpl-success-700: #047857;
+  --tpl-success-800: #065f46;
 
   /* ── Semantic — Warning ── */
   --tpl-warning-50:  #fffbeb;
@@ -145,38 +147,38 @@
   --tpl-warning-700: #b45309;
   --tpl-warning-800: #92400e;
 
-  /* ── Semantic — Danger ── */
-  --tpl-danger-50:  #fef2f2;
-  --tpl-danger-100: #fee2e2;
-  --tpl-danger-200: #fecaca;
-  --tpl-danger-300: #fca5a5;
-  --tpl-danger-400: #f87171;
-  --tpl-danger-500: #ef4444;
-  --tpl-danger-600: #dc2626;
-  --tpl-danger-700: #b91c1c;
-  --tpl-danger-800: #991b1b;
+  /* ── Semantic — Danger (rose) ── */
+  --tpl-danger-50:  #fff1f2;
+  --tpl-danger-100: #ffe4e6;
+  --tpl-danger-200: #fecdd3;
+  --tpl-danger-300: #fda4af;
+  --tpl-danger-400: #fb7185;
+  --tpl-danger-500: #f43f5e;
+  --tpl-danger-600: #e11d48;
+  --tpl-danger-700: #be123c;
+  --tpl-danger-800: #9f1239;
 
-  /* ── Semantic — Info (warm sky-tinted) ── */
-  --tpl-info-50:  #f0f9ff;
-  --tpl-info-100: #e0f2fe;
-  --tpl-info-200: #bae6fd;
-  --tpl-info-300: #7dd3fc;
-  --tpl-info-400: #38bdf8;
-  --tpl-info-500: #0ea5e9;
-  --tpl-info-600: #0284c7;
-  --tpl-info-700: #0369a1;
+  /* ── Semantic — Info (steel-teal, matches sky) ── */
+  --tpl-info-50:  #eefaff;
+  --tpl-info-100: #d7f3ff;
+  --tpl-info-200: #b8e9ff;
+  --tpl-info-300: #86d9fc;
+  --tpl-info-400: #46c0f0;
+  --tpl-info-500: #1da3d8;
+  --tpl-info-600: #0884b6;
+  --tpl-info-700: #086c96;
 
-  /* ── Neutrals (Lavender-Slate — warm-cool hybrid) ── */
-  --tpl-slate-50:  #f7f8fc;
-  --tpl-slate-100: #eef0f7;
-  --tpl-slate-200: #dde2ee;
-  --tpl-slate-300: #c5cde0;
-  --tpl-slate-400: #8f9bba;
-  --tpl-slate-500: #5f6d8e;
-  --tpl-slate-600: #434e6a;
-  --tpl-slate-700: #303952;
-  --tpl-slate-800: #1c2438;
-  --tpl-slate-900: #0e1322;
+  /* ── Neutrals (Steel-Slate — professional cool grey) ── */
+  --tpl-slate-50:  #f8f9fb;
+  --tpl-slate-100: #f0f2f6;
+  --tpl-slate-200: #e3e7ee;
+  --tpl-slate-300: #cdd3de;
+  --tpl-slate-400: #98a2b8;
+  --tpl-slate-500: #6a7590;
+  --tpl-slate-600: #4d586e;
+  --tpl-slate-700: #373f52;
+  --tpl-slate-800: #212836;
+  --tpl-slate-900: #111620;
 
   /* ── Surface & Background ── */
   --tpl-bg:          var(--tpl-slate-100);
@@ -188,7 +190,7 @@
   --tpl-border-light:  var(--tpl-slate-100);
   --tpl-border:        var(--tpl-slate-200);
   --tpl-border-strong: var(--tpl-slate-300);
-  --tpl-border-accent: rgba(51, 102, 255, .2);
+  --tpl-border-accent: rgba(53, 112, 240, .2);
   --tpl-border-focus:  var(--tpl-blue-500);
 
   /* ── Text ── */
@@ -225,8 +227,8 @@
   --tpl-shadow-md:   0 4px 14px rgba(0, 0, 0, .08);
   --tpl-shadow-lg:   0 8px 24px rgba(0, 0, 0, .1);
   --tpl-shadow-xl:   0 16px 48px rgba(0, 0, 0, .12);
-  --tpl-shadow-glow-blue:   0 0 0 3.5px rgba(51, 102, 255, .12), 0 1px 3px rgba(0, 0, 0, .04);
-  --tpl-shadow-glow-indigo: 0 0 0 4px rgba(107, 66, 255, .14);
+  --tpl-shadow-glow-blue:   0 0 0 3.5px rgba(53, 112, 240, .14), 0 1px 3px rgba(0, 0, 0, .04);
+  --tpl-shadow-glow-indigo: 0 0 0 4px rgba(112, 80, 232, .16);
 
   /* ══ TRANSITIONS ══════════════════════════════════════════════════════ */
   --tpl-ease-default: cubic-bezier(.4, 0, .2, 1);
@@ -259,37 +261,37 @@
   --tpl-glass-border-strong: rgba(255, 255, 255, .2);
   --tpl-glass-blur:   blur(12px);
 
-  /* ═══ SIDEBAR TOKENS (Fusion v7.0) ══════════════════════════════════════════ */
+  /* ═══ SIDEBAR TOKENS (Prism v8.0) ══════════════════════════════════════════ */
   --tpl-sidebar-width:       260px;
   --tpl-sidebar-collapsed:   64px;
   --tpl-sidebar-bg:          var(--tpl-gradient-sidebar);
-  --tpl-sidebar-text:        #e0e4f0;
-  --tpl-sidebar-text-faint:  rgba(210,215,232,.42);
-  --tpl-sidebar-hover:       rgba(107, 66, 255, .14);
-  --tpl-sidebar-active:      linear-gradient(135deg, rgba(107,66,255,.20), rgba(166,81,245,.16), rgba(107,66,255,.12));
+  --tpl-sidebar-text:        #e2e6f0;
+  --tpl-sidebar-text-faint:  rgba(214,218,234,.40);
+  --tpl-sidebar-hover:       rgba(112, 80, 232, .14);
+  --tpl-sidebar-active:      linear-gradient(135deg, rgba(112,80,232,.22), rgba(168,106,219,.16), rgba(112,80,232,.12));
   --tpl-sidebar-accent:      var(--tpl-gradient-aurora);
-  --tpl-sidebar-divider:     rgba(166, 81, 245, .14);
-  --tpl-sidebar-glow:        rgba(166, 81, 245, .12);
+  --tpl-sidebar-divider:     rgba(168, 106, 219, .14);
+  --tpl-sidebar-glow:        rgba(168, 106, 219, .12);
   --tpl-sidebar-blur:        none;
 
-  /* ═══ NAVBAR TOKENS (Fusion v7.0) ══════════════════════════════════════════ */
+  /* ═══ NAVBAR TOKENS (Prism v8.0) ══════════════════════════════════════════ */
   --tpl-navbar-height:       54px;
   --tpl-navbar-bg:           var(--tpl-gradient-navbar);
   --tpl-navbar-blur:         blur(24px) saturate(1.6);
-  --tpl-navbar-border:       rgba(166, 81, 245, .14);
-  --tpl-navbar-text:         #d0d6e6;
+  --tpl-navbar-border:       rgba(168, 106, 219, .14);
+  --tpl-navbar-text:         #d2d8e8;
   --tpl-navbar-text-hover:   var(--tpl-violet-300);
 
   /* ═══ OVERLAY TOKENS (structured rgba) ═══════════════════════════════════ */
-  --tpl-overlay-indigo-4:    rgba(107,66,255,.04);
-  --tpl-overlay-indigo-6:    rgba(107,66,255,.06);
-  --tpl-overlay-indigo-12:   rgba(107,66,255,.12);
-  --tpl-overlay-indigo-15:   rgba(107,66,255,.15);
-  --tpl-overlay-indigo-20:   rgba(107,66,255,.20);
-  --tpl-overlay-indigo-25:   rgba(107,66,255,.25);
-  --tpl-overlay-violet-10:   rgba(166,81,245,.10);
-  --tpl-overlay-violet-12:   rgba(166,81,245,.12);
-  --tpl-overlay-violet-14:   rgba(166,81,245,.14);
+  --tpl-overlay-indigo-4:    rgba(112,80,232,.04);
+  --tpl-overlay-indigo-6:    rgba(112,80,232,.06);
+  --tpl-overlay-indigo-12:   rgba(112,80,232,.12);
+  --tpl-overlay-indigo-15:   rgba(112,80,232,.15);
+  --tpl-overlay-indigo-20:   rgba(112,80,232,.20);
+  --tpl-overlay-indigo-25:   rgba(112,80,232,.25);
+  --tpl-overlay-violet-10:   rgba(168,106,219,.10);
+  --tpl-overlay-violet-12:   rgba(168,106,219,.12);
+  --tpl-overlay-violet-14:   rgba(168,106,219,.14);
   --tpl-overlay-white-4:     rgba(255,255,255,.04);
   --tpl-overlay-white-6:     rgba(255,255,255,.06);
   --tpl-overlay-white-8:     rgba(255,255,255,.08);
@@ -298,10 +300,10 @@
   --tpl-overlay-white-20:    rgba(255,255,255,.20);
   --tpl-overlay-black-4:     rgba(0,0,0,.04);
   --tpl-overlay-black-6:     rgba(0,0,0,.06);
-  --tpl-overlay-blue-10:     rgba(51,102,255,.10);
-  --tpl-overlay-blue-15:     rgba(51,102,255,.15);
-  --tpl-overlay-blue-20:     rgba(51,102,255,.20);
-  --tpl-overlay-blue-25:     rgba(51,102,255,.25);
+  --tpl-overlay-blue-10:     rgba(53,112,240,.10);
+  --tpl-overlay-blue-15:     rgba(53,112,240,.15);
+  --tpl-overlay-blue-20:     rgba(53,112,240,.20);
+  --tpl-overlay-blue-25:     rgba(53,112,240,.25);
 
   /* ══ INPUT TOKENS ═════════════════════════════════════════════════════ */
   --tpl-input-bg:         var(--tpl-surface);
@@ -316,8 +318,8 @@
   /* ══ BUTTON TOKENS ════════════════════════════════════════════════════ */
   --tpl-btn-primary-bg:     var(--tpl-accent-gradient);
   --tpl-btn-primary-bg-hover: var(--tpl-accent-gradient-vivid);
-  --tpl-btn-primary-shadow: 0 4px 14px rgba(51, 102, 255, .22), 0 1px 3px rgba(0, 0, 0, .05);
-  --tpl-btn-primary-shadow-hover: 0 8px 24px rgba(51, 102, 255, .32), 0 2px 6px rgba(0, 0, 0, .06);
+  --tpl-btn-primary-shadow: 0 4px 14px rgba(53, 112, 240, .22), 0 1px 3px rgba(0, 0, 0, .05);
+  --tpl-btn-primary-shadow-hover: 0 8px 24px rgba(53, 112, 240, .32), 0 2px 6px rgba(0, 0, 0, .06);
   --tpl-btn-radius:         var(--tpl-radius-lg);
 
   /* ══ CARD TOKENS ══════════════════════════════════════════════════════ */
@@ -331,7 +333,7 @@
   --tpl-hero-bg:       var(--tpl-brand-gradient-135);
   --tpl-hero-radius:   var(--tpl-radius-xl);
   --tpl-hero-text:     var(--tpl-text-inverse);
-  --tpl-hero-glow:     radial-gradient(circle, rgba(107, 66, 255, .18) 0%, transparent 70%);
+  --tpl-hero-glow:     radial-gradient(circle, rgba(112, 80, 232, .20) 0%, transparent 70%);
 
   /* ══ PILL / BADGE TOKENS ══════════════════════════════════════════════ */
   --tpl-pill-radius:   var(--tpl-radius-full);
@@ -368,7 +370,7 @@ body {
 
 /* ── Selection ─────────────────────────────────────────────────────────── */
 ::selection {
-  background: rgba(51, 102, 255, .18);
+  background: rgba(53, 112, 240, .20);
   color: var(--tpl-text);
 }
 
@@ -458,7 +460,7 @@ body {
 .tpl-version-badge--accent {
   background: var(--tpl-indigo-50);
   color: var(--tpl-indigo-600);
-  border: 1px solid rgba(107, 66, 255, .12);
+  border: 1px solid rgba(112, 80, 232, .12);
 }
 .tpl-version-badge--dark {
   background: rgba(255, 255, 255, .1);
