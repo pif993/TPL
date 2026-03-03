@@ -1565,11 +1565,22 @@ class OTAFileRegistry:
 
         old_build = vdata.get("build", 0)
         vdata["version"] = new_version
-        vdata["build"] = old_build + 1
+
+        # Build number: YYYYMMDD + NNN (daily sequence)
+        # e.g. 20260303001, 20260303002, ...
+        now = datetime.now()
+        date_prefix = int(now.strftime("%Y%m%d")) * 1000
+        if old_build // 1000 == date_prefix // 1000:
+            # Same day — increment sequence
+            vdata["build"] = old_build + 1
+        else:
+            # New day — reset sequence
+            vdata["build"] = date_prefix + 1
+
         if codename:
             vdata["codename"] = codename
         vdata["full_version"] = f"{new_version}+{vdata['build']}"
-        vdata["released_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        vdata["released_at"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         # Write to project root
         with open(version_path, "w") as f:
@@ -1703,7 +1714,10 @@ class OTAFileRegistry:
         parts = list(_version_tuple(ver))
         while len(parts) < 3:
             parts.append(0)
-        if bump == "major":
+        if bump == "build":
+            # Keep same semver — only build number changes
+            pass
+        elif bump == "major":
             parts[0] += 1; parts[1] = 0; parts[2] = 0
         elif bump == "minor":
             parts[1] += 1; parts[2] = 0
@@ -1788,9 +1802,10 @@ class OTAFileRegistry:
                 break  # one is enough to block
 
         # ── G-08: Version tag not duplicated in history ──────────
+        # For 'build' bump, allow same semver (only build number changes)
         history = self._data.get("history", [])
         past_versions = {h.get("version") for h in history}
-        if new_version in past_versions:
+        if new_version in past_versions and bump != "build":
             blocking.append({"id": "G-08", "msg": f"Versione {new_version} già rilasciata in precedenza."})
 
         # ── G-09: No secrets in staged files ─────────────────────
@@ -6087,9 +6102,9 @@ echo "=== Security smoke completato ==="
     class RegistryReleaseRequest(BaseModel):
         codename: Optional[str] = Field(None, max_length=50, description="Release codename")
         bump: str = Field(
-            default="patch",
-            pattern=r"^(patch|minor|major)$",
-            description="Version bump type",
+            default="build",
+            pattern=r"^(build|patch|minor|major)$",
+            description="Version bump type: 'build' (increment build only, keep semver), 'patch', 'minor', 'major'",
         )
 
     @app.get("/ota/registry")

@@ -338,8 +338,8 @@
   --tpl-sidebar-width:       260px;
   --tpl-sidebar-collapsed:   64px;
   --tpl-sidebar-bg:          var(--tpl-gradient-sidebar);
-  --tpl-sidebar-text:        #E0DCD2;
-  --tpl-sidebar-text-faint:  rgba(208,204,196,.36);
+  --tpl-sidebar-text:        #E8E4DC;   /* brighter warm champagne for readability */
+  --tpl-sidebar-text-faint:  rgba(208,204,196,.45);
   --tpl-sidebar-hover:       rgba(196, 162, 69, .12);
   --tpl-sidebar-active:      linear-gradient(135deg, rgba(196,162,69,.18), rgba(138,96,176,.10), rgba(196,162,69,.06));
   --tpl-sidebar-accent:      var(--tpl-gradient-aurora);
@@ -352,8 +352,8 @@
   --tpl-navbar-bg:           var(--tpl-gradient-navbar);
   --tpl-navbar-blur:         blur(24px) saturate(1.6);
   --tpl-navbar-border:       rgba(196, 162, 69, .10);
-  --tpl-navbar-text:         #D8D4CA;
-  --tpl-navbar-text-hover:   var(--tpl-indigo-300);
+  --tpl-navbar-text:         #E0DCD2;   /* brighter for readability */
+  --tpl-navbar-text-hover:   rgba(212,186,102,.95);  /* gold hover */
 
   /* ═══ OVERLAY TOKENS ═══════════════════════════════════════════════════ */
   --tpl-overlay-indigo-4:    rgba(196,162,69,.04);
