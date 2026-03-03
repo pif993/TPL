@@ -1,9 +1,15 @@
 # TPL — Linee Guida Vincolanti per Sviluppo Aggiornamenti
 
-> **Versione:** 2.0 · **Data:** 2 marzo 2026 · **Stato:** VINCOLANTE  
+> **Versione:** 3.0 · **Data:** 3 marzo 2026 · **Stato:** VINCOLANTE  
 > Questo documento definisce le regole obbligatorie per lo sviluppo, il rilascio
 > e la distribuzione di aggiornamenti nella piattaforma TPL. Ogni violazione
 > viene bloccata automaticamente dalla pipeline OTA.
+>
+> **Changelog v3.0:** Aggiornamento a Design Token System v4.0 "Obsidian".
+> Rimozione totale CDN — tutti gli asset (Bootstrap CSS/JS/Icons, font Inter)
+> serviti localmente da `/vendor/` e `/fonts/`. Nuova palette Obsidian:
+> Sapphire (primary), Amethyst (secondary), Orchid (tertiary), Arctic Cyan (info).
+> CSP policy `'self'` only. Aggiunta regola CDN-free vincolante.
 >
 > **Changelog v2.0:** Aggiunta sezione Design Token System, regole CSS
 > token-first, governance palette custom, branch fallback GitHub,
@@ -66,7 +72,7 @@ MAJOR.MINOR.PATCH[+BUILD]
   "version": "3.6.0",           // ← OBBLIGATORIO, SemVer
   "build": 20260301003,         // ← OBBLIGATORIO, incrementale
   "channel": "stable",          // ← OBBLIGATORIO: "stable" | "beta" | "dev"
-  "codename": "Fusion",         // ← OBBLIGATORIO per minor/major
+  "codename": "Obsidian",       // ← OBBLIGATORIO per minor/major
   "full_version": "3.6.0+20260301003",
   "released_at": "2026-03-02T21:02:05Z",
   "min_upgrade_from": "2.0.0",  // ← Versione minima da cui si può aggiornare
@@ -378,7 +384,7 @@ Ogni modifica DEVE essere accompagnata da:
 
 ### 7.6 Design Token System — Regole CSS (VINCOLANTI)
 
-> **Riferimento:** `infra/web/design-tokens.css` v2.0 (Fusion v7.0)
+> **Riferimento:** `infra/web/design-tokens.css` v4.0 (Obsidian v4.0)
 
 #### 7.6.1 Regola fondamentale: Token-First
 
@@ -408,16 +414,16 @@ Ogni modifica ai valori cromatici DEVE avvenire SOLO in `design-tokens.css`.
 
 | Scala | Ruolo | Token Prefix |
 |-------|-------|--------------|
-| Azure | Primary Action (bottoni, link, focus) | `--tpl-blue-*` |
+| Sapphire | Primary Action (bottoni, link, focus) | `--tpl-blue-*` |
 | Amethyst | Secondary Action (accenti, badge) | `--tpl-indigo-*` |
 | Orchid | Tertiary (gradients, glow) | `--tpl-violet-*` |
-| Cerulean | Info accent (badge info, sky) | `--tpl-sky-*` |
-| Lavender-Slate | Neutrali (testi, bordi, bg) | `--tpl-slate-*` |
-| Dark Surface | Sidebar/Navbar profondità | `--tpl-dark-*` |
-| Success | Stato positivo | `--tpl-success-*` |
-| Warning | Stato attenzione | `--tpl-warning-*` |
-| Danger | Stato errore/critico | `--tpl-danger-*` |
-| Info | Stato informativo | `--tpl-info-*` |
+| Arctic Cyan | Info accent (badge info, sky) | `--tpl-sky-*` |
+| Platinum-Slate | Neutrali (testi, bordi, bg) | `--tpl-slate-*` |
+| Obsidian Carbon | Sidebar/Navbar profondità | `--tpl-dark-*` |
+| Emerald | Stato positivo | `--tpl-success-*` |
+| Amber-Gold | Stato attenzione | `--tpl-warning-*` |
+| Crimson-Rose | Stato errore/critico | `--tpl-danger-*` |
+| Arctic Cyan | Stato informativo | `--tpl-info-*` |
 
 #### 7.6.3 Gradients — Token Compositi
 
@@ -433,9 +439,9 @@ background: linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
 ```
 
 Token compositi disponibili:
-- `--tpl-accent-gradient` — Azure → Amethyst (135deg)
-- `--tpl-accent-gradient-vivid` — Azure-600 → Amethyst-600
-- `--tpl-accent-gradient-soft` — Azure-400 → Orchid-400
+- `--tpl-accent-gradient` — Sapphire → Amethyst (135deg)
+- `--tpl-accent-gradient-vivid` — Sapphire-600 → Amethyst-600
+- `--tpl-accent-gradient-soft` — Sapphire-400 → Orchid-400
 - `--tpl-gradient-sidebar` — Dark surface sidebar (170deg)
 - `--tpl-gradient-navbar` — Dark surface navbar (105deg)
 - `--tpl-gradient-aurora` — Amethyst → Orchid → Cerulean (180deg)
@@ -467,7 +473,44 @@ Overlay disponibili: `indigo-{4,6,12,15,20,25}`, `violet-{10,12,14}`,
 | Colore Tailwind default usato | **WARNING** | `GUIDELINE_WARN: usare palette custom` |
 | Modifica design-tokens.css senza review | **BLOCCANTE** | Non rilasciabile |
 
-### 7.7 Aggiornamento Remoto — Branch Fallback
+### 7.7 Policy CDN-Free (VINCOLANTE)
+
+> **Da Obsidian v4.0 in poi, ZERO dipendenze CDN.**
+
+Tutti gli asset di terze parti DEVONO essere serviti localmente:
+
+| Asset | Path locale | Dimensione |
+|-------|-------------|------------|
+| Bootstrap CSS | `/vendor/bootstrap/css/bootstrap.min.css` | 228 KB |
+| Bootstrap JS | `/vendor/bootstrap/js/bootstrap.bundle.min.js` | 79 KB |
+| Bootstrap Icons CSS | `/vendor/bootstrap-icons/font/bootstrap-icons.min.css` | 84 KB |
+| Bootstrap Icons WOFF2 | `/vendor/bootstrap-icons/font/fonts/bootstrap-icons.woff2` | 128 KB |
+| Inter Font (latin) | `/fonts/inter/inter-latin.woff2` | 48 KB |
+| Inter Font (latin-ext) | `/fonts/inter/inter-latin-ext.woff2` | 85 KB |
+
+**Regole:**
+- **VIETATO** inserire URL `cdn.jsdelivr.net`, `fonts.googleapis.com`, o qualsiasi CDN esterno
+- **VIETATO** caricare script/css da domini esterni
+- CSP (Content-Security-Policy) configurato a `'self'` only — nessun dominio esterno ammesso
+- Ogni aggiornamento di librerie (`/vendor/`) deve essere scaricato, verificato e committato localmente
+- Cache headers per `/vendor/` e `/fonts/`: `immutable, max-age=31536000` (1 anno)
+- `@font-face` definiti in `design-tokens.css` con path relativi a `/fonts/`
+
+```nginx
+# ✅ CORRETTO — nginx.conf
+location /vendor/ { expires max; add_header Cache-Control "public, immutable, max-age=31536000"; }
+location /fonts/  { expires max; add_header Cache-Control "public, immutable, max-age=31536000"; }
+```
+
+```html
+<!-- ✅ CORRETTO -->
+<link href="/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- ❌ VIETATO -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet">
+```
+
+### 7.8 Aggiornamento Remoto — Branch Fallback
 
 Quando un tag OTA non esiste sul repository GitHub (es. release locale),
 il sistema di download automaticamente:
@@ -607,6 +650,6 @@ L'engine `ota_update_engine.py` è un file protetto. Per aggiornarlo:
 
 ---
 
-> **Documento vincolante** — v2.0, aggiornato il 2 marzo 2026  
+> **Documento vincolante** — v3.0, aggiornato il 3 marzo 2026  
 > Enforcement automatico tramite `_validate_release_guidelines()` nell'OTA engine.  
-> Design Token System v2.0, palette Fusion v7.0, branch fallback GitHub.
+> Design Token System v4.0, palette Obsidian v4.0, CDN-free policy, branch fallback GitHub.

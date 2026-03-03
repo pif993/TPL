@@ -1,10 +1,10 @@
 {
-  "version": "3.6.4",
-  "build": 20260301007,
+  "version": "4.0.0",
+  "build": 20260301011,
   "channel": "stable",
-  "codename": "Fusion",
-  "full_version": "3.6.4+20260301007",
-  "released_at": "2026-03-03T10:12:35Z",
+  "codename": "Obsidian",
+  "full_version": "4.0.0+20260301011",
+  "released_at": "2026-03-03T10:59:19Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
 }

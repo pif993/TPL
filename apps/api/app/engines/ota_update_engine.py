@@ -487,7 +487,18 @@ class OTASecurityManager:
 
             # Hidden files (unusual in releases)
             if fpath.name.startswith(".") and fpath.is_file():
-                if fpath.name not in (".gitignore", ".dockerignore", ".env.example"):
+                _KNOWN_HIDDEN = (
+                    ".gitignore", ".dockerignore", ".env.example",
+                    ".env", ".env.bak", ".bootstrapped",
+                )
+                _KNOWN_HIDDEN_PREFIXES = (
+                    ".tpl_", ".ota_manifest", ".env.bak.",
+                )
+                is_known = (
+                    fpath.name in _KNOWN_HIDDEN
+                    or any(fpath.name.startswith(p) for p in _KNOWN_HIDDEN_PREFIXES)
+                )
+                if not is_known:
                     scan["hidden_files"].append(rel)
                     risk += 2
 
@@ -5822,6 +5833,8 @@ echo "=== Security smoke completato ==="
                     "compose.d/40-api.yml",
                     "run.sh",
                     ".env",
+                    # Build artifacts (not project files)
+                    "TPL.tar.gz",
                 }
                 if rel_path in _PROTECTED_FILES:
                     skipped_files.append(rel_path)
@@ -5832,9 +5845,32 @@ echo "=== Security smoke completato ==="
                 try:
                     os.makedirs(os.path.dirname(dest), exist_ok=True)
                     # Use raw file copy (not copy2) to avoid EPERM from metadata
-                    # preservation when running without CAP_FOWNER in container
-                    with open(src, "rb") as fsrc, open(dest, "wb") as fdst:
-                        fdst.write(fsrc.read())
+                    # preservation when running without CAP_FOWNER in container.
+                    # If the destination is root-owned (e.g. compose.d/20-vault.yml),
+                    # open(dest, "wb") fails with PermissionError.  Fallback:
+                    # write to a temp file in the same dir, then os.replace() which
+                    # only requires write permission on the *directory*.
+                    try:
+                        with open(src, "rb") as fsrc, open(dest, "wb") as fdst:
+                            fdst.write(fsrc.read())
+                    except PermissionError:
+                        import tempfile
+                        dest_dir = os.path.dirname(dest)
+                        fd, tmp_path = tempfile.mkstemp(
+                            dir=dest_dir, prefix=".ota_tmp_"
+                        )
+                        try:
+                            with open(src, "rb") as fsrc:
+                                os.write(fd, fsrc.read())
+                            os.close(fd)
+                            fd = None
+                            os.replace(tmp_path, dest)
+                        except Exception:
+                            if fd is not None:
+                                os.close(fd)
+                            if os.path.exists(tmp_path):
+                                os.unlink(tmp_path)
+                            raise
                     applied_files.append(rel_path)
 
                     # Categorize for restart logic
