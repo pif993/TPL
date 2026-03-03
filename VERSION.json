@@ -1,10 +1,10 @@
 {
-  "version": "4.0.0",
-  "build": 20260301011,
+  "version": "5.0.0",
+  "build": 20260301012,
   "channel": "stable",
-  "codename": "Obsidian",
-  "full_version": "4.0.0+20260301011",
-  "released_at": "2026-03-03T10:59:19Z",
+  "codename": "Sovereign",
+  "full_version": "5.0.0+20260301012",
+  "released_at": "2026-03-03T11:37:17Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
 }

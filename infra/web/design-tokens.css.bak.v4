@@ -1,0 +1,474 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TPL FORTRESS — Design Token System v4.0  (Obsidian)
+   ═══════════════════════════════════════════════════════════════════════════
+   Single source of truth for the entire platform visual language.
+   100% local — ZERO CDN dependencies. All fonts self-hosted.
+   
+   Obsidian v4.0 — Luxury dark-matter palette. Deep carbon surfaces,
+   platinum neutrals, sapphire-amethyst accent axis, liquid-gold highlights.
+   Professional-grade chromatic system — zero Tailwind defaults.
+   
+   Usage:  <link href="/design-tokens.css" rel="stylesheet">  (BEFORE styles.css)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Self-Hosted Fonts — zero external requests ─────────────────────── */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/inter/inter-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+                 U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+                 U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+                 U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/inter/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                 U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+                 U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+                 U+FFFD;
+}
+
+:root {
+
+  /* ══ TYPOGRAPHY ════════════════════════════════════════════════════════ */
+  --tpl-font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --tpl-font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, 'Liberation Mono', monospace;
+
+  --tpl-fs-xs:    .65rem;
+  --tpl-fs-sm:    .75rem;
+  --tpl-fs-base:  .85rem;
+  --tpl-fs-md:    .92rem;
+  --tpl-fs-lg:    1.1rem;
+  --tpl-fs-xl:    1.35rem;
+  --tpl-fs-2xl:   1.65rem;
+  --tpl-fs-3xl:   2rem;
+  --tpl-fs-display: 2.5rem;
+
+  --tpl-fw-light:    300;
+  --tpl-fw-regular:  400;
+  --tpl-fw-medium:   500;
+  --tpl-fw-semibold: 600;
+  --tpl-fw-bold:     700;
+  --tpl-fw-black:    800;
+
+  --tpl-leading-tight:  1.15;
+  --tpl-leading-snug:   1.35;
+  --tpl-leading-normal: 1.55;
+  --tpl-leading-loose:  1.75;
+
+  --tpl-tracking-tight:  -.03em;
+  --tpl-tracking-normal: .01em;
+  --tpl-tracking-wide:   .04em;
+  --tpl-tracking-wider:  .08em;
+  --tpl-tracking-luxury: .12em;
+
+  /* ══ COLOR PALETTE — Obsidian v4.0 ════════════════════════════════════ */
+
+  --tpl-brand-gradient:     linear-gradient(160deg, #0c1a3d 0%, #1a0f42 45%, #0a0c14 100%);
+  --tpl-brand-gradient-135: linear-gradient(135deg, #0c1a3d 0%, #1a0f42 50%, #0a0c14 100%);
+  --tpl-brand-dark:         #060810;
+  --tpl-brand-deep:         #0a0c14;
+  --tpl-brand-navy:         #0c1a3d;
+  --tpl-brand-indigo:       #1a0f42;
+
+  /* ── Dark Surface Scale (obsidian carbon) ── */
+  --tpl-dark-950:  #040608;
+  --tpl-dark-900:  #070a12;
+  --tpl-dark-850:  #0a0e1a;
+  --tpl-dark-800:  #0d1222;
+  --tpl-dark-750:  #10162c;
+  --tpl-dark-700:  #131a36;
+  --tpl-dark-650:  #161e40;
+  --tpl-dark-600:  #1c264e;
+  --tpl-dark-500:  #24305e;
+
+  /* ── Primary — Sapphire ── */
+  --tpl-blue-50:   #e8f0ff;
+  --tpl-blue-100:  #d0e0ff;
+  --tpl-blue-200:  #a8c4ff;
+  --tpl-blue-300:  #7aa4ff;
+  --tpl-blue-400:  #4d82f8;
+  --tpl-blue-500:  #2d64ec;
+  --tpl-blue-600:  #1a4fd4;
+  --tpl-blue-700:  #1240b0;
+  --tpl-blue-800:  #103490;
+  --tpl-blue-900:  #0c2468;
+
+  /* ── Secondary — Amethyst ── */
+  --tpl-indigo-50:  #eeeaff;
+  --tpl-indigo-100: #dcd4ff;
+  --tpl-indigo-200: #c0b0ff;
+  --tpl-indigo-300: #a18aff;
+  --tpl-indigo-400: #836af4;
+  --tpl-indigo-500: #6548e5;
+  --tpl-indigo-600: #5036c8;
+  --tpl-indigo-700: #3f2aa6;
+  --tpl-indigo-800: #332288;
+  --tpl-indigo-900: #261868;
+
+  /* ── Tertiary — Orchid ── */
+  --tpl-violet-50:  #f8f2ff;
+  --tpl-violet-100: #efe2ff;
+  --tpl-violet-200: #dfc8ff;
+  --tpl-violet-300: #c9a4fd;
+  --tpl-violet-400: #b280f0;
+  --tpl-violet-500: #9a5edb;
+  --tpl-violet-600: #8044c0;
+  --tpl-violet-700: #6a359e;
+  --tpl-violet-800: #562c80;
+  --tpl-violet-900: #432264;
+
+  /* ── Accent — Arctic Cyan ── */
+  --tpl-sky-50:   #e6f7ff;
+  --tpl-sky-100:  #ccefff;
+  --tpl-sky-200:  #99ddff;
+  --tpl-sky-300:  #66c8fa;
+  --tpl-sky-400:  #38b0ed;
+  --tpl-sky-500:  #1294d4;
+  --tpl-sky-600:  #0a78b4;
+  --tpl-sky-700:  #066094;
+
+  /* ── Accent Gradients ── */
+  --tpl-accent-gradient:       linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
+  --tpl-accent-gradient-vivid: linear-gradient(135deg, var(--tpl-blue-400), var(--tpl-indigo-400));
+  --tpl-accent-gradient-soft:  linear-gradient(135deg, var(--tpl-blue-300), var(--tpl-violet-400));
+  --tpl-accent-gradient-luxury: linear-gradient(135deg, var(--tpl-indigo-400), var(--tpl-violet-400), var(--tpl-sky-400));
+
+  /* ── Composite Gradient Tokens ── */
+  --tpl-gradient-sidebar:  linear-gradient(170deg, var(--tpl-dark-700), var(--tpl-dark-750), var(--tpl-dark-850), var(--tpl-dark-900));
+  --tpl-gradient-navbar:   linear-gradient(105deg, rgba(19,26,54,.98), rgba(13,18,34,.97), rgba(10,12,20,.99));
+  --tpl-gradient-aurora:   linear-gradient(180deg, var(--tpl-indigo-400), var(--tpl-violet-400), var(--tpl-sky-400));
+  --tpl-gradient-success:  linear-gradient(135deg, var(--tpl-success-500), var(--tpl-success-600));
+  --tpl-gradient-danger:   linear-gradient(135deg, var(--tpl-danger-500), var(--tpl-danger-600));
+  --tpl-gradient-warning:  linear-gradient(135deg, var(--tpl-warning-500), var(--tpl-warning-600));
+  --tpl-gradient-edge:     linear-gradient(90deg, transparent, var(--tpl-violet-500), var(--tpl-indigo-400), transparent);
+  --tpl-gradient-shimmer:  linear-gradient(110deg, transparent 25%, rgba(255,255,255,.04) 37%, transparent 63%);
+  --tpl-gradient-hero:     linear-gradient(135deg, var(--tpl-dark-800) 0%, var(--tpl-dark-700) 30%, var(--tpl-dark-800) 70%, var(--tpl-dark-850) 100%);
+
+  /* ── Semantic — Success (emerald) ── */
+  --tpl-success-50:  #e8faf3;
+  --tpl-success-100: #c8f5e3;
+  --tpl-success-200: #98ecc8;
+  --tpl-success-300: #5cdea6;
+  --tpl-success-400: #2cc882;
+  --tpl-success-500: #0eb068;
+  --tpl-success-600: #089254;
+  --tpl-success-700: #067442;
+  --tpl-success-800: #045c36;
+
+  /* ── Semantic — Warning (amber-gold) ── */
+  --tpl-warning-50:  #fff9e6;
+  --tpl-warning-100: #fff0bf;
+  --tpl-warning-200: #ffe080;
+  --tpl-warning-400: #f4be1e;
+  --tpl-warning-500: #e8a608;
+  --tpl-warning-600: #cc8c04;
+  --tpl-warning-700: #a87004;
+  --tpl-warning-800: #885a06;
+
+  /* ── Semantic — Danger (crimson-rose) ── */
+  --tpl-danger-50:  #fff0f2;
+  --tpl-danger-100: #ffd9de;
+  --tpl-danger-200: #ffb0be;
+  --tpl-danger-300: #ff8098;
+  --tpl-danger-400: #f45070;
+  --tpl-danger-500: #e02850;
+  --tpl-danger-600: #c41840;
+  --tpl-danger-700: #a01232;
+  --tpl-danger-800: #800e28;
+
+  /* ── Semantic — Info (arctic cyan) ── */
+  --tpl-info-50:  #e6f7ff;
+  --tpl-info-100: #ccefff;
+  --tpl-info-200: #99ddff;
+  --tpl-info-300: #66c8fa;
+  --tpl-info-400: #38b0ed;
+  --tpl-info-500: #1294d4;
+  --tpl-info-600: #0a78b4;
+  --tpl-info-700: #066094;
+
+  /* ── Neutrals (Platinum-Slate) ── */
+  --tpl-slate-50:  #f6f7f9;
+  --tpl-slate-100: #eceef2;
+  --tpl-slate-200: #dde0e8;
+  --tpl-slate-300: #c4c9d6;
+  --tpl-slate-400: #8e96aa;
+  --tpl-slate-500: #636d84;
+  --tpl-slate-600: #495266;
+  --tpl-slate-700: #343b4e;
+  --tpl-slate-800: #1e2332;
+  --tpl-slate-900: #0e1118;
+
+  /* ── Surface & Background ── */
+  --tpl-bg:             var(--tpl-slate-100);
+  --tpl-surface:        #ffffff;
+  --tpl-surface-alt:    var(--tpl-slate-50);
+  --tpl-surface-raised: #ffffff;
+  --tpl-surface-sunken: var(--tpl-slate-200);
+
+  /* ── Borders ── */
+  --tpl-border-light:  var(--tpl-slate-100);
+  --tpl-border:        var(--tpl-slate-200);
+  --tpl-border-strong: var(--tpl-slate-300);
+  --tpl-border-accent: rgba(45, 100, 236, .18);
+  --tpl-border-focus:  var(--tpl-blue-500);
+
+  /* ── Text ── */
+  --tpl-text:        var(--tpl-slate-800);
+  --tpl-text-sec:    var(--tpl-slate-600);
+  --tpl-text-muted:  var(--tpl-slate-500);
+  --tpl-text-faint:  var(--tpl-slate-400);
+  --tpl-text-inverse: #ffffff;
+
+  /* ══ SPACING ══════════════════════════════════════════════════════════ */
+  --tpl-sp-0:  0;
+  --tpl-sp-px: 1px;
+  --tpl-sp-1:  .25rem;
+  --tpl-sp-2:  .5rem;
+  --tpl-sp-3:  .75rem;
+  --tpl-sp-4:  1rem;
+  --tpl-sp-5:  1.25rem;
+  --tpl-sp-6:  1.5rem;
+  --tpl-sp-8:  2rem;
+  --tpl-sp-10: 2.5rem;
+  --tpl-sp-12: 3rem;
+  --tpl-sp-16: 4rem;
+
+  /* ══ BORDER RADIUS ════════════════════════════════════════════════════ */
+  --tpl-radius-xs:   .2rem;
+  --tpl-radius-sm:   .35rem;
+  --tpl-radius-md:   .5rem;
+  --tpl-radius-lg:   .65rem;
+  --tpl-radius-xl:   .85rem;
+  --tpl-radius-2xl:  1.1rem;
+  --tpl-radius-3xl:  1.5rem;
+  --tpl-radius-full: 9999px;
+
+  /* ══ SHADOWS (luxury depth) ═══════════════════════════════════════════ */
+  --tpl-shadow-xs:    0 1px 2px rgba(0, 0, 0, .05);
+  --tpl-shadow-sm:    0 1px 3px rgba(0, 0, 0, .07), 0 1px 2px rgba(0, 0, 0, .04);
+  --tpl-shadow-md:    0 4px 16px rgba(0, 0, 0, .08), 0 1px 4px rgba(0, 0, 0, .04);
+  --tpl-shadow-lg:    0 10px 32px rgba(0, 0, 0, .10), 0 2px 8px rgba(0, 0, 0, .04);
+  --tpl-shadow-xl:    0 20px 56px rgba(0, 0, 0, .14), 0 4px 16px rgba(0, 0, 0, .06);
+  --tpl-shadow-2xl:   0 32px 80px rgba(0, 0, 0, .18), 0 8px 24px rgba(0, 0, 0, .08);
+  --tpl-shadow-inner: inset 0 2px 6px rgba(0, 0, 0, .06);
+  --tpl-shadow-glow-blue:   0 0 0 3px rgba(45, 100, 236, .16), 0 2px 8px rgba(45, 100, 236, .10);
+  --tpl-shadow-glow-indigo: 0 0 0 3px rgba(101, 72, 229, .18), 0 2px 8px rgba(101, 72, 229, .10);
+  --tpl-shadow-glow-violet: 0 0 0 3px rgba(154, 94, 219, .16), 0 2px 8px rgba(154, 94, 219, .08);
+  --tpl-shadow-luxury:      0 8px 32px rgba(0, 0, 0, .12), 0 0 0 1px rgba(255, 255, 255, .06);
+
+  /* ══ TRANSITIONS ══════════════════════════════════════════════════════ */
+  --tpl-ease-default: cubic-bezier(.4, 0, .2, 1);
+  --tpl-ease-bounce:  cubic-bezier(.34, 1.56, .64, 1);
+  --tpl-ease-in:      cubic-bezier(.4, 0, 1, 1);
+  --tpl-ease-out:     cubic-bezier(0, 0, .2, 1);
+  --tpl-ease-luxury:  cubic-bezier(.22, .68, 0, 1.04);
+
+  --tpl-duration-fast:   .15s;
+  --tpl-duration-normal: .25s;
+  --tpl-duration-slow:   .4s;
+  --tpl-duration-luxury: .6s;
+
+  --tpl-transition-colors: color var(--tpl-duration-fast) var(--tpl-ease-default),
+                           background-color var(--tpl-duration-fast) var(--tpl-ease-default),
+                           border-color var(--tpl-duration-fast) var(--tpl-ease-default);
+  --tpl-transition-all:    all var(--tpl-duration-normal) var(--tpl-ease-default);
+  --tpl-transition-luxury: all var(--tpl-duration-luxury) var(--tpl-ease-luxury);
+
+  /* ══ Z-INDEX SCALE ════════════════════════════════════════════════════ */
+  --tpl-z-base:     1;
+  --tpl-z-dropdown: 100;
+  --tpl-z-sticky:   200;
+  --tpl-z-sidebar:  1040;
+  --tpl-z-backdrop: 1039;
+  --tpl-z-modal:    9999;
+
+  /* ══ GLASSMORPHISM (obsidian frost) ═══════════════════════════════════ */
+  --tpl-glass-bg:         rgba(255, 255, 255, .06);
+  --tpl-glass-bg-med:     rgba(255, 255, 255, .10);
+  --tpl-glass-bg-strong:  rgba(255, 255, 255, .16);
+  --tpl-glass-border:     rgba(255, 255, 255, .08);
+  --tpl-glass-border-strong: rgba(255, 255, 255, .18);
+  --tpl-glass-blur:       blur(16px) saturate(1.4);
+  --tpl-glass-blur-heavy: blur(32px) saturate(1.8);
+
+  /* ═══ SIDEBAR TOKENS ═══════════════════════════════════════════════════ */
+  --tpl-sidebar-width:       260px;
+  --tpl-sidebar-collapsed:   64px;
+  --tpl-sidebar-bg:          var(--tpl-gradient-sidebar);
+  --tpl-sidebar-text:        #d8dce8;
+  --tpl-sidebar-text-faint:  rgba(200,205,222,.38);
+  --tpl-sidebar-hover:       rgba(101, 72, 229, .14);
+  --tpl-sidebar-active:      linear-gradient(135deg, rgba(101,72,229,.22), rgba(154,94,219,.14), rgba(101,72,229,.10));
+  --tpl-sidebar-accent:      var(--tpl-gradient-aurora);
+  --tpl-sidebar-divider:     rgba(154, 94, 219, .12);
+  --tpl-sidebar-glow:        rgba(154, 94, 219, .10);
+  --tpl-sidebar-blur:        none;
+
+  /* ═══ NAVBAR TOKENS ═══════════════════════════════════════════════════ */
+  --tpl-navbar-height:       54px;
+  --tpl-navbar-bg:           var(--tpl-gradient-navbar);
+  --tpl-navbar-blur:         blur(24px) saturate(1.8);
+  --tpl-navbar-border:       rgba(154, 94, 219, .12);
+  --tpl-navbar-text:         #ccd2e2;
+  --tpl-navbar-text-hover:   var(--tpl-violet-300);
+
+  /* ═══ OVERLAY TOKENS ═══════════════════════════════════════════════════ */
+  --tpl-overlay-indigo-4:    rgba(101,72,229,.04);
+  --tpl-overlay-indigo-6:    rgba(101,72,229,.06);
+  --tpl-overlay-indigo-10:   rgba(101,72,229,.10);
+  --tpl-overlay-indigo-12:   rgba(101,72,229,.12);
+  --tpl-overlay-indigo-15:   rgba(101,72,229,.15);
+  --tpl-overlay-indigo-20:   rgba(101,72,229,.20);
+  --tpl-overlay-indigo-25:   rgba(101,72,229,.25);
+  --tpl-overlay-violet-6:    rgba(154,94,219,.06);
+  --tpl-overlay-violet-10:   rgba(154,94,219,.10);
+  --tpl-overlay-violet-12:   rgba(154,94,219,.12);
+  --tpl-overlay-violet-14:   rgba(154,94,219,.14);
+  --tpl-overlay-white-4:     rgba(255,255,255,.04);
+  --tpl-overlay-white-6:     rgba(255,255,255,.06);
+  --tpl-overlay-white-8:     rgba(255,255,255,.08);
+  --tpl-overlay-white-10:    rgba(255,255,255,.10);
+  --tpl-overlay-white-12:    rgba(255,255,255,.12);
+  --tpl-overlay-white-20:    rgba(255,255,255,.20);
+  --tpl-overlay-black-4:     rgba(0,0,0,.04);
+  --tpl-overlay-black-6:     rgba(0,0,0,.06);
+  --tpl-overlay-black-10:    rgba(0,0,0,.10);
+  --tpl-overlay-blue-10:     rgba(45,100,236,.10);
+  --tpl-overlay-blue-15:     rgba(45,100,236,.15);
+  --tpl-overlay-blue-20:     rgba(45,100,236,.20);
+  --tpl-overlay-blue-25:     rgba(45,100,236,.25);
+
+  /* ══ INPUT TOKENS ═════════════════════════════════════════════════════ */
+  --tpl-input-bg:           var(--tpl-surface);
+  --tpl-input-border:       var(--tpl-border);
+  --tpl-input-border-hover: var(--tpl-slate-300);
+  --tpl-input-border-focus: var(--tpl-blue-500);
+  --tpl-input-radius:       var(--tpl-radius-lg);
+  --tpl-input-shadow-focus: var(--tpl-shadow-glow-blue);
+  --tpl-input-text:         var(--tpl-text);
+  --tpl-input-placeholder:  var(--tpl-text-faint);
+
+  /* ══ BUTTON TOKENS ════════════════════════════════════════════════════ */
+  --tpl-btn-primary-bg:         var(--tpl-accent-gradient);
+  --tpl-btn-primary-bg-hover:   var(--tpl-accent-gradient-vivid);
+  --tpl-btn-primary-shadow:     0 4px 16px rgba(45, 100, 236, .24), 0 1px 4px rgba(0, 0, 0, .06);
+  --tpl-btn-primary-shadow-hover: 0 8px 28px rgba(45, 100, 236, .34), 0 2px 8px rgba(0, 0, 0, .08);
+  --tpl-btn-radius:             var(--tpl-radius-lg);
+
+  /* ══ CARD TOKENS ══════════════════════════════════════════════════════ */
+  --tpl-card-bg:          var(--tpl-surface);
+  --tpl-card-border:      var(--tpl-border);
+  --tpl-card-radius:      var(--tpl-radius-xl);
+  --tpl-card-shadow:      var(--tpl-shadow-sm);
+  --tpl-card-shadow-hover: var(--tpl-shadow-md);
+
+  /* ══ HERO TOKENS ══════════════════════════════════════════════════════ */
+  --tpl-hero-bg:     var(--tpl-brand-gradient-135);
+  --tpl-hero-radius: var(--tpl-radius-2xl);
+  --tpl-hero-text:   var(--tpl-text-inverse);
+  --tpl-hero-glow:   radial-gradient(circle, rgba(101, 72, 229, .18) 0%, transparent 70%);
+
+  /* ══ PILL / BADGE TOKENS ══════════════════════════════════════════════ */
+  --tpl-pill-radius: var(--tpl-radius-full);
+
+  /* ══ ORBS (ambient animation) ═════════════════════════════════════════ */
+  --tpl-orb-blue:    radial-gradient(circle, var(--tpl-blue-500) 0%, transparent 70%);
+  --tpl-orb-violet:  radial-gradient(circle, var(--tpl-violet-500) 0%, transparent 70%);
+  --tpl-orb-sky:     radial-gradient(circle, var(--tpl-sky-500) 0%, transparent 70%);
+  --tpl-orb-blur:    100px;
+  --tpl-orb-opacity: .30;
+}
+
+/* ══ GLOBAL RESETS & BASE ═══════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-family: var(--tpl-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--tpl-font-sans);
+  color: var(--tpl-text);
+  line-height: var(--tpl-leading-normal);
+}
+
+::selection {
+  background: rgba(45, 100, 236, .20);
+  color: var(--tpl-text);
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--tpl-slate-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--tpl-slate-400); }
+* { scrollbar-width: thin; scrollbar-color: var(--tpl-slate-300) transparent; }
+
+:focus-visible { outline: 2px solid var(--tpl-blue-500); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :root { --tpl-border: ButtonText; --tpl-text: CanvasText; --tpl-surface: Canvas; }
+}
+
+/* ══ UTILITY CLASSES ════════════════════════════════════════════════════ */
+
+.tpl-text-primary  { color: var(--tpl-blue-500) !important; }
+.tpl-text-success  { color: var(--tpl-success-600) !important; }
+.tpl-text-warning  { color: var(--tpl-warning-600) !important; }
+.tpl-text-danger   { color: var(--tpl-danger-500) !important; }
+.tpl-text-muted    { color: var(--tpl-text-muted) !important; }
+.tpl-text-faint    { color: var(--tpl-text-faint) !important; }
+
+.tpl-bg-surface     { background: var(--tpl-surface) !important; }
+.tpl-bg-surface-alt { background: var(--tpl-surface-alt) !important; }
+.tpl-bg-brand       { background: var(--tpl-brand-gradient) !important; color: var(--tpl-text-inverse) !important; }
+
+.tpl-focus-ring:focus-visible {
+  outline: 2px solid var(--tpl-blue-500);
+  outline-offset: 2px;
+  box-shadow: var(--tpl-shadow-glow-blue);
+}
+
+.tpl-mono { font-family: var(--tpl-font-mono); }
+
+/* ══ VERSION BADGE ══════════════════════════════════════════════════════ */
+.tpl-version-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .15rem .55rem; border-radius: var(--tpl-pill-radius);
+  font-size: var(--tpl-fs-xs); font-weight: var(--tpl-fw-semibold);
+  font-family: var(--tpl-font-mono); letter-spacing: var(--tpl-tracking-wide);
+  background: var(--tpl-slate-100); color: var(--tpl-text-muted);
+  white-space: nowrap; user-select: all;
+}
+.tpl-version-badge--accent {
+  background: var(--tpl-indigo-50); color: var(--tpl-indigo-600);
+  border: 1px solid rgba(101, 72, 229, .12);
+}
+.tpl-version-badge--dark {
+  background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .7);
+  border: 1px solid rgba(255, 255, 255, .06);
+}

@@ -1,15 +1,18 @@
 # TPL — Linee Guida Vincolanti per Sviluppo Aggiornamenti
 
-> **Versione:** 3.0 · **Data:** 3 marzo 2026 · **Stato:** VINCOLANTE  
+> **Versione:** 4.0 · **Data:** 3 marzo 2026 · **Stato:** VINCOLANTE  
 > Questo documento definisce le regole obbligatorie per lo sviluppo, il rilascio
 > e la distribuzione di aggiornamenti nella piattaforma TPL. Ogni violazione
 > viene bloccata automaticamente dalla pipeline OTA.
 >
+> **Changelog v4.0:** Design Token System v5.0 "Sovereign". Top-luxury redesign
+> completo: Sovereign Gold (secondary), Regal Sapphire (primary), Platinum
+> Wisteria (tertiary), Steel Horizon (info), Warm Carbon (dark surfaces),
+> Warm Greige (neutrals). Palette interamente ridisegnata da zero.
+>
 > **Changelog v3.0:** Aggiornamento a Design Token System v4.0 "Obsidian".
 > Rimozione totale CDN — tutti gli asset (Bootstrap CSS/JS/Icons, font Inter)
-> serviti localmente da `/vendor/` e `/fonts/`. Nuova palette Obsidian:
-> Sapphire (primary), Amethyst (secondary), Orchid (tertiary), Arctic Cyan (info).
-> CSP policy `'self'` only. Aggiunta regola CDN-free vincolante.
+> serviti localmente da `/vendor/` e `/fonts/`. CSP policy `'self'` only.
 >
 > **Changelog v2.0:** Aggiunta sezione Design Token System, regole CSS
 > token-first, governance palette custom, branch fallback GitHub,
@@ -72,7 +75,7 @@ MAJOR.MINOR.PATCH[+BUILD]
   "version": "3.6.0",           // ← OBBLIGATORIO, SemVer
   "build": 20260301003,         // ← OBBLIGATORIO, incrementale
   "channel": "stable",          // ← OBBLIGATORIO: "stable" | "beta" | "dev"
-  "codename": "Obsidian",       // ← OBBLIGATORIO per minor/major
+  "codename": "Sovereign",      // ← OBBLIGATORIO per minor/major
   "full_version": "3.6.0+20260301003",
   "released_at": "2026-03-02T21:02:05Z",
   "min_upgrade_from": "2.0.0",  // ← Versione minima da cui si può aggiornare
@@ -384,7 +387,7 @@ Ogni modifica DEVE essere accompagnata da:
 
 ### 7.6 Design Token System — Regole CSS (VINCOLANTI)
 
-> **Riferimento:** `infra/web/design-tokens.css` v4.0 (Obsidian v4.0)
+> **Riferimento:** `infra/web/design-tokens.css` v5.0 (Sovereign v5.0)
 
 #### 7.6.1 Regola fondamentale: Token-First
 
@@ -414,16 +417,16 @@ Ogni modifica ai valori cromatici DEVE avvenire SOLO in `design-tokens.css`.
 
 | Scala | Ruolo | Token Prefix |
 |-------|-------|--------------|
-| Sapphire | Primary Action (bottoni, link, focus) | `--tpl-blue-*` |
-| Amethyst | Secondary Action (accenti, badge) | `--tpl-indigo-*` |
-| Orchid | Tertiary (gradients, glow) | `--tpl-violet-*` |
-| Arctic Cyan | Info accent (badge info, sky) | `--tpl-sky-*` |
-| Platinum-Slate | Neutrali (testi, bordi, bg) | `--tpl-slate-*` |
-| Obsidian Carbon | Sidebar/Navbar profondità | `--tpl-dark-*` |
-| Emerald | Stato positivo | `--tpl-success-*` |
-| Amber-Gold | Stato attenzione | `--tpl-warning-*` |
-| Crimson-Rose | Stato errore/critico | `--tpl-danger-*` |
-| Arctic Cyan | Stato informativo | `--tpl-info-*` |
+| Regal Sapphire | Primary Action (bottoni, link, focus) | `--tpl-blue-*` |
+| Sovereign Gold | Secondary Action (accenti, badge, luxury) | `--tpl-indigo-*` |
+| Platinum Wisteria | Tertiary (gradients, depth, elegance) | `--tpl-violet-*` |
+| Steel Horizon | Info accent (badge info, sky) | `--tpl-sky-*` |
+| Warm Greige | Neutrali (testi, bordi, bg) | `--tpl-slate-*` |
+| Warm Carbon | Sidebar/Navbar profondità | `--tpl-dark-*` |
+| Forest Emerald | Stato positivo | `--tpl-success-*` |
+| Rich Amber | Stato attenzione | `--tpl-warning-*` |
+| Burgundy Claret | Stato errore/critico | `--tpl-danger-*` |
+| Steel Horizon | Stato informativo | `--tpl-info-*` |
 
 #### 7.6.3 Gradients — Token Compositi
 
@@ -439,13 +442,17 @@ background: linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
 ```
 
 Token compositi disponibili:
-- `--tpl-accent-gradient` — Sapphire → Amethyst (135deg)
-- `--tpl-accent-gradient-vivid` — Sapphire-600 → Amethyst-600
-- `--tpl-accent-gradient-soft` — Sapphire-400 → Orchid-400
-- `--tpl-gradient-sidebar` — Dark surface sidebar (170deg)
-- `--tpl-gradient-navbar` — Dark surface navbar (105deg)
-- `--tpl-gradient-aurora` — Amethyst → Orchid → Cerulean (180deg)
+- `--tpl-accent-gradient` — Regal Sapphire → Sovereign Gold (135deg)
+- `--tpl-accent-gradient-vivid` — Sapphire-400 → Gold-400
+- `--tpl-accent-gradient-soft` — Sapphire-300 → Wisteria-400
+- `--tpl-accent-gradient-luxury` — Gold → Wisteria → Steel (135deg)
+- `--tpl-accent-gradient-gold` — Gold scale gradient (135deg)
+- `--tpl-gradient-sidebar` — Warm Carbon sidebar (170deg)
+- `--tpl-gradient-navbar` — Warm Carbon navbar (105deg)
+- `--tpl-gradient-aurora` — Gold → Wisteria → Steel (180deg)
 - `--tpl-gradient-edge` — Edge line accent
+- `--tpl-gradient-gold-shimmer` — Subtle gold shimmer effect
+- `--tpl-gradient-sovereign` — Premium multi-stop dark gradient
 - `--tpl-gradient-success/danger/warning` — Semantic gradients
 
 #### 7.6.4 Overlay / Trasparenze
@@ -650,6 +657,6 @@ L'engine `ota_update_engine.py` è un file protetto. Per aggiornarlo:
 
 ---
 
-> **Documento vincolante** — v3.0, aggiornato il 3 marzo 2026  
+> **Documento vincolante** — v4.0, aggiornato il 3 marzo 2026  
 > Enforcement automatico tramite `_validate_release_guidelines()` nell'OTA engine.  
-> Design Token System v4.0, palette Obsidian v4.0, CDN-free policy, branch fallback GitHub.
+> Design Token System v5.0, palette Sovereign v5.0, CDN-free policy, branch fallback GitHub.
