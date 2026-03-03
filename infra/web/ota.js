@@ -128,6 +128,12 @@
       const curEl = q('otaHeroCurrentVer');
       if (curEl) curEl.textContent = `v${data.current_version || '?'}`;
 
+      // Hero: Build number & codename
+      const buildEl = q('otaHeroBuild');
+      if (buildEl) buildEl.textContent = data.build ? `Build ${data.build}` : '';
+      const codeEl = q('otaHeroCodename');
+      if (codeEl) codeEl.textContent = data.codename ? `«${data.codename}»` : '';
+
       // Hero: Latest version + arrow
       if (data.update_available && data.latest_version) {
         q('otaHeroArrow')?.style.setProperty('display', '');
@@ -282,6 +288,7 @@
           <h5 class="mb-1"><i class="bi bi-tag"></i> ${esc(detail.name || tag)}</h5>
           <div class="d-flex flex-wrap gap-1 mb-2">
             <span class="badge bg-secondary">${esc(tag)}</span>
+            ${detail.full_version ? `<span class="badge bg-dark">${esc(detail.full_version)}</span>` : ''}
             ${detail.is_current ? '<span class="badge bg-primary">Corrente</span>' : ''}
             ${detail.is_newer ? '<span class="badge bg-success">Aggiornamento</span>' : ''}
             ${detail.prerelease ? '<span class="badge bg-warning text-dark">Pre-release</span>' : ''}
@@ -383,6 +390,7 @@
         check_interval_minutes: parseInt(q('otaCfgInterval')?.value || '60', 10),
         branch: q('otaCfgBranch')?.value || 'main',
         pre_release: q('otaCfgPre')?.checked ?? false,
+        bump: q('otaCfgBump')?.value || 'build',
       };
       await TPL.jsonFetch('/api/ota/config', {
         method: 'POST',
@@ -663,7 +671,7 @@
 
       if (repoEl) repoEl.innerHTML = `<a href="https://github.com/${esc(data.repo || '')}" target="_blank" rel="noopener" class="text-decoration-none">${esc(data.repo || '—')}</a>`;
       if (branchEl) branchEl.textContent = data.branch || '—';
-      if (localEl) localEl.innerHTML = `<code>v${esc(data.local_version || '?')}</code>`;
+      if (localEl) localEl.innerHTML = `<code>v${esc(data.local_version || '?')}</code>${data.local_build ? ` <small class="text-muted">Build ${data.local_build}</small>` : ''}${data.local_codename ? ` <small class="text-muted">«${esc(data.local_codename)}»</small>` : ''}`;
       if (remoteEl) remoteEl.innerHTML = `<code>v${esc(data.remote_version || '?')}</code>${data.remote_codename ? ` <small class="text-muted">${esc(data.remote_codename)}</small>` : ''}`;
       if (lastCheckEl) lastCheckEl.textContent = data.checked_at ? fmtDateShort(data.checked_at) : 'mai';
       if (filesEl) filesEl.textContent = `${data.remote_tracked_files || 0} remoti / ${data.local_tracked_files || 0} locali`;
@@ -811,6 +819,7 @@
       if (info) {
         info.innerHTML = `<div class="d-flex flex-wrap gap-2 small">
           <span>v${esc(data.version)}</span>
+          ${data.build ? `<span>Build ${esc(String(data.build))}</span>` : ''}
           <span>${data.file_count || data.staged_files || '—'} file</span>
           <span>${data.certified ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-x-circle-fill text-danger"></i>'}</span>
           <span>Rischio: ${data.risk_score ?? '—'}/100</span>
@@ -1031,10 +1040,11 @@
       }
 
       // ── SUCCESS ───────────────────────────────────────────────
+      const finalVinfo = _state.full_version || tag;
       setPipelinePill('completato', 'ota-pipe-pill--ok');
       updateCta('check-circle-fill', `Aggiornato a ${tag}`, false, 'ota-pipe-cta--done');
-      setPipelineStatus(`<span class="text-success small"><i class="bi bi-check-circle-fill"></i> Aggiornamento ${esc(tag)} completato con successo!</span>`);
-      pipeLog(`Pipeline completata: ${tag} applicato con successo.`, 'ok');
+      setPipelineStatus(`<span class="text-success small"><i class="bi bi-check-circle-fill"></i> Aggiornamento ${esc(tag)} completato con successo!${_state.build ? ` (Build ${_state.build})` : ''}</span>`);
+      pipeLog(`Pipeline completata: ${finalVinfo} applicato con successo.`, 'ok');
       showToast(`Aggiornamento ${tag} completato!`, 'success');
 
       await loadAll();

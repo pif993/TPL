@@ -63,15 +63,16 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger("tpl.ota.security")
 
 # ── Dynamic Version from VERSION.json ───────────────────────────────────
+_VERSION_CANDIDATES = [
+    Path("/app/VERSION.json"),                              # Docker mount (primary)
+    Path(__file__).resolve().parents[2] / "VERSION.json",   # /app from engines/
+    Path(os.environ.get("TPL_ROOT", "")) / "VERSION.json", # env override
+]
+
 def _load_platform_version() -> str:
     """Load version from VERSION.json (single source of truth).
     Falls back to hardcoded value if file is unavailable."""
-    _candidates = [
-        Path("/app/VERSION.json"),                              # Docker mount (primary)
-        Path(__file__).resolve().parents[2] / "VERSION.json",   # /app from engines/
-        Path(os.environ.get("TPL_ROOT", "")) / "VERSION.json", # env override
-    ]
-    for p in _candidates:
+    for p in _VERSION_CANDIDATES:
         try:
             if p.is_file():
                 data = json.loads(p.read_text(encoding="utf-8"))
@@ -80,12 +81,49 @@ def _load_platform_version() -> str:
             continue
     return "3.1.0"
 
+def _load_version_info() -> dict:
+    """Load full version info from VERSION.json (build, codename, channel, etc.).
+    Returns all fields for build-aware endpoints."""
+    for p in _VERSION_CANDIDATES:
+        try:
+            if p.is_file():
+                data = json.loads(p.read_text(encoding="utf-8"))
+                return {
+                    "version": data.get("version", "3.1.0"),
+                    "build": data.get("build", 0),
+                    "full_version": data.get("full_version", data.get("version", "3.1.0")),
+                    "codename": data.get("codename", ""),
+                    "channel": data.get("channel", "stable"),
+                    "released_at": data.get("released_at", ""),
+                }
+        except (OSError, json.JSONDecodeError, TypeError):
+            continue
+    return {"version": "3.1.0", "build": 0, "full_version": "3.1.0",
+            "codename": "", "channel": "stable", "released_at": ""}
+
 # ── Constants ───────────────────────────────────────────────────────────
 
 GITHUB_OWNER = "pif993"
 GITHUB_REPO = "TPL"
 GITHUB_API = "https://api.github.com"
 GITHUB_DOWNLOAD = "https://github.com"
+
+# Dynamic platform version — always reads from disk so it stays
+# current after OTA installs within the same process lifecycle.
+_platform_version_cache: dict = {}
+
+def _get_platform_version() -> str:
+    """Return the current platform semver (e.g. '5.1.1').
+    Reads VERSION.json each call (OS page-cache makes this fast)."""
+    return _load_version_info()["version"]
+
+def _get_platform_build() -> int:
+    """Return the current platform build number (e.g. 20260303006)."""
+    return _load_version_info()["build"]
+
+# Backward-compat alias — existing callers that just read the var.
+# NOTE: This captures the value at import time; hot paths should use
+# _get_platform_version() instead for accuracy after OTA.
 PLATFORM_VERSION = _load_platform_version()
 
 # ── Security Constants ──────────────────────────────────────────────────
@@ -148,16 +186,40 @@ class OTASecurityExport(BaseModel):
 
 # ── Helpers ─────────────────────────────────────────────────────────────
 
-def _version_tuple(v: str) -> tuple:
-    """Parse semver string to comparable tuple."""
+def _version_tuple(v: str, *, include_build: bool = False) -> tuple:
+    """Parse semver string to comparable tuple.
+
+    Args:
+        v: Version string, e.g. '5.1.1', 'v3.5.0', '5.1.1+20260303006'.
+        include_build: When True, the build metadata after '+' is included
+                       as a 4th element so that same-semver versions with
+                       different builds can be compared correctly.
+    Returns:
+        (major, minor, patch) or (major, minor, patch, build).
+    """
     clean = v.lstrip("v").strip()
-    parts = re.findall(r"\d+", clean)
-    return tuple(int(x) for x in parts[:3]) if parts else (0, 0, 0)
+    # Split on '+' to separate semver from build metadata
+    sem_part = clean.split("+")[0]
+    parts = re.findall(r"\d+", sem_part)
+    base = tuple(int(x) for x in parts[:3]) if parts else (0, 0, 0)
+    if include_build:
+        build_parts = clean.split("+")
+        build_num = int(build_parts[1]) if len(build_parts) > 1 and build_parts[1].isdigit() else 0
+        return base + (build_num,)
+    return base
 
 
-def _version_compare(a: str, b: str) -> int:
-    """Compare two version strings. Returns -1, 0, 1."""
-    ta, tb = _version_tuple(a), _version_tuple(b)
+def _version_compare(a: str, b: str, *, build_aware: bool = False) -> int:
+    """Compare two version strings. Returns -1, 0, 1.
+
+    Args:
+        a: First version string.
+        b: Second version string.
+        build_aware: When True, if semvers are equal the build metadata
+                     (after '+') is used as a tiebreaker.
+    """
+    ta = _version_tuple(a, include_build=build_aware)
+    tb = _version_tuple(b, include_build=build_aware)
     if ta < tb:
         return -1
     if ta > tb:
@@ -2113,11 +2175,20 @@ class OTARemoteChecker:
                 "repo": repo, "branch": branch,
             }
 
-        local_version = self.registry._get_current_version()
+        local_vinfo = _load_version_info()
+        local_version = local_vinfo["version"]
+        local_build = local_vinfo["build"]
         remote_version = remote_ver_data.get("version", "0.0.0")
+        remote_build = remote_ver_data.get("build", 0)
         local_tuple = _version_tuple(local_version)
         remote_tuple = _version_tuple(remote_version)
-        upgrade_available = remote_tuple > local_tuple
+        # Build-aware comparison: if semver is equal, compare build numbers
+        if remote_tuple > local_tuple:
+            upgrade_available = True
+        elif remote_tuple == local_tuple and remote_build > local_build:
+            upgrade_available = True
+        else:
+            upgrade_available = False
 
         # Count remote tracked files (lightweight, 1 API call)
         remote_tracked_count = 0
@@ -2133,11 +2204,15 @@ class OTARemoteChecker:
         self._config["last_remote_version"] = remote_version
         self._save_config()
 
+        local_vinfo = _load_version_info()
         return {
             "status": "upgrade_available" if upgrade_available else "up_to_date",
             "upgrade_available": upgrade_available,
             "local_version": local_version,
-            "local_codename": self.registry._data.get("baseline_version", local_version),
+            "local_build": local_vinfo["build"],
+            "local_full_version": local_vinfo["full_version"],
+            "local_codename": local_vinfo.get("codename") or self.registry._data.get("baseline_version", local_version),
+            "local_channel": local_vinfo["channel"],
             "remote_version": remote_version,
             "remote_codename": remote_ver_data.get("codename", ""),
             "remote_build": remote_ver_data.get("build", 0),
@@ -3120,7 +3195,7 @@ def register(app: FastAPI):
 
                 if releases:
                     latest = releases[0]
-                    cmp = _version_compare(PLATFORM_VERSION, latest["version"])
+                    cmp = _version_compare(_get_platform_version(), latest["version"])
                     dismissed = state.get("dismissed", [])
                     state["update_available"] = (
                         cmp < 0 and latest["tag"] not in dismissed
@@ -3159,9 +3234,16 @@ def register(app: FastAPI):
                     prepared.append(d)
 
         trust = sec.get_trust_info()
+        vinfo = _load_version_info()
+        cur_ver = vinfo["version"]
 
         return {
-            "current_version": PLATFORM_VERSION,
+            "current_version": cur_ver,
+            "build": vinfo["build"],
+            "full_version": vinfo["full_version"],
+            "codename": vinfo["codename"],
+            "channel": vinfo["channel"],
+            "released_at": vinfo["released_at"],
             "latest_version": state.get("latest_version"),
             "update_available": state.get("update_available", False),
             "last_check": state.get("last_check", 0),
@@ -3217,8 +3299,9 @@ def register(app: FastAPI):
             latest_version = latest["version"]
             dismissed = state.get("dismissed", [])
 
+            cur_ver = _get_platform_version()
             for r in releases:
-                cmp = _version_compare(PLATFORM_VERSION, r["version"])
+                cmp = _version_compare(cur_ver, r["version"])
                 if cmp < 0:
                     newer_releases.append({
                         "tag": r["tag"],
@@ -3253,8 +3336,12 @@ def register(app: FastAPI):
             "newer_count": len(newer_releases),
         })
 
+        vinfo = _load_version_info()
         return {
-            "current_version": PLATFORM_VERSION,
+            "current_version": vinfo["version"],
+            "build": vinfo["build"],
+            "full_version": vinfo["full_version"],
+            "codename": vinfo["codename"],
             "latest_version": latest_version,
             "update_available": update_available,
             "newer_releases": newer_releases,
@@ -3285,16 +3372,21 @@ def register(app: FastAPI):
             releases = state.get("releases_cache", [])
 
         # Annotate with update status
+        vinfo = _load_version_info()
+        cur_ver = vinfo["version"]
         for r in releases:
-            r["is_newer"] = _version_compare(PLATFORM_VERSION, r.get("version", "")) < 0
-            r["is_current"] = r.get("version", "") == PLATFORM_VERSION
+            r["is_newer"] = _version_compare(cur_ver, r.get("version", "")) < 0
+            r["is_current"] = r.get("version", "") == cur_ver
             r["is_prepared"] = os.path.isdir(
                 os.path.join(OTA_STAGING, _sanitize_tag(r.get("tag", "")))
             )
 
         return {
             "releases": releases,
-            "current_version": PLATFORM_VERSION,
+            "current_version": cur_ver,
+            "build": vinfo["build"],
+            "full_version": vinfo["full_version"],
+            "codename": vinfo["codename"],
             "total": len(releases),
         }
 
@@ -3344,10 +3436,11 @@ def register(app: FastAPI):
         staging_dir = os.path.join(OTA_STAGING, safe_tag)
         is_prepared = os.path.isdir(staging_dir)
 
+        cur_ver = _get_platform_version()
         result = {
             **cached,
-            "is_newer": _version_compare(PLATFORM_VERSION, cached.get("version", "")) < 0,
-            "is_current": cached.get("version", "") == PLATFORM_VERSION,
+            "is_newer": _version_compare(cur_ver, cached.get("version", "")) < 0,
+            "is_current": cached.get("version", "") == cur_ver,
             "is_prepared": is_prepared,
         }
 
@@ -3363,7 +3456,9 @@ def register(app: FastAPI):
     async def ota_diff(tag: str, _u=Depends(require_admin)):
         """Show what changed between current version and target tag."""
         config = _load_config()
-        base_ref = f"v{PLATFORM_VERSION}"
+        vinfo = _load_version_info()
+        cur_ver = vinfo["version"]
+        base_ref = f"v{cur_ver}"
         head_ref = tag
 
         diff_data = await _fetch_commits_between(config, base_ref, head_ref)
@@ -3376,7 +3471,9 @@ def register(app: FastAPI):
         return {
             "base": base_ref,
             "head": head_ref,
-            "current_version": PLATFORM_VERSION,
+            "current_version": cur_ver,
+            "build": vinfo["build"],
+            "full_version": vinfo["full_version"],
             "target_version": tag.lstrip("v"),
             **diff_data,
             "staged_files": staged_files,
@@ -3591,8 +3688,9 @@ def register(app: FastAPI):
 
         # Re-evaluate update_available
         releases = state.get("releases_cache", [])
+        cur_ver = _get_platform_version()
         state["update_available"] = any(
-            _version_compare(PLATFORM_VERSION, r.get("version", "")) < 0
+            _version_compare(cur_ver, r.get("version", "")) < 0
             and r.get("tag", "") not in dismissed
             for r in releases
         )
@@ -4758,13 +4856,14 @@ echo "=== Security smoke completato ==="
 
         # Re-evaluate update_available
         dismissed = state.get("dismissed", [])
+        cur_ver = _get_platform_version()
         state["update_available"] = any(
-            _version_compare(PLATFORM_VERSION, r.get("version", "")) < 0
+            _version_compare(cur_ver, r.get("version", "")) < 0
             and r.get("tag", "") not in dismissed
             for r in cache
         )
         if not state["update_available"]:
-            state["latest_version"] = PLATFORM_VERSION
+            state["latest_version"] = cur_ver
 
         _save_state(state)
         removed.append("state_cleanup")
@@ -5206,7 +5305,7 @@ echo "=== Security smoke completato ==="
         if iv:
             return iv
         # Fallback: read VERSION.json
-        return PLATFORM_VERSION
+        return _get_platform_version()
 
     def _find_pending_migrations(current_ver: str, target_ver: str) -> List[dict]:
         """Find all migrations between current and target version, ordered by semver.
