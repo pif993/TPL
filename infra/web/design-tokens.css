@@ -247,11 +247,13 @@
   --tpl-border-focus:  var(--tpl-blue-500);
 
   /* ── Text ── */
-  --tpl-text:        var(--tpl-slate-800);
-  --tpl-text-sec:    var(--tpl-slate-600);
-  --tpl-text-muted:  var(--tpl-slate-500);
-  --tpl-text-faint:  var(--tpl-slate-400);
+  --tpl-text:         var(--tpl-slate-800);
+  --tpl-text-sec:     var(--tpl-slate-600);
+  --tpl-text-muted:   var(--tpl-slate-500);
+  --tpl-text-faint:   var(--tpl-slate-500);   /* was slate-400 — bumped for WCAG AA 4.5:1 */
   --tpl-text-inverse: #FDFCFA;
+  --tpl-accent-text:  var(--tpl-indigo-700);  /* #866E2C — safe gold for text on light bg (6.4:1) */
+  --tpl-accent-text-light: var(--tpl-indigo-600); /* #A48838 — decorative accent text (4.0:1) */
 
   /* ══ SPACING ══════════════════════════════════════════════════════════ */
   --tpl-sp-0:  0;
@@ -391,7 +393,7 @@
   --tpl-input-radius:       var(--tpl-radius-lg);
   --tpl-input-shadow-focus: var(--tpl-shadow-glow-blue);
   --tpl-input-text:         var(--tpl-text);
-  --tpl-input-placeholder:  var(--tpl-text-faint);
+  --tpl-input-placeholder:  var(--tpl-slate-400);  /* placeholders: slightly lighter is OK (incidental) */
 
   /* ══ BUTTON TOKENS ════════════════════════════════════════════════════ */
   --tpl-btn-primary-bg:           var(--tpl-accent-gradient);
@@ -475,12 +477,12 @@ body {
 /* ══ UTILITY CLASSES ════════════════════════════════════════════════════ */
 
 .tpl-text-primary  { color: var(--tpl-blue-500) !important; }
-.tpl-text-gold     { color: var(--tpl-indigo-500) !important; }
+.tpl-text-gold     { color: var(--tpl-indigo-700) !important; }
 .tpl-text-success  { color: var(--tpl-success-600) !important; }
 .tpl-text-warning  { color: var(--tpl-warning-600) !important; }
 .tpl-text-danger   { color: var(--tpl-danger-500) !important; }
 .tpl-text-muted    { color: var(--tpl-text-muted) !important; }
-.tpl-text-faint    { color: var(--tpl-text-faint) !important; }
+.tpl-text-faint    { color: var(--tpl-slate-500) !important; }
 
 .tpl-bg-surface     { background: var(--tpl-surface) !important; }
 .tpl-bg-surface-alt { background: var(--tpl-surface-alt) !important; }
@@ -504,7 +506,7 @@ body {
   white-space: nowrap; user-select: all;
 }
 .tpl-version-badge--accent {
-  background: var(--tpl-indigo-50); color: var(--tpl-indigo-600);
+  background: var(--tpl-indigo-50); color: var(--tpl-indigo-700);
   border: 1px solid rgba(196, 162, 69, .14);
 }
 .tpl-version-badge--dark {
