@@ -1,6 +1,6 @@
 # TPL — Mappa del Progetto
 
-> Versione corrente: **5.1.1+20260303006** — Codename **Sovereign** — Channel **stable**
+> Versione corrente: **5.1.1+20260304001** — Codename **Sovereign** — Channel **stable**
 > Ultimo aggiornamento: **4 marzo 2026**
 
 ---
@@ -98,6 +98,9 @@ TPL/
 ├── modules/                        # ⬇ Vedi sezione 5
 ├── scripts/                        # ⬇ Vedi sezione 6
 ├── tests/                          # ⬇ Vedi sezione 7
+├── dist/                           # ⬇ Archivio esportazione (non in VCS)
+│   └── TPL-{version}.tar.gz       # Archivio compresso sempre aggiornato
+│
 ├── docs/                           # Documentazione progetto
 │   ├── PROJECT_MAP.md              # ← Questo file
 │   ├── UPDATE_PROTOCOL.md          # Protocollo aggiornamento
@@ -227,6 +230,7 @@ I moduli vengono applicati in ordine numerico durante l'installazione.
 | `test_integration.sh` | Test di integrazione |
 | `vault_rotate.sh` | Rotazione secrets Vault |
 | `tpl-modules` | Gestione moduli CLI |
+| `export.sh` | Genera archivio compresso `.tar.gz` (o `--zip`) in `dist/` per esportazione |
 | `stage_351.sh` | Staging helper specifico |
 
 ---
