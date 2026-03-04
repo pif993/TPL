@@ -1,10 +1,10 @@
 {
   "version": "5.1.1",
-  "build": 20260303006,
+  "build": 20260304001,
   "channel": "stable",
   "codename": "Sovereign",
-  "full_version": "5.1.1+20260303006",
-  "released_at": "2026-03-03T14:21:51Z",
+  "full_version": "5.1.1+20260304001",
+  "released_at": "2026-03-04T20:55:39Z",
   "min_upgrade_from": "2.0.0",
   "schema_version": 1
 }

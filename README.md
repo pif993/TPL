@@ -202,4 +202,4 @@ Prima del deploy reale:
 
 ## Last update
 
-February 2026
+March 2026
