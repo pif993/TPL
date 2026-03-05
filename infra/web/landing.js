@@ -150,7 +150,12 @@
     if (pwConfirm) pwConfirm.value = '';
     if (pwMsg) pwMsg.style.display = 'none';
     checkRules();
-    if (pwOverlay) pwOverlay.style.display = 'flex';
+    if (pwOverlay) {
+      pwOverlay.style.display = '';
+      // Trigger reflow so the .show transition animates
+      void pwOverlay.offsetHeight;
+      pwOverlay.classList.add('show');
+    }
     if (pwNew) pwNew.focus();
     fetchPasswordPolicy();      // refresh policy while user types
   };
@@ -169,8 +174,10 @@
         }),
       });
       pwm('Password cambiata! Effettua il login con la nuova password.', 'success');
-      // Destroy session server-side + wipe local state, then back to login
-      await TPL.logout();                // revokes refresh token, clears storage, redirects to /
+      // Give user time to read the success message, then logout + redirect
+      setTimeout(async () => {
+        await TPL.logout();              // revokes refresh token, clears storage, redirects to /
+      }, 2000);
     } catch (e) {
       pwm(`Errore: ${e.message || String(e)}`, 'danger');
       if (pwSubmit) pwSubmit.disabled = false;

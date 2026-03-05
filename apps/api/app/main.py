@@ -197,7 +197,8 @@ FORCE_HTTPS = os.getenv("FORCE_HTTPS", "false").lower() in ("true", "1", "yes")
 # the ones needed to actually change the password and re-authenticate.
 _MCP_ALLOWED = {"/health", "/status", "/token", "/me", "/users/me/password",
                 "/auth/refresh", "/auth/logout", "/auth/logout-all",
-                "/auth/password-policy", "/auth/keys/public"}
+                "/auth/password-policy", "/auth/keys/public",
+                "/lang/strings"}
 
 @app.middleware("http")
 async def must_change_password_guard(request: Request, call_next):

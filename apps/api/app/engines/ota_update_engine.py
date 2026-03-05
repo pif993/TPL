@@ -79,7 +79,7 @@ def _load_platform_version() -> str:
                 return data.get("version", "3.1.0")
         except (OSError, json.JSONDecodeError, TypeError):
             continue
-    return "3.1.0"
+    return "5.1.2"
 
 def _load_version_info() -> dict:
     """Load full version info from VERSION.json (build, codename, channel, etc.).

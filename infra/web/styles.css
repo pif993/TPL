@@ -12,6 +12,7 @@
 
 .app-wrapper {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background: var(--tpl-bg);
 }
@@ -373,7 +374,6 @@
 .app-main {
   margin-left: var(--tpl-sidebar-width);
   margin-top: var(--tpl-navbar-height);
-  min-height: calc(100vh - var(--tpl-navbar-height));
   transition: margin-left var(--tpl-duration-normal) var(--tpl-ease-default);
   display: flex;
   flex-direction: column;

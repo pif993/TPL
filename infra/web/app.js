@@ -1,5 +1,5 @@
 /**
- * TPL Fortress — Core client library v3.0
+ * TPL Fortress — Core client library v5.1.2
  *
  * Ed25519 JWT · Refresh-token rotation · Cross-tab sync · Auto-refresh
  * ──────────────────────────────────────────────────────────────────────

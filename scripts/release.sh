@@ -49,6 +49,10 @@ echo "INFO: Staging release in $STAGE/$NAME ..."
 rsync -a --delete \
   --exclude='.git' \
   --exclude='.git/' \
+  --exclude='.venv' \
+  --exclude='.venv/' \
+  --exclude='.pytest_cache' \
+  --exclude='.pytest_cache/' \
   --exclude='.env' \
   --exclude='.secrets' \
   --exclude='.secrets/' \

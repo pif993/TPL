@@ -1,0 +1,55 @@
+{
+  "realm": "myapp",
+  "enabled": true,
+  "registrationAllowed": false,
+  "verifyEmail": false,
+  "resetPasswordAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "sslRequired": "external",
+  "bruteForceProtected": true,
+  "maxFailureWaitSeconds": 900,
+  "failureFactor": 5,
+  "permanentLockout": false,
+  "maxDeltaTimeSeconds": 43200,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "requiredActions": [],
+  "passwordPolicy": "length(12) and specialChars(1) and upperCase(1) and digits(1)",
+  "roles": {
+    "realm": [
+      {"name": "admin"},
+      {"name": "user"}
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "myapp-web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["https://localhost/*", "http://localhost:8080/*"],
+      "webOrigins": ["https://localhost", "http://localhost:8080"]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [{"type": "password", "value": "7hZHXn3uQ8xmTJOKSdZy!A1", "temporary": false}],
+      "realmRoles": ["admin", "user"]
+    },
+    {
+      "username": "user",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [{"type": "password", "value": "wvLkDcFGtRnBu33UYVYH!A1", "temporary": false}],
+      "realmRoles": ["user"]
+    }
+  ]
+}
