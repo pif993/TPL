@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TPL · Dashboard</title>
   <!-- Bootstrap 5 -->
-  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=6.0" rel="stylesheet">
+  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=5.1.2" rel="stylesheet">
   <!-- Bootstrap Icons -->
-  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=6.0" rel="stylesheet">
+  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=5.1.2" rel="stylesheet">
   <!-- TPL Design System -->
-  <link href="/design-tokens.css?v=6.0" rel="stylesheet">
-  <link href="/styles.css?v=6.0" rel="stylesheet">
+  <link href="/design-tokens.css?v=5.1.2" rel="stylesheet">
+  <link href="/styles.css?v=5.1.2" rel="stylesheet">
 </head>
 <body class="tpl-app-body">
   <div class="app-wrapper">
@@ -121,7 +121,7 @@
             </div>
 
             <!-- ─ Quick Actions + Platform Info (all users) ─ -->
-            <div class="row g-3 mb-3">
+            <div class="row g-3 mb-4">
               <div class="col-12 col-lg-6">
                 <div class="ov-panel">
                   <div class="ov-panel-head"><span><i class="bi bi-lightning-charge"></i> Azioni Rapide</span></div>
@@ -151,7 +151,7 @@
             </div>
 
             <!-- Live System Status -->
-            <div class="ov-panel mb-3">
+            <div class="ov-panel mb-4">
               <div class="ov-panel-head"><span><i class="bi bi-activity"></i> Stato Sistema</span></div>
               <div class="ov-panel-body" id="wsSystemStatus">
                 <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
@@ -173,7 +173,7 @@
             </div>
 
             <!-- Keyboard shortcuts hint -->
-            <div class="text-muted text-center mt-3 adv-info-text">
+            <div class="tpl-shortcuts">
               Premi <kbd>?</kbd> per le scorciatoie da tastiera · <kbd>Alt+1–9</kbd> per navigare tra le viste
             </div>
           </section>
@@ -232,7 +232,7 @@
             </div>
 
             <!-- ─ Tab Panels ─ -->
-            <div class="ov-panel mb-3">
+            <div class="ov-panel mb-4">
               <div class="ov-panel-body">
 
                 <!-- Tab: Anagrafica -->
@@ -385,7 +385,7 @@
             </div>
 
             <!-- Filter Panel -->
-            <div class="ov-panel mb-3">
+            <div class="ov-panel mb-4">
               <div class="ov-panel-head"><span><i class="bi bi-funnel"></i> Filtri e Ricerca</span></div>
               <div class="ov-panel-body">
                 <div class="ov-filter-row">
@@ -480,7 +480,7 @@
             </div>
 
             <!-- ─ Tabs ─ -->
-            <div class="ov-tabs mb-3" id="mcTabs">
+            <div class="ov-tabs mb-4" id="mcTabs">
               <button class="ov-tab active" data-mc-tab="modules"><i class="bi bi-puzzle"></i> Moduli</button>
               <button class="ov-tab" data-mc-tab="version"><i class="bi bi-git"></i> Versione</button>
               <button class="ov-tab" data-mc-tab="deps"><i class="bi bi-diagram-3"></i> Dipendenze</button>
@@ -833,7 +833,7 @@
             </div>
 
             <!-- KPI Row — 8 cards -->
-            <div class="row g-3 mb-3">
+            <div class="row g-3 mb-4">
               <div class="col-6 col-md-4 col-xl-3">
                 <div class="ov-kpi" data-accent="danger">
                   <div class="ov-kpi-top"><span class="ov-kpi-value" id="secCritical">—</span><span class="ov-kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></span></div>
@@ -1116,7 +1116,7 @@
             </div>
 
             <!-- KPI Row -->
-            <div class="row g-3 mb-3">
+            <div class="row g-3 mb-4">
               <div class="col-6 col-md-4 col-xl-2">
                 <div class="ov-kpi" data-accent="info">
                   <div class="ov-kpi-top"><span class="ov-kpi-value" id="rtTotal">—</span><span class="ov-kpi-icon"><i class="bi bi-signpost-2"></i></span></div>
@@ -1655,7 +1655,7 @@
                 </button>
               </div>
               <!-- Report complessivo -->
-              <div class="ai2-card mb-3">
+              <div class="ai2-card mb-4">
                 <div class="ai2-card-head">
                   <i class="bi bi-journal-check"></i>
                   <span>Report Complessivo</span>
@@ -1788,11 +1788,11 @@
   </div></div></div>
 
   <!-- JS -->
-  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=6.0"></script>
-  <script src="/app.js?v=6.0"></script>
+  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=5.1.2"></script>
+  <script src="/app.js?v=5.1.2"></script>
   <script src="/sidebar.js?v=5.1.2"></script>
-  <script src="/tpl-nav.js?v=6.0"></script>
-  <script src="/dashboard-router.js?v=6.0"></script>
-  <script src="/dashboard-system.js?v=6.0"></script>
+  <script src="/tpl-nav.js?v=5.1.2"></script>
+  <script src="/dashboard-router.js?v=5.1.2"></script>
+  <script src="/dashboard-system.js?v=5.1.2"></script>
 </body>
 </html>

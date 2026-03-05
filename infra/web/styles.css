@@ -384,18 +384,19 @@
 }
 
 .app-content-header {
-  padding: var(--tpl-sp-6) var(--tpl-sp-8);
-  background: var(--tpl-bg);
+  padding: var(--tpl-sp-3) var(--tpl-sp-8);
+  background: var(--tpl-surface);
+  border-bottom: 1px solid var(--tpl-border);
 }
 .app-content-header h1 {
-  font-size: var(--tpl-fs-2xl);
-  font-weight: var(--tpl-fw-bold);
+  font-size: var(--tpl-fs-lg);
+  font-weight: var(--tpl-fw-semibold);
   margin: 0;
   color: var(--tpl-text);
   letter-spacing: var(--tpl-tracking-tight);
 }
 .app-content-header p {
-  font-size: var(--tpl-fs-sm);
+  font-size: var(--tpl-fs-xs);
   color: var(--tpl-text-muted);
   margin: var(--tpl-sp-1) 0 0;
 }
@@ -403,6 +404,10 @@
 .app-content {
   padding: 0 var(--tpl-sp-8) var(--tpl-sp-8);
   flex: 1;
+}
+/* When no content-header precedes, add breathing room below navbar */
+.app-main > .app-content:first-child {
+  padding-top: var(--tpl-sp-6);
 }
 
 /* ── Footer ────────────────────────────────────────────── */
@@ -631,6 +636,59 @@
 .ov-scroll-sm { max-height: 220px; overflow-y: auto; }
 .ov-scroll-md { max-height: 360px; overflow-y: auto; }
 .ov-scroll-lg { max-height: 520px; overflow-y: auto; }
+
+/* ── Action grids ──────────────────────────────────────── */
+.ov-actions--2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--tpl-sp-3);
+}
+.ov-actions--3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--tpl-sp-3);
+}
+@media (max-width: 576px) {
+  .ov-actions--2col,
+  .ov-actions--3col { grid-template-columns: 1fr; }
+}
+
+/* ── Keyboard shortcuts hint ───────────────────────────── */
+.tpl-shortcuts {
+  text-align: center;
+  font-size: var(--tpl-fs-xs);
+  color: var(--tpl-text-faint);
+  opacity: .55;
+  padding: var(--tpl-sp-4) 0 var(--tpl-sp-2);
+}
+.tpl-shortcuts kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  margin: 0 1px;
+  font-family: var(--tpl-font-mono);
+  font-size: .65rem;
+  background: var(--tpl-surface-alt);
+  border: 1px solid var(--tpl-border);
+  border-radius: var(--tpl-radius-xs);
+  box-shadow: 0 1px 0 var(--tpl-border);
+}
+
+/* ── Terminal / log pre block ──────────────────────────── */
+.tpl-log-pre {
+  margin: 0;
+  padding: var(--tpl-sp-4);
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--tpl-surface-sunken);
+  color: var(--tpl-success-600);
+  font-family: var(--tpl-font-mono);
+  font-size: var(--tpl-fs-xs);
+  line-height: 1.65;
+  border-radius: 0 0 var(--tpl-radius-lg) var(--tpl-radius-lg);
+}
+[data-theme="dark"] .tpl-log-pre {
+  color: var(--tpl-success-400);
+}
 
 /* ── Placeholder / Skeleton ────────────────────────────── */
 .ov-placeholder {
@@ -2425,13 +2483,22 @@ textarea.tpl-input {
 }
 
 @media (max-width: 768px) {
-  .app-content-header { padding: var(--tpl-sp-4) var(--tpl-sp-4); }
+  .app-content-header { padding: var(--tpl-sp-2) var(--tpl-sp-4); }
   .app-content { padding: 0 var(--tpl-sp-4) var(--tpl-sp-4); }
+  .app-main > .app-content:first-child { padding-top: var(--tpl-sp-4); }
 
   .ov-hero { flex-direction: column; padding: var(--tpl-sp-5); text-align: center; }
   .ov-hero-right { justify-content: center; }
   .ov-hero-actions { justify-content: center; }
   .ov-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* OTA stepper & grid */
+  .ota-pipe-stepper { flex-wrap: wrap; justify-content: center; gap: var(--tpl-sp-2); }
+  .ota-pipe-step-line { display: none; }
+  .ota-pipe-hero-content { flex-direction: column; text-align: center; }
+  .ota-pipe-hero-versions { justify-content: center; }
+  .ota-pipe-grid { grid-template-columns: 1fr; }
+  .ota-pipe-bottom { grid-template-columns: 1fr; }
 
   .tpl-auth-page { flex-direction: column; }
   .tpl-auth-brand { min-height: 200px; padding: var(--tpl-sp-8); }
@@ -2486,27 +2553,10 @@ textarea.tpl-input {
 .tpl-stagger > *:nth-child(7) { animation-delay: 240ms; }
 .tpl-stagger > *:nth-child(8) { animation-delay: 280ms; }
 
-/* ── Utility spacers ───────────────────────────────────── */
-.gap-2 { gap: var(--tpl-sp-2); }
-.gap-3 { gap: var(--tpl-sp-3); }
-.gap-4 { gap: var(--tpl-sp-4); }
-
-.mt-0 { margin-top: 0 !important; }
-.mt-2 { margin-top: var(--tpl-sp-2) !important; }
-.mt-3 { margin-top: var(--tpl-sp-3) !important; }
-.mt-4 { margin-top: var(--tpl-sp-4) !important; }
-.mt-5 { margin-top: var(--tpl-sp-5) !important; }
-.mb-0 { margin-bottom: 0 !important; }
-.mb-2 { margin-bottom: var(--tpl-sp-2) !important; }
-.mb-3 { margin-bottom: var(--tpl-sp-3) !important; }
-.mb-4 { margin-bottom: var(--tpl-sp-4) !important; }
-.mb-5 { margin-bottom: var(--tpl-sp-5) !important; }
-.me-1 { margin-right: var(--tpl-sp-1) !important; }
-.me-2 { margin-right: var(--tpl-sp-2) !important; }
-
-.d-none { display: none !important; }
-.d-flex { display: flex !important; }
-
+/* ── Utility overrides ──────────────────────────────────── */
+/* Spacing utilities: delegate to Bootstrap's native scale (mb-3 = 1rem,
+   mb-4 = 1.5rem, mb-5 = 3rem).  Only override non-spacing helpers that
+   need TPL token values. */
 .text-center { text-align: center; }
 .text-end { text-align: right; }
 .text-muted { color: var(--tpl-text-muted); }

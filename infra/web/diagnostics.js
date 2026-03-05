@@ -53,7 +53,7 @@
       icon.classList.add(passed ? 'text-success' : 'text-danger');
     }
     if (badge) {
-      badge.className = `badge ${passed ? 'bg-success' : 'bg-danger'}`;
+      badge.className = `ov-pill ${passed ? 'ov-pill--ok' : 'ov-pill--danger'}`;
       badge.textContent = passed ? 'OK' : 'ERRORE';
     }
     if (lat) lat.textContent = detail || (latency >= 0 ? `${latency}ms` : '');
@@ -165,13 +165,13 @@
             .map((e) => {
               const name = typeof e === 'string' ? e : e.name || e.id || '?';
               const status = typeof e === 'object' && e.status ? e.status : 'loaded';
-              const cls = status === 'loaded' ? 'bg-success' : status === 'error' ? 'bg-danger' : 'bg-primary';
-              return `<span class="badge ${cls} me-1 mb-1">${name}</span>`;
+              const cls = status === 'loaded' ? 'ov-pill--ok' : status === 'error' ? 'ov-pill--danger' : 'ov-pill--primary';
+              return `<span class="ov-pill ${cls} me-1 mb-1">${name}</span>`;
             })
             .join('');
           addLog(`  ${engines.length} moduli trovati`);
         } else {
-          document.getElementById('modulesList').innerHTML = '<span class="text-body-secondary">Nessun modulo rilevato</span>';
+          document.getElementById('modulesList').innerHTML = '<span class="text-muted">Nessun modulo rilevato</span>';
           addLog('  Nessun modulo rilevato');
         }
       } catch (e) {

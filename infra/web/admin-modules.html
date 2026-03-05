@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TPL · Admin Modules</title>
-  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=6.0" rel="stylesheet">
-  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=6.0" rel="stylesheet">
+  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=5.1.2" rel="stylesheet">
+  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=5.1.2" rel="stylesheet">
 
-  <link href="/design-tokens.css?v=6.0" rel="stylesheet">
-  <link href="/styles.css?v=6.0" rel="stylesheet">
+  <link href="/design-tokens.css?v=5.1.2" rel="stylesheet">
+  <link href="/styles.css?v=5.1.2" rel="stylesheet">
 </head>
 <body class="tpl-app-body">
   <div class="app-wrapper">
@@ -18,10 +18,6 @@
 
     <!-- Main Content -->
     <main class="app-main">
-      <div class="app-content-header">
-        <h1>Distribuzione Moduli</h1>
-        <p>Gestione bundle firmati, release e integrità della piattaforma</p>
-      </div>
       <div class="app-content">
         <div class="container-fluid">
 
@@ -37,7 +33,7 @@
           </div>
 
           <!-- Bundle Info + Security Checklist -->
-          <div class="row g-3 mb-3">
+          <div class="row g-3 mb-4">
             <div class="col-12 col-lg-7">
               <div class="ov-panel">
                 <div class="ov-panel-head">
@@ -60,7 +56,7 @@
           </div>
 
           <!-- Module List (read-only) -->
-          <div class="ov-panel mb-3">
+          <div class="ov-panel mb-4">
             <div class="ov-panel-head">
               <span><i class="bi bi-grid-3x3-gap"></i> Moduli Installati</span>
               <span class="ov-pill ov-pill--info" id="amCountPill">—</span>
@@ -86,7 +82,7 @@
           </div>
 
           <!-- Release History + Integrity -->
-          <div class="row g-3 mb-3">
+          <div class="row g-3 mb-4">
             <div class="col-12 col-lg-6">
               <div class="ov-panel">
                 <div class="ov-panel-head"><span><i class="bi bi-clock-history"></i> Release</span><span class="ov-pill" id="amRelPill">—</span></div>
@@ -106,7 +102,7 @@
           </div>
 
           <!-- Distribution Config -->
-          <div class="ov-panel mb-3">
+          <div class="ov-panel mb-4">
             <div class="ov-panel-head"><span><i class="bi bi-gear"></i> Configurazione Distribuzione</span></div>
             <div class="ov-panel-body" id="amDistConfig">
               <div class="ov-placeholder"><div class="ov-placeholder-pulse"></div></div>
@@ -130,7 +126,7 @@
           </div>
 
           <!-- Keyboard shortcuts -->
-          <div class="text-muted text-center mt-3 mb-2" style="font-size:.68rem;opacity:.5">
+          <div class="tpl-shortcuts">
             <kbd>R</kbd> aggiorna &nbsp; <kbd>/</kbd> cerca &nbsp; <kbd>G</kbd> griglia/lista
           </div>
 
@@ -142,10 +138,10 @@
 
   </div>
 
-  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=6.0"></script>
-  <script src="/app.js?v=6.0"></script>
+  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=5.1.2"></script>
+  <script src="/app.js?v=5.1.2"></script>
   <script src="/sidebar.js?v=5.1.2"></script>
-  <script src="/tpl-nav.js?v=6.0"></script>
-  <script src="/admin-modules.js?v=6.0"></script>
+  <script src="/tpl-nav.js?v=5.1.2"></script>
+  <script src="/admin-modules.js?v=5.1.2"></script>
 </body>
 </html>

@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TPL · Diagnostica Sistema</title>
-  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=6.0" rel="stylesheet">
-  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=6.0" rel="stylesheet">
+  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=5.1.2" rel="stylesheet">
+  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=5.1.2" rel="stylesheet">
 
-  <link href="/design-tokens.css?v=6.0" rel="stylesheet">
-  <link href="/styles.css?v=6.0" rel="stylesheet">
+  <link href="/design-tokens.css?v=5.1.2" rel="stylesheet">
+  <link href="/styles.css?v=5.1.2" rel="stylesheet">
 </head>
 <body class="tpl-app-body">
   <div class="app-wrapper">
@@ -18,11 +18,6 @@
 
     <!-- Main Content -->
     <main class="app-main">
-      <div class="app-content-header">
-        <h1>Diagnostica Sistema</h1>
-        <p>Verifica integrità e stato dei servizi della piattaforma</p>
-      </div>
-
       <div class="app-content">
         <div class="container-fluid">
 
@@ -49,8 +44,8 @@
                 <div class="ov-panel-body text-center py-3">
                   <i class="bi bi-hdd-rack fs-1 text-secondary" id="iconApi"></i>
                   <h6 class="mt-2 mb-1">API Server</h6>
-                  <span class="badge bg-secondary" id="badgeApi">In attesa…</span>
-                  <div class="small text-body-secondary mt-1" id="latApi"></div>
+                  <span class="ov-pill" id="badgeApi">In attesa…</span>
+                  <div class="small text-muted mt-1" id="latApi"></div>
                 </div>
               </div>
             </div>
@@ -59,8 +54,8 @@
                 <div class="ov-panel-body text-center py-3">
                   <i class="bi bi-cloud-arrow-down fs-1 text-secondary" id="iconOta"></i>
                   <h6 class="mt-2 mb-1">OTA Engine</h6>
-                  <span class="badge bg-secondary" id="badgeOta">In attesa…</span>
-                  <div class="small text-body-secondary mt-1" id="latOta"></div>
+                  <span class="ov-pill" id="badgeOta">In attesa…</span>
+                  <div class="small text-muted mt-1" id="latOta"></div>
                 </div>
               </div>
             </div>
@@ -69,8 +64,8 @@
                 <div class="ov-panel-body text-center py-3">
                   <i class="bi bi-hdd fs-1 text-secondary" id="iconFs"></i>
                   <h6 class="mt-2 mb-1">Filesystem</h6>
-                  <span class="badge bg-secondary" id="badgeFs">In attesa…</span>
-                  <div class="small text-body-secondary mt-1" id="latFs"></div>
+                  <span class="ov-pill" id="badgeFs">In attesa…</span>
+                  <div class="small text-muted mt-1" id="latFs"></div>
                 </div>
               </div>
             </div>
@@ -79,8 +74,8 @@
                 <div class="ov-panel-body text-center py-3">
                   <i class="bi bi-key fs-1 text-secondary" id="iconKeys"></i>
                   <h6 class="mt-2 mb-1">Chiavi Crittografiche</h6>
-                  <span class="badge bg-secondary" id="badgeKeys">In attesa…</span>
-                  <div class="small text-body-secondary mt-1" id="latKeys"></div>
+                  <span class="ov-pill" id="badgeKeys">In attesa…</span>
+                  <div class="small text-muted mt-1" id="latKeys"></div>
                 </div>
               </div>
             </div>
@@ -102,7 +97,7 @@
               <div class="ov-panel h-100">
                 <div class="ov-panel-head"><span><i class="bi bi-puzzle"></i> Moduli Caricati</span></div>
                 <div class="ov-panel-body" id="modulesList">
-                  <em class="text-body-secondary">Clicca "Esegui Diagnostica" per analizzare il sistema…</em>
+                  <em class="text-muted">Clicca "Esegui Diagnostica" per analizzare il sistema…</em>
                 </div>
               </div>
             </div>
@@ -110,7 +105,7 @@
               <div class="ov-panel h-100">
                 <div class="ov-panel-head"><span><i class="bi bi-shield-lock"></i> Sicurezza OTA</span></div>
                 <div class="ov-panel-body" id="securitySummary">
-                  <em class="text-body-secondary">Dati disponibili dopo la diagnostica…</em>
+                  <em class="text-muted">Dati disponibili dopo la diagnostica…</em>
                 </div>
               </div>
             </div>
@@ -120,11 +115,10 @@
           <div class="ov-panel">
             <div class="ov-panel-head d-flex justify-content-between align-items-center">
               <span><i class="bi bi-journal-code"></i> Log Diagnostica</span>
-              <small class="text-body-secondary" id="diagTimestamp"></small>
+              <small class="text-muted" id="diagTimestamp"></small>
             </div>
             <div class="ov-panel-body p-0">
-              <pre class="m-0 p-3 bg-dark text-success small" id="diagLog"
-                   style="max-height:300px;overflow:auto;font-family:'JetBrains Mono',monospace;border-radius:0 0 var(--ov-radius,.75rem) var(--ov-radius,.75rem)">In attesa dell'esecuzione della diagnostica…</pre>
+              <pre class="tpl-log-pre" id="diagLog">In attesa dell'esecuzione della diagnostica…</pre>
             </div>
           </div>
 
@@ -136,10 +130,10 @@
 
   </div>
 
-  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=6.0"></script>
-  <script src="/app.js?v=6.0"></script>
-  <script src="/sidebar.js?v=6.0"></script>
-  <script src="/tpl-nav.js?v=6.0"></script>
-  <script src="/diagnostics.js?v=6.0"></script>
+  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=5.1.2"></script>
+  <script src="/app.js?v=5.1.2"></script>
+  <script src="/sidebar.js?v=5.1.2"></script>
+  <script src="/tpl-nav.js?v=5.1.2"></script>
+  <script src="/diagnostics.js?v=5.1.2"></script>
 </body>
 </html>
