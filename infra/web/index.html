@@ -16,192 +16,124 @@
                  form-action 'self';
                  frame-ancestors 'none';">
   <title>TPL · Secure Access</title>
-  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=5.1.1" rel="stylesheet">
-  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=5.1.1" rel="stylesheet">
-  <link href="/design-tokens.css?v=5.1.1" rel="stylesheet">
-  <link href="/styles.css?v=5.1.1" rel="stylesheet">
+  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=6.0" rel="stylesheet">
+  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=6.0" rel="stylesheet">
+  <link href="/design-tokens.css?v=6.0" rel="stylesheet">
+  <link href="/styles.css?v=6.0" rel="stylesheet">
 </head>
-<body class="tpl-auth-body">
+<body>
 
   <div class="tpl-auth-page">
 
     <!-- ═══ LEFT: Brand Panel ═══════════════════════════════════ -->
     <aside class="tpl-auth-brand" aria-label="TPL Fortress branding">
-      <!-- Animated background orbs -->
-      <div class="tpl-auth-orb tpl-auth-orb--1" aria-hidden="true"></div>
-      <div class="tpl-auth-orb tpl-auth-orb--2" aria-hidden="true"></div>
-      <div class="tpl-auth-orb tpl-auth-orb--3" aria-hidden="true"></div>
-
-      <div class="tpl-auth-brand-inner">
-        <!-- Logo -->
-        <div class="tpl-auth-logo" aria-hidden="true">
-          <i class="bi bi-shield-lock-fill"></i>
-        </div>
-        <h1 class="tpl-auth-app-name">TPL Fortress</h1>
-        <p class="tpl-auth-tagline" data-i18n="login.hero_subtitle">
-          Piattaforma di gestione sicura<br>con crittografia end-to-end
-        </p>
-
-        <!-- Security features -->
-        <div class="tpl-auth-feats" role="list" aria-label="Security features">
-          <div class="tpl-auth-feat" role="listitem">
-            <div class="tpl-auth-feat-icon"><i class="bi bi-key-fill" aria-hidden="true"></i></div>
-            <div>
-              <div class="tpl-auth-feat-title" data-i18n="login.feature1_title">Crittografia Ed25519</div>
-              <div class="tpl-auth-feat-desc" data-i18n="login.feature1_desc">JWT firmati con chiavi asimmetriche.</div>
-            </div>
-          </div>
-          <div class="tpl-auth-feat" role="listitem">
-            <div class="tpl-auth-feat-icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></div>
-            <div>
-              <div class="tpl-auth-feat-title" data-i18n="login.feature2_title">Rotazione token automatica</div>
-              <div class="tpl-auth-feat-desc" data-i18n="login.feature2_desc">Refresh token monouso con rilevamento furto.</div>
-            </div>
-          </div>
-          <div class="tpl-auth-feat" role="listitem">
-            <div class="tpl-auth-feat-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></div>
-            <div>
-              <div class="tpl-auth-feat-title" data-i18n="login.feature3_title">Sessioni a vita breve</div>
-              <div class="tpl-auth-feat-desc" data-i18n="login.feature3_desc">Access token 15 min, rinnovo trasparente.</div>
-            </div>
-          </div>
-          <div class="tpl-auth-feat" role="listitem">
-            <div class="tpl-auth-feat-icon"><i class="bi bi-database-lock" aria-hidden="true"></i></div>
-            <div>
-              <div class="tpl-auth-feat-title" data-i18n="login.feature4_title">Credential Vault</div>
-              <div class="tpl-auth-feat-desc" data-i18n="login.feature4_desc">Breach detection, password history, policy avanzate.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="tpl-auth-brand-footer">
-          &copy; TPL Fortress v3.0 &mdash; Ed25519 + Argon2id
-        </div>
-      </div>
+      <div class="tpl-auth-brand-logo" aria-hidden="true">T</div>
+      <h1 class="tpl-auth-brand-name">TPL Fortress</h1>
+      <p class="tpl-auth-brand-tagline" data-i18n="login.hero_subtitle">
+        Piattaforma di gestione sicura<br>con crittografia end-to-end
+      </p>
+      <span class="tpl-auth-brand-version">&copy; TPL Fortress &mdash; Ed25519 + Argon2id</span>
     </aside>
 
     <!-- ═══ RIGHT: Form Panel ═══════════════════════════════════ -->
     <main class="tpl-auth-form-panel" role="main">
-      <div class="tpl-auth-form-container">
 
-        <!-- Top bar: security badge + lang -->
-        <div class="tpl-auth-topbar">
-          <div class="tpl-auth-sec-badge" id="secBadge" role="status" aria-live="polite">
-            <i class="bi bi-lock-fill" aria-hidden="true"></i>
-            <span id="secLabel">Connessione sicura</span>
-          </div>
-          <select id="lang" class="tpl-auth-lang" aria-label="Lingua">
-            <option value="it">IT</option>
-            <option value="en">EN</option>
-          </select>
+      <!-- Top bar: security badge + lang -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;">
+        <div id="secBadge" role="status" aria-live="polite" style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--tpl-success-600);">
+          <i class="bi bi-lock-fill" aria-hidden="true"></i>
+          <span id="secLabel">Connessione sicura</span>
         </div>
-
-        <!-- Mobile logo (visible only on small screens) -->
-        <div class="tpl-auth-mobile-brand">
-          <div class="tpl-auth-logo tpl-auth-logo--sm" aria-hidden="true">
-            <i class="bi bi-shield-lock-fill"></i>
-          </div>
-          <span class="tpl-auth-mobile-title">TPL Fortress</span>
-        </div>
-
-        <!-- Form header -->
-        <div class="tpl-auth-header">
-          <h2 class="tpl-auth-title">Bentornato</h2>
-          <p class="tpl-auth-subtitle">Inserisci le tue credenziali per accedere alla piattaforma</p>
-        </div>
-
-        <!-- Login form -->
-        <form id="loginForm" class="tpl-auth-form" autocomplete="on" novalidate>
-          <div class="tpl-auth-field">
-            <label class="tpl-auth-label" for="u">
-              <span data-i18n="login.username">Username</span>
-            </label>
-            <div class="tpl-auth-input-wrap">
-              <i class="bi bi-person tpl-auth-input-icon" aria-hidden="true"></i>
-              <input class="tpl-auth-input" id="u" name="username" maxlength="64"
-                     placeholder="Il tuo username" data-i18n-placeholder="login.username_placeholder"
-                     autocomplete="username" autocapitalize="off" autocorrect="off"
-                     spellcheck="false" autofocus required
-                     aria-required="true" aria-label="Username">
-            </div>
-          </div>
-
-          <div class="tpl-auth-field">
-            <label class="tpl-auth-label" for="p">
-              <span data-i18n="login.password">Password</span>
-            </label>
-            <div class="tpl-auth-input-wrap">
-              <i class="bi bi-key tpl-auth-input-icon" aria-hidden="true"></i>
-              <input class="tpl-auth-input tpl-auth-input--pw" id="p" name="password" type="password" maxlength="256"
-                     placeholder="La tua password" data-i18n-placeholder="login.password_placeholder"
-                     autocomplete="current-password" required
-                     aria-required="true" aria-label="Password">
-              <button class="tpl-auth-pw-toggle" type="button" id="togglePw" tabindex="-1"
-                      aria-label="Mostra/nascondi password" title="Mostra/nascondi password">
-                <i class="bi bi-eye" id="togglePwIcon" aria-hidden="true"></i>
-              </button>
-            </div>
-          </div>
-
-          <button class="ov-login-btn tpl-auth-submit" id="go" type="submit" data-i18n="login.sign_in">
-            <i class="bi bi-arrow-right-circle-fill" aria-hidden="true"></i>
-            <span>Accedi</span>
-          </button>
-
-          <!-- Session info -->
-          <div class="tpl-auth-session" id="sessionInfo" style="display:none" role="status" aria-live="polite">
-            <i class="bi bi-clock-history" aria-hidden="true"></i>
-            Token scade tra <span id="tokenTTL">15</span> min
-          </div>
-
-          <!-- Toast / feedback -->
-          <div class="ov-toast ov-toast--info mt-3" id="o" style="display:none" role="alert" aria-live="assertive">&mdash;</div>
-        </form>
-
-        <!-- Footer (desktop) -->
-        <div class="tpl-auth-footer">
-          <span class="tpl-auth-poweredby">Powered by Ed25519 + Argon2id</span>
-        </div>
+        <select id="lang" class="tpl-input tpl-input--sm" style="width:auto;" aria-label="Lingua">
+          <option value="it">IT</option>
+          <option value="en">EN</option>
+        </select>
       </div>
+
+      <!-- Form header -->
+      <div class="tpl-auth-form-header">
+        <h1 data-i18n="login.welcome_back">Bentornato</h1>
+        <p data-i18n="login.sign_in_subtitle">Inserisci le tue credenziali per accedere alla piattaforma</p>
+      </div>
+
+      <!-- Login form -->
+      <form id="loginForm" autocomplete="on" novalidate>
+
+        <div class="tpl-auth-input-group">
+          <label for="u" data-i18n="login.username">Username</label>
+          <div class="tpl-auth-input-wrap">
+            <i class="bi bi-person auth-icon" aria-hidden="true"></i>
+            <input class="tpl-auth-input" id="u" name="username" maxlength="64"
+                   placeholder="Il tuo username" data-i18n-placeholder="login.username_placeholder"
+                   autocomplete="username" autocapitalize="off" autocorrect="off"
+                   spellcheck="false" autofocus required
+                   aria-required="true" aria-label="Username">
+          </div>
+        </div>
+
+        <div class="tpl-auth-input-group">
+          <label for="p" data-i18n="login.password">Password</label>
+          <div class="tpl-auth-input-wrap">
+            <i class="bi bi-key auth-icon" aria-hidden="true"></i>
+            <input class="tpl-auth-input" id="p" name="password" type="password" maxlength="256"
+                   placeholder="La tua password" data-i18n-placeholder="login.password_placeholder"
+                   autocomplete="current-password" required
+                   aria-required="true" aria-label="Password">
+            <button type="button" id="togglePw" tabindex="-1"
+                    style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tpl-text-faint);cursor:pointer;"
+                    aria-label="Mostra/nascondi password" title="Mostra/nascondi password">
+              <i class="bi bi-eye" id="togglePwIcon" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <button class="tpl-auth-submit" id="go" type="submit" data-i18n="login.sign_in">
+          Accedi
+        </button>
+
+        <!-- Session info -->
+        <div id="sessionInfo" style="display:none;margin-top:1rem;font-size:.8rem;color:var(--tpl-text-muted);text-align:center;" role="status" aria-live="polite">
+          <i class="bi bi-clock-history" aria-hidden="true"></i>
+          Token scade tra <span id="tokenTTL">15</span> min
+        </div>
+
+        <!-- Toast / feedback -->
+        <div class="tpl-auth-error" id="o" style="display:none" role="alert" aria-live="assertive">&mdash;</div>
+      </form>
+
+      <!-- Footer -->
+      <div class="tpl-auth-footer">Powered by Ed25519 + Argon2id</div>
     </main>
 
   </div>
 
   <!-- ═══ Password Change Modal (first login / expired) ═══════ -->
-  <div class="ov-pw-overlay" id="pwOverlay" style="display:none">
-    <div class="ov-pw-card tpl-pw-card">
-      <div class="ov-pw-header tpl-pw-header">
-        <div class="ov-pw-icon tpl-pw-icon"><i class="bi bi-shield-lock-fill"></i></div>
-        <h2 class="ov-pw-title tpl-pw-title">Cambio Password Obbligatorio</h2>
-        <p class="ov-pw-subtitle tpl-pw-subtitle">La tua password non soddisfa la policy di sicurezza attuale. Scegline una nuova per continuare.</p>
+  <div class="ov-modal-overlay" id="pwOverlay" style="display:none">
+    <div class="ov-modal ov-modal--sm">
+      <div class="ov-modal-head">
+        <h3><i class="bi bi-shield-lock-fill me-2"></i>Cambio Password Obbligatorio</h3>
       </div>
-      <div class="ov-pw-body tpl-pw-body">
-        <div class="tpl-pw-field">
-          <label class="tpl-auth-label" for="pwCurrent"><i class="bi bi-key" aria-hidden="true"></i> Password attuale</label>
-          <div class="tpl-auth-input-wrap">
-            <i class="bi bi-key tpl-auth-input-icon" aria-hidden="true"></i>
-            <input class="tpl-auth-input" id="pwCurrent" type="password" maxlength="256"
-                   placeholder="Password attuale" autocomplete="current-password">
-          </div>
+      <div class="ov-modal-body">
+        <p class="text-muted" style="font-size:.875rem;margin-bottom:1.5rem;">La tua password non soddisfa la policy di sicurezza attuale. Scegline una nuova per continuare.</p>
+
+        <div class="tpl-form-group">
+          <label class="tpl-label" for="pwCurrent"><i class="bi bi-key me-1"></i> Password attuale</label>
+          <input class="tpl-input" id="pwCurrent" type="password" maxlength="256"
+                 placeholder="Password attuale" autocomplete="current-password">
         </div>
-        <div class="tpl-pw-field">
-          <label class="tpl-auth-label" for="pwNew"><i class="bi bi-lock" aria-hidden="true"></i> Nuova password</label>
-          <div class="tpl-auth-input-wrap">
-            <i class="bi bi-lock tpl-auth-input-icon" aria-hidden="true"></i>
-            <input class="tpl-auth-input" id="pwNew" type="password" maxlength="256"
-                   placeholder="Nuova password (min 14 caratteri)" autocomplete="new-password">
-          </div>
-          <div class="ov-pw-strength" id="pwStrength"></div>
+        <div class="tpl-form-group">
+          <label class="tpl-label" for="pwNew"><i class="bi bi-lock me-1"></i> Nuova password</label>
+          <input class="tpl-input" id="pwNew" type="password" maxlength="256"
+                 placeholder="Nuova password (min 14 caratteri)" autocomplete="new-password">
+          <div id="pwStrength" style="margin-top:.5rem;"></div>
         </div>
-        <div class="tpl-pw-field">
-          <label class="tpl-auth-label" for="pwConfirm"><i class="bi bi-lock-fill" aria-hidden="true"></i> Conferma nuova password</label>
-          <div class="tpl-auth-input-wrap">
-            <i class="bi bi-lock-fill tpl-auth-input-icon" aria-hidden="true"></i>
-            <input class="tpl-auth-input" id="pwConfirm" type="password" maxlength="256"
-                   placeholder="Ripeti nuova password" autocomplete="new-password">
-          </div>
+        <div class="tpl-form-group">
+          <label class="tpl-label" for="pwConfirm"><i class="bi bi-lock-fill me-1"></i> Conferma nuova password</label>
+          <input class="tpl-input" id="pwConfirm" type="password" maxlength="256"
+                 placeholder="Ripeti nuova password" autocomplete="new-password">
         </div>
-        <ul class="ov-pw-rules" id="pwRules">
+
+        <ul style="list-style:none;padding:0;margin:1rem 0;font-size:.8rem;" id="pwRules">
           <li id="pwRuleLen"><i class="bi bi-x-circle"></i> Almeno <span id="pwMinLen">14</span> caratteri</li>
           <li id="pwRuleUpper"><i class="bi bi-x-circle"></i> Almeno una lettera maiuscola</li>
           <li id="pwRuleLower"><i class="bi bi-x-circle"></i> Almeno una lettera minuscola</li>
@@ -210,17 +142,15 @@
           <li id="pwRuleMatch"><i class="bi bi-x-circle"></i> Le password corrispondono</li>
           <li id="pwRuleNoUser"><i class="bi bi-x-circle"></i> Non contiene lo username</li>
         </ul>
-        <button class="ov-login-btn tpl-auth-submit" id="pwSubmit" type="button" disabled>
-          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-          <span>Cambia Password</span>
-        </button>
-        <div class="ov-toast ov-toast--info mt-3" id="pwMsg" style="display:none"></div>
+
+        <button class="tpl-auth-submit" id="pwSubmit" type="button" disabled>Cambia Password</button>
+        <div class="tpl-auth-error" id="pwMsg" style="display:none;margin-top:1rem;"></div>
       </div>
     </div>
   </div>
 
-  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=5.1.1"></script>
-  <script src="/app.js?v=5.1.1"></script>
-  <script src="/landing.js?v=5.1.1"></script>
+  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=6.0"></script>
+  <script src="/app.js?v=6.0"></script>
+  <script src="/landing.js?v=6.0"></script>
 </body>
 </html>

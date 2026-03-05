@@ -1,37 +1,25 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   TPL FORTRESS — Design Token System v5.2  «Sovereign»
+   TPL FORTRESS — Design Token System v6.0  «Architect»
    ═══════════════════════════════════════════════════════════════════════════
    Single source of truth for the entire platform visual language.
    100% local — ZERO CDN dependencies. All fonts self-hosted.
 
-   Sovereign v5.2 — WCAG AA-compliant palette + readable font scale.
-   Color-contrast validated on ALL surface combos (white/surface/sl-100/sl-200).
-   Font floor raised to .7rem (11.2px). Luxury aesthetic preserved.
+   Architect v6.0 — Modern dashboard design system.
+   Dual-theme support (light/dark) via [data-theme] attribute.
+   WCAG AA-compliant palette on ALL surface combos.
+   Font floor: 0.75rem (12px).
 
    Design Philosophy:
-     Deep warm-carbon surfaces with barely perceptible amber warmth.
-     Sovereign Gold signature accent — the "precious metal" touch.
-     Regal Sapphire for trust, authority, and primary actions.
-     Platinum Wisteria for depth, mystery, and gradient richness.
-     Rich jewel-tone semantics. Generous whitespace. Refined shadows.
-
-   Color Architecture:
-     ● Primary   (--tpl-blue-*)   → Regal Sapphire     — trust, action
-     ● Secondary (--tpl-indigo-*) → Sovereign Gold      — luxury, premium
-     ● Tertiary  (--tpl-violet-*) → Platinum Wisteria   — depth, elegance
-     ● Info      (--tpl-sky-*)    → Steel Horizon        — information
-     ● Dark      (--tpl-dark-*)   → Warm Carbon          — refined depth
-     ● Neutral   (--tpl-slate-*)  → Greige               — warm sophistication
-     ● Success   (--tpl-success-*)→ Forest Emerald       — organic positivity
-     ● Warning   (--tpl-warning-*)→ Rich Amber           — warm caution
-     ● Danger    (--tpl-danger-*) → Burgundy Claret      — refined urgency
+     Clean, spacious layouts with clear visual hierarchy.
+     Subtle depth via refined shadows and layered surfaces.
+     Professional blue primary palette with warm accent tones.
+     Generous whitespace. Consistent 8px grid. Smooth micro-interactions.
 
    Font: Inter (self-hosted, variable weight 300–800)
    Usage: <link href="/design-tokens.css" rel="stylesheet">  (BEFORE styles.css)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Self-Hosted Fonts — zero external requests ─────────────────────── */
-
+/* ── Self-Hosted Fonts ─────────────────────────────────────────────── */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -43,7 +31,6 @@
                  U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
                  U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
-
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -56,21 +43,21 @@
                  U+FFFD;
 }
 
+/* ══ STATIC TOKENS — Shared across themes ═══════════════════════════ */
 :root {
-
-  /* ══ TYPOGRAPHY ════════════════════════════════════════════════════════ */
+  /* ── Typography ────────────────────────────────────────────── */
   --tpl-font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   --tpl-font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, 'Liberation Mono', monospace;
 
-  --tpl-fs-xs:      .7rem;
-  --tpl-fs-sm:      .78rem;
-  --tpl-fs-base:    .88rem;
-  --tpl-fs-md:      .95rem;
-  --tpl-fs-lg:      1.1rem;
-  --tpl-fs-xl:      1.35rem;
-  --tpl-fs-2xl:     1.65rem;
-  --tpl-fs-3xl:     2rem;
-  --tpl-fs-display: 2.5rem;
+  --tpl-fs-xs:      .75rem;
+  --tpl-fs-sm:      .8125rem;
+  --tpl-fs-base:    .875rem;
+  --tpl-fs-md:      .9375rem;
+  --tpl-fs-lg:      1.0625rem;
+  --tpl-fs-xl:      1.25rem;
+  --tpl-fs-2xl:     1.5rem;
+  --tpl-fs-3xl:     1.875rem;
+  --tpl-fs-display: 2.25rem;
 
   --tpl-fw-light:    300;
   --tpl-fw-regular:  400;
@@ -79,362 +66,353 @@
   --tpl-fw-bold:     700;
   --tpl-fw-black:    800;
 
-  --tpl-leading-tight:  1.15;
+  --tpl-leading-tight:  1.2;
   --tpl-leading-snug:   1.35;
-  --tpl-leading-normal: 1.55;
+  --tpl-leading-normal: 1.5;
   --tpl-leading-loose:  1.75;
 
-  --tpl-tracking-tight:   -.03em;
-  --tpl-tracking-normal:  .01em;
-  --tpl-tracking-wide:    .04em;
-  --tpl-tracking-wider:   .08em;
-  --tpl-tracking-luxury:  .14em;
-  --tpl-tracking-display: .18em;
+  --tpl-tracking-tight:  -.02em;
+  --tpl-tracking-normal:  0;
+  --tpl-tracking-wide:   .02em;
+  --tpl-tracking-wider:  .05em;
 
-  /* ══ COLOR PALETTE — Sovereign v5.0 ═══════════════════════════════════ */
+  /* ── Primary — Professional Blue ───────────────────────────── */
+  --tpl-blue-50:  #eff6ff; --tpl-blue-100: #dbeafe; --tpl-blue-200: #bfdbfe;
+  --tpl-blue-300: #93c5fd; --tpl-blue-400: #60a5fa; --tpl-blue-500: #3b82f6;
+  --tpl-blue-600: #2563eb; --tpl-blue-700: #1d4ed8; --tpl-blue-800: #1e40af;
+  --tpl-blue-900: #1e3a5f;
 
-  /* ── Brand Foundation ── */
-  --tpl-brand-gradient:     linear-gradient(160deg, #0E1428 0%, #1A1820 45%, #0A0A0E 100%);
-  --tpl-brand-gradient-135: linear-gradient(135deg, #0E1428 0%, #1A1820 50%, #0A0A0E 100%);
-  --tpl-brand-dark:         #070708;
-  --tpl-brand-deep:         #0A0A0E;
-  --tpl-brand-navy:         #0E1428;
-  --tpl-brand-warm:         #1A1820;
+  /* ── Secondary — Indigo ────────────────────────────────────── */
+  --tpl-indigo-50: #eef2ff; --tpl-indigo-100: #e0e7ff; --tpl-indigo-200: #c7d2fe;
+  --tpl-indigo-300: #a5b4fc; --tpl-indigo-400: #818cf8; --tpl-indigo-500: #6366f1;
+  --tpl-indigo-600: #4f46e5; --tpl-indigo-700: #4338ca;
 
-  /* ── Dark Surface Scale (warm carbon) ── */
-  --tpl-dark-950:  #07080B;
-  --tpl-dark-900:  #0C0E14;
-  --tpl-dark-850:  #11141E;
-  --tpl-dark-800:  #161A28;
-  --tpl-dark-750:  #1C2034;
-  --tpl-dark-700:  #222840;
-  --tpl-dark-650:  #2A304C;
-  --tpl-dark-600:  #343A58;
-  --tpl-dark-500:  #404866;
+  /* ── Tertiary — Violet ─────────────────────────────────────── */
+  --tpl-violet-50: #f5f3ff; --tpl-violet-100: #ede9fe; --tpl-violet-200: #ddd6fe;
+  --tpl-violet-300: #c4b5fd; --tpl-violet-400: #a78bfa; --tpl-violet-500: #8b5cf6;
+  --tpl-violet-600: #7c3aed; --tpl-violet-700: #6d28d9;
 
-  /* ── Primary — Regal Sapphire ── */
-  --tpl-blue-50:   #EDF2FA;
-  --tpl-blue-100:  #D2E0F0;
-  --tpl-blue-200:  #A8C0E0;
-  --tpl-blue-300:  #80A2CE;
-  --tpl-blue-400:  #5884BC;
-  --tpl-blue-500:  #2B5EA8;
-  --tpl-blue-600:  #234E90;
-  --tpl-blue-700:  #1C3E78;
-  --tpl-blue-800:  #152E60;
-  --tpl-blue-900:  #0E2048;
+  /* ── Amber/Gold accent ─────────────────────────────────────── */
+  --tpl-amber-50: #fffbeb; --tpl-amber-100: #fef3c7; --tpl-amber-200: #fde68a;
+  --tpl-amber-300: #fcd34d; --tpl-amber-400: #fbbf24; --tpl-amber-500: #f59e0b;
+  --tpl-amber-600: #d97706; --tpl-amber-700: #b45309;
 
-  /* ── Secondary — Sovereign Gold ── */
-  --tpl-indigo-50:  #FBF8F0;
-  --tpl-indigo-100: #F4ECDA;
-  --tpl-indigo-200: #E8D8AE;
-  --tpl-indigo-300: #DCC280;
-  --tpl-indigo-400: #CCAA55;
-  --tpl-indigo-500: #C4A245;
-  --tpl-indigo-600: #7E682A;
-  --tpl-indigo-700: #6B5520;
-  --tpl-indigo-800: #685522;
-  --tpl-indigo-900: #4A3E18;
+  /* ── Success — Emerald ─────────────────────────────────────── */
+  --tpl-success-50: #ecfdf5; --tpl-success-100: #d1fae5; --tpl-success-200: #a7f3d0;
+  --tpl-success-300: #6ee7b7; --tpl-success-400: #34d399; --tpl-success-500: #10b981;
+  --tpl-success-600: #059669; --tpl-success-700: #047857; --tpl-success-800: #065f46;
 
-  /* ── Tertiary — Platinum Wisteria ── */
-  --tpl-violet-50:  #F6F2FA;
-  --tpl-violet-100: #EAE0F2;
-  --tpl-violet-200: #D5C2E4;
-  --tpl-violet-300: #BEA2D4;
-  --tpl-violet-400: #A682C4;
-  --tpl-violet-500: #8A60B0;
-  --tpl-violet-600: #724E98;
-  --tpl-violet-700: #5C3E80;
-  --tpl-violet-800: #463068;
-  --tpl-violet-900: #322250;
+  /* ── Warning — Amber ───────────────────────────────────────── */
+  --tpl-warning-50: #fffbeb; --tpl-warning-100: #fef3c7; --tpl-warning-200: #fde68a;
+  --tpl-warning-300: #fcd34d; --tpl-warning-400: #fbbf24; --tpl-warning-500: #f59e0b;
+  --tpl-warning-600: #d97706; --tpl-warning-700: #b45309; --tpl-warning-800: #92400e;
 
-  /* ── Accent — Steel Horizon ── */
-  --tpl-sky-50:   #EFF5FB;
-  --tpl-sky-100:  #D8E8F4;
-  --tpl-sky-200:  #B0CEE8;
-  --tpl-sky-300:  #88B4DC;
-  --tpl-sky-400:  #609CD0;
-  --tpl-sky-500:  #487CBE;
-  --tpl-sky-600:  #3A66A2;
-  --tpl-sky-700:  #2E5286;
+  /* ── Danger — Rose ─────────────────────────────────────────── */
+  --tpl-danger-50: #fff1f2; --tpl-danger-100: #ffe4e6; --tpl-danger-200: #fecdd3;
+  --tpl-danger-300: #fda4af; --tpl-danger-400: #fb7185; --tpl-danger-500: #f43f5e;
+  --tpl-danger-600: #e11d48; --tpl-danger-700: #be123c; --tpl-danger-800: #9f1239;
 
-  /* ── Accent Gradients ── */
-  --tpl-accent-gradient:        linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
-  --tpl-accent-gradient-vivid:  linear-gradient(135deg, var(--tpl-blue-400), var(--tpl-indigo-400));
-  --tpl-accent-gradient-soft:   linear-gradient(135deg, var(--tpl-blue-300), var(--tpl-indigo-400));
-  --tpl-accent-gradient-luxury: linear-gradient(135deg, var(--tpl-indigo-400), var(--tpl-indigo-600), var(--tpl-sky-400));
-  --tpl-accent-gradient-gold:   linear-gradient(135deg, var(--tpl-indigo-300), var(--tpl-indigo-500), var(--tpl-indigo-700));
+  /* ── Info — Sky ────────────────────────────────────────────── */
+  --tpl-info-50: #f0f9ff; --tpl-info-100: #e0f2fe; --tpl-info-200: #bae6fd;
+  --tpl-info-300: #7dd3fc; --tpl-info-400: #38bdf8; --tpl-info-500: #0ea5e9;
+  --tpl-info-600: #0284c7; --tpl-info-700: #0369a1;
 
-  /* ── Composite Gradient Tokens ── */
-  --tpl-gradient-sidebar:  linear-gradient(170deg, var(--tpl-dark-700), var(--tpl-dark-750), var(--tpl-dark-850), var(--tpl-dark-900));
-  --tpl-gradient-navbar:   linear-gradient(105deg, rgba(20,24,40,.98), rgba(14,16,28,.97), rgba(10,11,16,.99));
-  --tpl-gradient-aurora:   linear-gradient(180deg, var(--tpl-indigo-400), var(--tpl-indigo-600), var(--tpl-sky-400));
-  --tpl-gradient-success:  linear-gradient(135deg, var(--tpl-success-500), var(--tpl-success-600));
-  --tpl-gradient-danger:   linear-gradient(135deg, var(--tpl-danger-500), var(--tpl-danger-600));
-  --tpl-gradient-warning:  linear-gradient(135deg, var(--tpl-warning-500), var(--tpl-warning-600));
-  --tpl-gradient-edge:     linear-gradient(90deg, transparent, var(--tpl-indigo-500), var(--tpl-indigo-400), transparent);
-  --tpl-gradient-shimmer:  linear-gradient(110deg, transparent 25%, rgba(253,252,250,.04) 37%, transparent 63%);
-  --tpl-gradient-hero:     linear-gradient(135deg, var(--tpl-dark-800) 0%, var(--tpl-dark-700) 30%, var(--tpl-dark-800) 70%, var(--tpl-dark-850) 100%);
-  --tpl-gradient-gold-shimmer: linear-gradient(110deg, transparent 30%, rgba(196,162,69,.08) 45%, transparent 65%);
-  --tpl-gradient-sovereign:    linear-gradient(135deg, var(--tpl-dark-900) 0%, var(--tpl-dark-800) 25%, var(--tpl-dark-750) 50%, var(--tpl-dark-850) 75%, var(--tpl-dark-900) 100%);
+  /* ── Old naming compat (alias) ─────────────────────────────── */
+  --tpl-sky-50: var(--tpl-info-50); --tpl-sky-100: var(--tpl-info-100);
+  --tpl-sky-200: var(--tpl-info-200); --tpl-sky-300: var(--tpl-info-300);
+  --tpl-sky-400: var(--tpl-info-400); --tpl-sky-500: var(--tpl-info-500);
+  --tpl-sky-600: var(--tpl-info-600); --tpl-sky-700: var(--tpl-info-700);
 
-  /* ── Semantic — Success (Forest Emerald) ── */
-  --tpl-success-50:  #ECF8F2;
-  --tpl-success-100: #CEECDE;
-  --tpl-success-200: #98DCB8;
-  --tpl-success-300: #60C890;
-  --tpl-success-400: #34B06E;
-  --tpl-success-500: #108258;
-  --tpl-success-600: #0C6B48;
-  --tpl-success-700: #085538;
-  --tpl-success-800: #064028;
+  /* ── Spacing (8px grid) ────────────────────────────────────── */
+  --tpl-sp-0: 0; --tpl-sp-px: 1px; --tpl-sp-0h: .125rem;
+  --tpl-sp-1: .25rem; --tpl-sp-2: .5rem; --tpl-sp-3: .75rem;
+  --tpl-sp-4: 1rem; --tpl-sp-5: 1.25rem; --tpl-sp-6: 1.5rem;
+  --tpl-sp-8: 2rem; --tpl-sp-10: 2.5rem; --tpl-sp-12: 3rem;
+  --tpl-sp-16: 4rem; --tpl-sp-20: 5rem; --tpl-sp-24: 6rem;
 
-  /* ── Semantic — Warning (Rich Amber) ── */
-  --tpl-warning-50:  #FFF9E8;
-  --tpl-warning-100: #FFF0C4;
-  --tpl-warning-200: #FFE090;
-  --tpl-warning-400: #ECB820;
-  --tpl-warning-500: #D29812;
-  --tpl-warning-600: #B4800C;
-  --tpl-warning-700: #946808;
-  --tpl-warning-800: #785206;
+  /* ── Border Radius ─────────────────────────────────────────── */
+  --tpl-radius-xs: .25rem; --tpl-radius-sm: .375rem; --tpl-radius-md: .5rem;
+  --tpl-radius-lg: .75rem; --tpl-radius-xl: 1rem; --tpl-radius-2xl: 1.25rem;
+  --tpl-radius-3xl: 1.5rem; --tpl-radius-full: 9999px;
 
-  /* ── Semantic — Danger (Burgundy Claret) ── */
-  --tpl-danger-50:  #FBF0F2;
-  --tpl-danger-100: #F5D4DA;
-  --tpl-danger-200: #E8AAB6;
-  --tpl-danger-300: #D8808E;
-  --tpl-danger-400: #C85A70;
-  --tpl-danger-500: #B23244;
-  --tpl-danger-600: #962838;
-  --tpl-danger-700: #7A202C;
-  --tpl-danger-800: #601824;
+  /* ── Transitions ───────────────────────────────────────────── */
+  --tpl-ease-default: cubic-bezier(.4,0,.2,1);
+  --tpl-ease-in:      cubic-bezier(.4,0,1,1);
+  --tpl-ease-out:     cubic-bezier(0,0,.2,1);
+  --tpl-ease-spring:  cubic-bezier(.34,1.56,.64,1);
+  --tpl-ease-luxury:  var(--tpl-ease-spring);
+  --tpl-ease-silk:    cubic-bezier(.25,.46,.45,.94);
+  --tpl-ease-bounce:  var(--tpl-ease-spring);
 
-  /* ── Semantic — Info (Steel Horizon) ── */
-  --tpl-info-50:  #EFF5FB;
-  --tpl-info-100: #D8E8F4;
-  --tpl-info-200: #B0CEE8;
-  --tpl-info-300: #88B4DC;
-  --tpl-info-400: #609CD0;
-  --tpl-info-500: #487CBE;
-  --tpl-info-600: #3A66A2;
-  --tpl-info-700: #2E5286;
-
-  /* ── Neutrals (Warm Greige) ── */
-  --tpl-slate-50:  #F8F7F4;
-  --tpl-slate-100: #F0EEEA;
-  --tpl-slate-200: #E2DED8;
-  --tpl-slate-300: #CCC8C0;
-  --tpl-slate-400: #9E9890;
-  --tpl-slate-500: #5D5850;
-  --tpl-slate-600: #524E48;
-  --tpl-slate-700: #3A3832;
-  --tpl-slate-800: #242220;
-  --tpl-slate-900: #141310;
-
-  /* ── Surface & Background ── */
-  --tpl-bg:             var(--tpl-slate-100);
-  --tpl-surface:        #FDFCFA;
-  --tpl-surface-alt:    var(--tpl-slate-50);
-  --tpl-surface-raised: #FDFCFA;
-  --tpl-surface-sunken: var(--tpl-slate-200);
-
-  /* ── Borders ── */
-  --tpl-border-light:  var(--tpl-slate-100);
-  --tpl-border:        var(--tpl-slate-200);
-  --tpl-border-strong: var(--tpl-slate-300);
-  --tpl-border-accent: rgba(196, 162, 69, .16);
-  --tpl-border-focus:  var(--tpl-blue-500);
-
-  /* ── Text ── */
-  --tpl-text:         var(--tpl-slate-800);
-  --tpl-text-sec:     var(--tpl-slate-600);
-  --tpl-text-muted:   var(--tpl-slate-500);
-  --tpl-text-faint:   var(--tpl-slate-500);   /* was slate-400 — bumped for WCAG AA 4.5:1 */
-  --tpl-text-inverse: #FDFCFA;
-  --tpl-accent-text:  var(--tpl-indigo-700);  /* #6B5520 — safe gold for text on light bg (7.1:1 on white, 6.2:1 on sl-100) */
-  --tpl-accent-text-light: var(--tpl-indigo-600); /* #7E682A — accent text, AA-safe (5.4:1 on white, 4.7:1 on sl-100) */
-
-  /* ══ SPACING ══════════════════════════════════════════════════════════ */
-  --tpl-sp-0:  0;
-  --tpl-sp-px: 1px;
-  --tpl-sp-1:  .25rem;
-  --tpl-sp-2:  .5rem;
-  --tpl-sp-3:  .75rem;
-  --tpl-sp-4:  1rem;
-  --tpl-sp-5:  1.25rem;
-  --tpl-sp-6:  1.5rem;
-  --tpl-sp-8:  2rem;
-  --tpl-sp-10: 2.5rem;
-  --tpl-sp-12: 3rem;
-  --tpl-sp-16: 4rem;
-  --tpl-sp-20: 5rem;
-  --tpl-sp-24: 6rem;
-
-  /* ══ BORDER RADIUS ════════════════════════════════════════════════════ */
-  --tpl-radius-xs:   .2rem;
-  --tpl-radius-sm:   .35rem;
-  --tpl-radius-md:   .55rem;
-  --tpl-radius-lg:   .7rem;
-  --tpl-radius-xl:   .9rem;
-  --tpl-radius-2xl:  1.15rem;
-  --tpl-radius-3xl:  1.6rem;
-  --tpl-radius-full: 9999px;
-
-  /* ══ SHADOWS (sovereign depth) ════════════════════════════════════════ */
-  --tpl-shadow-xs:    0 1px 2px rgba(0, 0, 0, .04);
-  --tpl-shadow-sm:    0 1px 3px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .03);
-  --tpl-shadow-md:    0 4px 16px rgba(0, 0, 0, .07), 0 1px 4px rgba(0, 0, 0, .03);
-  --tpl-shadow-lg:    0 10px 32px rgba(0, 0, 0, .09), 0 2px 8px rgba(0, 0, 0, .04);
-  --tpl-shadow-xl:    0 20px 56px rgba(0, 0, 0, .12), 0 4px 16px rgba(0, 0, 0, .05);
-  --tpl-shadow-2xl:   0 32px 80px rgba(0, 0, 0, .16), 0 8px 24px rgba(0, 0, 0, .07);
-  --tpl-shadow-inner: inset 0 2px 6px rgba(0, 0, 0, .05);
-  --tpl-shadow-glow-blue:     0 0 0 3px rgba(43, 94, 168, .14), 0 2px 8px rgba(43, 94, 168, .08);
-  --tpl-shadow-glow-indigo:   0 0 0 3px rgba(196, 162, 69, .16), 0 2px 8px rgba(196, 162, 69, .10);
-  --tpl-shadow-glow-violet:   0 0 0 3px rgba(138, 96, 176, .14), 0 2px 8px rgba(138, 96, 176, .08);
-  --tpl-shadow-glow-gold:     0 0 0 3px rgba(196, 162, 69, .20), 0 4px 16px rgba(196, 162, 69, .12);
-  --tpl-shadow-luxury:        0 8px 32px rgba(0, 0, 0, .10), 0 0 0 1px rgba(196, 162, 69, .06);
-  --tpl-shadow-sovereign:     0 12px 48px rgba(0, 0, 0, .14), 0 0 1px rgba(196, 162, 69, .08), inset 0 1px 0 rgba(253, 252, 250, .04);
-
-  /* ══ TRANSITIONS ══════════════════════════════════════════════════════ */
-  --tpl-ease-default: cubic-bezier(.4, 0, .2, 1);
-  --tpl-ease-bounce:  cubic-bezier(.34, 1.56, .64, 1);
-  --tpl-ease-in:      cubic-bezier(.4, 0, 1, 1);
-  --tpl-ease-out:     cubic-bezier(0, 0, .2, 1);
-  --tpl-ease-luxury:  cubic-bezier(.22, .68, 0, 1.04);
-  --tpl-ease-silk:    cubic-bezier(.25, .46, .45, .94);
-
-  --tpl-duration-fast:      .15s;
-  --tpl-duration-normal:    .25s;
-  --tpl-duration-slow:      .4s;
-  --tpl-duration-luxury:    .6s;
-  --tpl-duration-sovereign: .8s;
+  --tpl-duration-fast:   120ms;
+  --tpl-duration-normal: 200ms;
+  --tpl-duration-slow:   350ms;
+  --tpl-duration-luxury: 500ms;
+  --tpl-duration-sovereign: 700ms;
 
   --tpl-transition-colors: color var(--tpl-duration-fast) var(--tpl-ease-default),
-                           background-color var(--tpl-duration-fast) var(--tpl-ease-default),
-                           border-color var(--tpl-duration-fast) var(--tpl-ease-default);
+    background-color var(--tpl-duration-fast) var(--tpl-ease-default),
+    border-color var(--tpl-duration-fast) var(--tpl-ease-default);
   --tpl-transition-all:    all var(--tpl-duration-normal) var(--tpl-ease-default);
-  --tpl-transition-luxury: all var(--tpl-duration-luxury) var(--tpl-ease-luxury);
+  --tpl-transition-luxury: all var(--tpl-duration-luxury) var(--tpl-ease-spring);
   --tpl-transition-silk:   all var(--tpl-duration-sovereign) var(--tpl-ease-silk);
 
-  /* ══ Z-INDEX SCALE ════════════════════════════════════════════════════ */
-  --tpl-z-base:     1;
-  --tpl-z-dropdown: 100;
-  --tpl-z-sticky:   200;
-  --tpl-z-sidebar:  1040;
-  --tpl-z-backdrop: 1039;
-  --tpl-z-modal:    9999;
+  /* ── Z-Index Scale ─────────────────────────────────────────── */
+  --tpl-z-base: 1; --tpl-z-dropdown: 100; --tpl-z-sticky: 200;
+  --tpl-z-sidebar: 1040; --tpl-z-backdrop: 1039; --tpl-z-modal: 9999;
 
-  /* ══ GLASSMORPHISM (warm frost) ═══════════════════════════════════════ */
-  --tpl-glass-bg:            rgba(253, 252, 250, .05);
-  --tpl-glass-bg-med:        rgba(253, 252, 250, .09);
-  --tpl-glass-bg-strong:     rgba(253, 252, 250, .14);
-  --tpl-glass-border:        rgba(253, 252, 250, .07);
-  --tpl-glass-border-strong: rgba(253, 252, 250, .16);
-  --tpl-glass-blur:          blur(16px) saturate(1.3);
-  --tpl-glass-blur-heavy:    blur(32px) saturate(1.6);
+  /* ── Layout ────────────────────────────────────────────────── */
+  --tpl-sidebar-width: 260px;
+  --tpl-sidebar-collapsed: 72px;
+  --tpl-navbar-height: 60px;
+  --tpl-content-max-width: 1440px;
 
-  /* ═══ SIDEBAR TOKENS ═══════════════════════════════════════════════════ */
-  --tpl-sidebar-width:       260px;
-  --tpl-sidebar-collapsed:   64px;
-  --tpl-sidebar-bg:          var(--tpl-gradient-sidebar);
-  --tpl-sidebar-text:        #E8E4DC;   /* brighter warm champagne for readability */
-  --tpl-sidebar-text-faint:  rgba(208,204,196,.45);
-  --tpl-sidebar-hover:       rgba(196, 162, 69, .12);
-  --tpl-sidebar-active:      linear-gradient(135deg, rgba(196,162,69,.18), rgba(138,96,176,.10), rgba(196,162,69,.06));
-  --tpl-sidebar-accent:      var(--tpl-gradient-aurora);
-  --tpl-sidebar-divider:     rgba(196, 162, 69, .10);
-  --tpl-sidebar-glow:        rgba(196, 162, 69, .08);
-  --tpl-sidebar-blur:        none;
-
-  /* ═══ NAVBAR TOKENS ═══════════════════════════════════════════════════ */
-  --tpl-navbar-height:       54px;
-  --tpl-navbar-bg:           var(--tpl-gradient-navbar);
-  --tpl-navbar-blur:         blur(24px) saturate(1.6);
-  --tpl-navbar-border:       rgba(196, 162, 69, .10);
-  --tpl-navbar-text:         #E0DCD2;   /* brighter for readability */
-  --tpl-navbar-text-hover:   rgba(212,186,102,.95);  /* gold hover */
-
-  /* ═══ OVERLAY TOKENS ═══════════════════════════════════════════════════ */
-  --tpl-overlay-indigo-4:    rgba(196,162,69,.04);
-  --tpl-overlay-indigo-6:    rgba(196,162,69,.06);
-  --tpl-overlay-indigo-10:   rgba(196,162,69,.10);
-  --tpl-overlay-indigo-12:   rgba(196,162,69,.12);
-  --tpl-overlay-indigo-15:   rgba(196,162,69,.15);
-  --tpl-overlay-indigo-20:   rgba(196,162,69,.20);
-  --tpl-overlay-indigo-25:   rgba(196,162,69,.25);
-  --tpl-overlay-violet-6:    rgba(138,96,176,.06);
-  --tpl-overlay-violet-10:   rgba(138,96,176,.10);
-  --tpl-overlay-violet-12:   rgba(138,96,176,.12);
-  --tpl-overlay-violet-14:   rgba(138,96,176,.14);
-  --tpl-overlay-white-4:     rgba(253,252,250,.04);
-  --tpl-overlay-white-6:     rgba(253,252,250,.06);
-  --tpl-overlay-white-8:     rgba(253,252,250,.08);
-  --tpl-overlay-white-10:    rgba(253,252,250,.10);
-  --tpl-overlay-white-12:    rgba(253,252,250,.12);
-  --tpl-overlay-white-20:    rgba(253,252,250,.20);
-  --tpl-overlay-black-4:     rgba(0,0,0,.04);
-  --tpl-overlay-black-6:     rgba(0,0,0,.06);
-  --tpl-overlay-black-10:    rgba(0,0,0,.10);
-  --tpl-overlay-blue-10:     rgba(43,94,168,.10);
-  --tpl-overlay-blue-15:     rgba(43,94,168,.15);
-  --tpl-overlay-blue-20:     rgba(43,94,168,.20);
-  --tpl-overlay-blue-25:     rgba(43,94,168,.25);
-  --tpl-overlay-gold-6:      rgba(196,162,69,.06);
-  --tpl-overlay-gold-10:     rgba(196,162,69,.10);
-  --tpl-overlay-gold-15:     rgba(196,162,69,.15);
-  --tpl-overlay-gold-20:     rgba(196,162,69,.20);
-
-  /* ══ INPUT TOKENS ═════════════════════════════════════════════════════ */
-  --tpl-input-bg:           var(--tpl-surface);
-  --tpl-input-border:       var(--tpl-border);
-  --tpl-input-border-hover: var(--tpl-slate-300);
-  --tpl-input-border-focus: var(--tpl-blue-500);
-  --tpl-input-radius:       var(--tpl-radius-lg);
-  --tpl-input-shadow-focus: var(--tpl-shadow-glow-blue);
-  --tpl-input-text:         var(--tpl-text);
-  --tpl-input-placeholder:  var(--tpl-slate-400);  /* placeholders: slightly lighter is OK (incidental) */
-
-  /* ══ BUTTON TOKENS ════════════════════════════════════════════════════ */
-  --tpl-btn-primary-bg:           var(--tpl-accent-gradient);
-  --tpl-btn-primary-bg-hover:     var(--tpl-accent-gradient-vivid);
-  --tpl-btn-primary-shadow:       0 4px 16px rgba(43, 94, 168, .22), 0 1px 4px rgba(0, 0, 0, .05);
-  --tpl-btn-primary-shadow-hover: 0 8px 28px rgba(43, 94, 168, .32), 0 2px 8px rgba(0, 0, 0, .07);
-  --tpl-btn-radius:               var(--tpl-radius-lg);
-  --tpl-btn-gold-bg:              var(--tpl-accent-gradient-gold);
-  --tpl-btn-gold-shadow:          0 4px 16px rgba(196, 162, 69, .24), 0 1px 4px rgba(0, 0, 0, .06);
-
-  /* ══ CARD TOKENS ══════════════════════════════════════════════════════ */
-  --tpl-card-bg:           var(--tpl-surface);
-  --tpl-card-border:       var(--tpl-border);
-  --tpl-card-radius:       var(--tpl-radius-xl);
-  --tpl-card-shadow:       var(--tpl-shadow-sm);
-  --tpl-card-shadow-hover: var(--tpl-shadow-md);
-
-  /* ══ HERO TOKENS ══════════════════════════════════════════════════════ */
-  --tpl-hero-bg:     var(--tpl-brand-gradient-135);
-  --tpl-hero-radius: var(--tpl-radius-2xl);
-  --tpl-hero-text:   var(--tpl-text-inverse);
-  --tpl-hero-glow:   radial-gradient(circle, rgba(196, 162, 69, .14) 0%, transparent 70%);
-
-  /* ══ PILL / BADGE TOKENS ══════════════════════════════════════════════ */
+  /* ── Pill / Badge ──────────────────────────────────────────── */
   --tpl-pill-radius: var(--tpl-radius-full);
-
-  /* ══ ORBS (ambient animation) ═════════════════════════════════════════ */
-  --tpl-orb-blue:    radial-gradient(circle, var(--tpl-blue-500) 0%, transparent 70%);
-  --tpl-orb-violet:  radial-gradient(circle, var(--tpl-violet-500) 0%, transparent 70%);
-  --tpl-orb-gold:    radial-gradient(circle, var(--tpl-indigo-500) 0%, transparent 70%);
-  --tpl-orb-sky:     radial-gradient(circle, var(--tpl-sky-500) 0%, transparent 70%);
-  --tpl-orb-blur:    100px;
-  --tpl-orb-opacity: .25;
 }
 
-/* ══ GLOBAL RESETS & BASE ═══════════════════════════════════════════════ */
+/* ══ LIGHT THEME (default) ══════════════════════════════════════════ */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
 
+  --tpl-gray-50: #f8fafc; --tpl-gray-100: #f1f5f9; --tpl-gray-200: #e2e8f0;
+  --tpl-gray-300: #cbd5e1; --tpl-gray-400: #94a3b8; --tpl-gray-500: #64748b;
+  --tpl-gray-600: #475569; --tpl-gray-700: #334155; --tpl-gray-800: #1e293b;
+  --tpl-gray-900: #0f172a;
+
+  /* Old compat aliases */
+  --tpl-slate-50: var(--tpl-gray-50); --tpl-slate-100: var(--tpl-gray-100);
+  --tpl-slate-200: var(--tpl-gray-200); --tpl-slate-300: var(--tpl-gray-300);
+  --tpl-slate-400: var(--tpl-gray-400); --tpl-slate-500: var(--tpl-gray-500);
+  --tpl-slate-600: var(--tpl-gray-600); --tpl-slate-700: var(--tpl-gray-700);
+  --tpl-slate-800: var(--tpl-gray-800); --tpl-slate-900: var(--tpl-gray-900);
+
+  --tpl-bg:             #f1f5f9;
+  --tpl-bg-alt:         #e2e8f0;
+  --tpl-surface:        #ffffff;
+  --tpl-surface-alt:    #f8fafc;
+  --tpl-surface-raised: #ffffff;
+  --tpl-surface-sunken: #f1f5f9;
+
+  --tpl-border-light: #f1f5f9; --tpl-border: #e2e8f0;
+  --tpl-border-strong: #cbd5e1; --tpl-border-accent: rgba(59,130,246,.15);
+  --tpl-border-focus: var(--tpl-blue-500);
+
+  --tpl-text: #1e293b; --tpl-text-sec: #475569;
+  --tpl-text-muted: #64748b; --tpl-text-faint: #94a3b8;
+  --tpl-text-inverse: #ffffff;
+  --tpl-accent-text: var(--tpl-blue-700);
+  --tpl-accent-text-light: var(--tpl-blue-600);
+
+  --tpl-shadow-xs:  0 1px 2px rgba(0,0,0,.05);
+  --tpl-shadow-sm:  0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --tpl-shadow-md:  0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -2px rgba(0,0,0,.05);
+  --tpl-shadow-lg:  0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.04);
+  --tpl-shadow-xl:  0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.06);
+  --tpl-shadow-2xl: 0 25px 50px -12px rgba(0,0,0,.15);
+  --tpl-shadow-inner: inset 0 2px 4px rgba(0,0,0,.04);
+  --tpl-shadow-glow-blue: 0 0 0 3px rgba(59,130,246,.15);
+  --tpl-shadow-glow-indigo: 0 0 0 3px rgba(99,102,241,.15);
+  --tpl-shadow-glow-gold: 0 0 0 3px rgba(245,158,11,.15);
+  --tpl-shadow-luxury: var(--tpl-shadow-lg);
+  --tpl-shadow-sovereign: var(--tpl-shadow-xl);
+
+  --tpl-sidebar-bg:          linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  --tpl-sidebar-bg-hover:    rgba(255,255,255,.06);
+  --tpl-sidebar-bg-active:   rgba(59,130,246,.15);
+  --tpl-sidebar-text:        #cbd5e1;
+  --tpl-sidebar-text-active: #ffffff;
+  --tpl-sidebar-text-faint:  rgba(148,163,184,.45);
+  --tpl-sidebar-border:      rgba(255,255,255,.06);
+  --tpl-sidebar-brand-bg:    rgba(0,0,0,.15);
+  --tpl-sidebar-accent:      var(--tpl-blue-500);
+  --tpl-sidebar-hover:       var(--tpl-sidebar-bg-hover);
+  --tpl-sidebar-active:      var(--tpl-sidebar-bg-active);
+  --tpl-sidebar-divider:     rgba(255,255,255,.06);
+  --tpl-sidebar-glow:        rgba(59,130,246,.08);
+
+  --tpl-navbar-bg:          #ffffff;
+  --tpl-navbar-border:      #e2e8f0;
+  --tpl-navbar-text:        #475569;
+  --tpl-navbar-text-hover:  #1e293b;
+  --tpl-navbar-height:      60px;
+  --tpl-navbar-blur:        none;
+
+  --tpl-card-bg:            #ffffff;
+  --tpl-card-border:        #e2e8f0;
+  --tpl-card-radius:        var(--tpl-radius-lg);
+  --tpl-card-shadow:        var(--tpl-shadow-sm);
+  --tpl-card-shadow-hover:  var(--tpl-shadow-md);
+
+  --tpl-input-bg:           #ffffff;
+  --tpl-input-border:       #e2e8f0;
+  --tpl-input-border-hover: #cbd5e1;
+  --tpl-input-border-focus: var(--tpl-blue-500);
+  --tpl-input-radius:       var(--tpl-radius-md);
+  --tpl-input-shadow-focus: 0 0 0 3px rgba(59,130,246,.15);
+  --tpl-input-text:         #1e293b;
+  --tpl-input-placeholder:  #94a3b8;
+
+  --tpl-btn-primary-bg:          var(--tpl-blue-600);
+  --tpl-btn-primary-bg-hover:    var(--tpl-blue-700);
+  --tpl-btn-primary-shadow:      0 1px 3px rgba(37,99,235,.3);
+  --tpl-btn-primary-shadow-hover:0 4px 12px rgba(37,99,235,.35);
+  --tpl-btn-radius:              var(--tpl-radius-md);
+  --tpl-btn-gold-bg:             linear-gradient(135deg, var(--tpl-amber-500), var(--tpl-amber-600));
+  --tpl-btn-gold-shadow:         0 2px 8px rgba(245,158,11,.25);
+
+  --tpl-hero-bg:     linear-gradient(135deg, #1e293b, #334155);
+  --tpl-hero-radius: var(--tpl-radius-xl);
+  --tpl-hero-text:   #ffffff;
+
+  --tpl-accent-primary: var(--tpl-blue-500);
+  --tpl-accent-success: var(--tpl-success-500);
+  --tpl-accent-warning: var(--tpl-warning-500);
+  --tpl-accent-danger:  var(--tpl-danger-500);
+  --tpl-accent-info:    var(--tpl-info-500);
+
+  /* ── Compat: gradient tokens used by old code ──────────────── */
+  --tpl-brand-gradient:     linear-gradient(135deg, #1e293b, #0f172a);
+  --tpl-brand-gradient-135: var(--tpl-brand-gradient);
+  --tpl-accent-gradient:    linear-gradient(135deg, var(--tpl-blue-500), var(--tpl-indigo-500));
+  --tpl-accent-gradient-vivid: linear-gradient(135deg, var(--tpl-blue-400), var(--tpl-indigo-400));
+  --tpl-gradient-sidebar:   var(--tpl-sidebar-bg);
+  --tpl-gradient-navbar:    var(--tpl-navbar-bg);
+  --tpl-gradient-success:   linear-gradient(135deg, var(--tpl-success-500), var(--tpl-success-600));
+  --tpl-gradient-danger:    linear-gradient(135deg, var(--tpl-danger-500), var(--tpl-danger-600));
+  --tpl-gradient-warning:   linear-gradient(135deg, var(--tpl-warning-500), var(--tpl-warning-600));
+
+  /* ── Compat: overlay tokens ────────────────────────────────── */
+  --tpl-overlay-indigo-4:  rgba(99,102,241,.04);
+  --tpl-overlay-indigo-10: rgba(99,102,241,.10);
+  --tpl-overlay-white-4:   rgba(255,255,255,.04);
+  --tpl-overlay-white-8:   rgba(255,255,255,.08);
+  --tpl-overlay-black-4:   rgba(0,0,0,.04);
+  --tpl-overlay-black-6:   rgba(0,0,0,.06);
+  --tpl-overlay-blue-10:   rgba(59,130,246,.10);
+  --tpl-overlay-blue-15:   rgba(59,130,246,.15);
+
+  /* ── Compat: glass tokens ──────────────────────────────────── */
+  --tpl-glass-bg:       rgba(255,255,255,.05);
+  --tpl-glass-bg-med:   rgba(255,255,255,.09);
+  --tpl-glass-border:   rgba(255,255,255,.07);
+  --tpl-glass-blur:     blur(16px);
+
+  /* ── Compat: orb tokens ────────────────────────────────────── */
+  --tpl-orb-blue:   radial-gradient(circle, var(--tpl-blue-500) 0%, transparent 70%);
+  --tpl-orb-violet: radial-gradient(circle, var(--tpl-violet-500) 0%, transparent 70%);
+  --tpl-orb-blur:   80px;
+  --tpl-orb-opacity: .15;
+
+  /* ── Dark surface compat (old code refs) ───────────────────── */
+  --tpl-dark-950: #07080B; --tpl-dark-900: #0C0E14; --tpl-dark-850: #11141E;
+  --tpl-dark-800: #161A28; --tpl-dark-750: #1C2034; --tpl-dark-700: #222840;
+  --tpl-dark-650: #2A304C; --tpl-dark-600: #343A58; --tpl-dark-500: #404866;
+}
+
+/* ══ DARK THEME ═════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --tpl-gray-50: #0f172a; --tpl-gray-100: #1e293b; --tpl-gray-200: #334155;
+  --tpl-gray-300: #475569; --tpl-gray-400: #64748b; --tpl-gray-500: #94a3b8;
+  --tpl-gray-600: #cbd5e1; --tpl-gray-700: #e2e8f0; --tpl-gray-800: #f1f5f9;
+  --tpl-gray-900: #f8fafc;
+
+  --tpl-slate-50: var(--tpl-gray-50); --tpl-slate-100: var(--tpl-gray-100);
+  --tpl-slate-200: var(--tpl-gray-200); --tpl-slate-300: var(--tpl-gray-300);
+  --tpl-slate-400: var(--tpl-gray-400); --tpl-slate-500: var(--tpl-gray-500);
+  --tpl-slate-600: var(--tpl-gray-600); --tpl-slate-700: var(--tpl-gray-700);
+  --tpl-slate-800: var(--tpl-gray-800); --tpl-slate-900: var(--tpl-gray-900);
+
+  --tpl-bg:             #0f172a;
+  --tpl-bg-alt:         #1e293b;
+  --tpl-surface:        #1e293b;
+  --tpl-surface-alt:    #273548;
+  --tpl-surface-raised: #273548;
+  --tpl-surface-sunken: #0f172a;
+
+  --tpl-border-light: #1e293b; --tpl-border: #334155;
+  --tpl-border-strong: #475569; --tpl-border-accent: rgba(96,165,250,.2);
+  --tpl-border-focus: var(--tpl-blue-400);
+
+  --tpl-text: #f1f5f9; --tpl-text-sec: #cbd5e1;
+  --tpl-text-muted: #94a3b8; --tpl-text-faint: #64748b;
+  --tpl-text-inverse: #0f172a;
+  --tpl-accent-text: var(--tpl-blue-400);
+  --tpl-accent-text-light: var(--tpl-blue-300);
+
+  --tpl-shadow-xs:  0 1px 2px rgba(0,0,0,.2);
+  --tpl-shadow-sm:  0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.15);
+  --tpl-shadow-md:  0 4px 6px -1px rgba(0,0,0,.3), 0 2px 4px -2px rgba(0,0,0,.2);
+  --tpl-shadow-lg:  0 10px 15px -3px rgba(0,0,0,.35), 0 4px 6px -4px rgba(0,0,0,.2);
+  --tpl-shadow-xl:  0 20px 25px -5px rgba(0,0,0,.4), 0 8px 10px -6px rgba(0,0,0,.25);
+  --tpl-shadow-2xl: 0 25px 50px -12px rgba(0,0,0,.5);
+  --tpl-shadow-inner: inset 0 2px 4px rgba(0,0,0,.15);
+  --tpl-shadow-glow-blue: 0 0 0 3px rgba(96,165,250,.2);
+  --tpl-shadow-glow-indigo: 0 0 0 3px rgba(129,140,248,.2);
+  --tpl-shadow-glow-gold: 0 0 0 3px rgba(251,191,36,.2);
+  --tpl-shadow-luxury: var(--tpl-shadow-lg);
+  --tpl-shadow-sovereign: var(--tpl-shadow-xl);
+
+  --tpl-sidebar-bg:          linear-gradient(180deg, #0f172a 0%, #020617 100%);
+  --tpl-sidebar-bg-hover:    rgba(255,255,255,.05);
+  --tpl-sidebar-bg-active:   rgba(59,130,246,.2);
+  --tpl-sidebar-text:        #94a3b8;
+  --tpl-sidebar-text-active: #ffffff;
+  --tpl-sidebar-text-faint:  rgba(100,116,139,.45);
+  --tpl-sidebar-border:      rgba(255,255,255,.05);
+  --tpl-sidebar-brand-bg:    rgba(0,0,0,.2);
+  --tpl-sidebar-accent:      var(--tpl-blue-400);
+  --tpl-sidebar-hover:       var(--tpl-sidebar-bg-hover);
+  --tpl-sidebar-active:      var(--tpl-sidebar-bg-active);
+  --tpl-sidebar-divider:     rgba(255,255,255,.05);
+  --tpl-sidebar-glow:        rgba(96,165,250,.08);
+
+  --tpl-navbar-bg:          #1e293b;
+  --tpl-navbar-border:      #334155;
+  --tpl-navbar-text:        #94a3b8;
+  --tpl-navbar-text-hover:  #f1f5f9;
+
+  --tpl-card-bg:     #1e293b;
+  --tpl-card-border: #334155;
+  --tpl-card-shadow: 0 1px 3px rgba(0,0,0,.25);
+
+  --tpl-input-bg:           #273548;
+  --tpl-input-border:       #334155;
+  --tpl-input-border-hover: #475569;
+  --tpl-input-border-focus: var(--tpl-blue-400);
+  --tpl-input-shadow-focus: 0 0 0 3px rgba(96,165,250,.2);
+  --tpl-input-text:         #f1f5f9;
+  --tpl-input-placeholder:  #64748b;
+
+  --tpl-btn-primary-bg:          var(--tpl-blue-500);
+  --tpl-btn-primary-bg-hover:    var(--tpl-blue-400);
+  --tpl-btn-primary-shadow:      0 1px 3px rgba(59,130,246,.4);
+  --tpl-btn-primary-shadow-hover:0 4px 12px rgba(96,165,250,.4);
+
+  --tpl-hero-bg:     linear-gradient(135deg, #0f172a, #1e293b);
+  --tpl-hero-text:   #f1f5f9;
+
+  --tpl-accent-primary: var(--tpl-blue-400);
+  --tpl-accent-success: var(--tpl-success-400);
+  --tpl-accent-warning: var(--tpl-warning-400);
+  --tpl-accent-danger:  var(--tpl-danger-400);
+  --tpl-accent-info:    var(--tpl-info-400);
+
+  --tpl-brand-gradient:     linear-gradient(135deg, #0f172a, #020617);
+  --tpl-brand-gradient-135: var(--tpl-brand-gradient);
+  --tpl-gradient-sidebar:   var(--tpl-sidebar-bg);
+  --tpl-gradient-navbar:    var(--tpl-navbar-bg);
+}
+
+/* ══ GLOBAL RESETS ══════════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; }
 
 html {
   font-family: var(--tpl-font-sans);
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -444,20 +422,20 @@ html {
 
 body {
   font-family: var(--tpl-font-sans);
+  font-size: var(--tpl-fs-base);
   color: var(--tpl-text);
   line-height: var(--tpl-leading-normal);
+  background: var(--tpl-bg);
+  margin: 0;
 }
 
-::selection {
-  background: rgba(196, 162, 69, .18);
-  color: var(--tpl-text);
-}
+::selection { background: rgba(59,130,246,.2); color: inherit; }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--tpl-slate-300); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--tpl-slate-400); }
-* { scrollbar-width: thin; scrollbar-color: var(--tpl-slate-300) transparent; }
+::-webkit-scrollbar-thumb { background: var(--tpl-gray-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--tpl-gray-400); }
+* { scrollbar-width: thin; scrollbar-color: var(--tpl-gray-300) transparent; }
 
 :focus-visible { outline: 2px solid var(--tpl-blue-500); outline-offset: 2px; }
 
@@ -469,20 +447,18 @@ body {
     scroll-behavior: auto !important;
   }
 }
-
 @media (forced-colors: active) {
-  :root { --tpl-border: ButtonText; --tpl-text: CanvasText; --tpl-surface: Canvas; }
+  :root { --tpl-border: ButtonText; --tpl-text: CanvasText; --tpl-surface: Canvas; --tpl-bg: Canvas; }
 }
 
-/* ══ UTILITY CLASSES ════════════════════════════════════════════════════ */
-
-.tpl-text-primary  { color: var(--tpl-blue-500) !important; }
-.tpl-text-gold     { color: var(--tpl-indigo-700) !important; }
+/* ══ UTILITY CLASSES ════════════════════════════════════════════════ */
+.tpl-text-primary  { color: var(--tpl-blue-600) !important; }
+.tpl-text-gold     { color: var(--tpl-amber-700) !important; }
 .tpl-text-success  { color: var(--tpl-success-600) !important; }
 .tpl-text-warning  { color: var(--tpl-warning-600) !important; }
-.tpl-text-danger   { color: var(--tpl-danger-500) !important; }
+.tpl-text-danger   { color: var(--tpl-danger-600) !important; }
 .tpl-text-muted    { color: var(--tpl-text-muted) !important; }
-.tpl-text-faint    { color: var(--tpl-slate-500) !important; }
+.tpl-text-faint    { color: var(--tpl-text-faint) !important; }
 
 .tpl-bg-surface     { background: var(--tpl-surface) !important; }
 .tpl-bg-surface-alt { background: var(--tpl-surface-alt) !important; }
@@ -491,31 +467,36 @@ body {
 .tpl-focus-ring:focus-visible {
   outline: 2px solid var(--tpl-blue-500);
   outline-offset: 2px;
-  box-shadow: var(--tpl-shadow-glow-blue);
+  box-shadow: var(--tpl-input-shadow-focus);
 }
 
 .tpl-mono { font-family: var(--tpl-font-mono); }
 
-/* ══ VERSION BADGE ══════════════════════════════════════════════════════ */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ── Version Badge ─────────────────────────────────────────── */
 .tpl-version-badge {
-  display: inline-flex; align-items: center; gap: .3rem;
+  display: inline-flex; align-items: center; gap: .25rem;
   padding: .15rem .55rem; border-radius: var(--tpl-pill-radius);
-  font-size: var(--tpl-fs-xs); font-weight: var(--tpl-fw-semibold);
+  font-size: var(--tpl-fs-xs); font-weight: var(--tpl-fw-medium);
   font-family: var(--tpl-font-mono); letter-spacing: var(--tpl-tracking-wide);
-  background: var(--tpl-slate-100); color: var(--tpl-text-muted);
+  background: var(--tpl-gray-100); color: var(--tpl-text-muted);
   white-space: nowrap; user-select: all;
+  border: 1px solid var(--tpl-border);
 }
 .tpl-version-badge--accent {
-  background: var(--tpl-indigo-50); color: var(--tpl-indigo-700);
-  border: 1px solid rgba(196, 162, 69, .14);
+  background: var(--tpl-blue-50); color: var(--tpl-blue-700);
+  border-color: rgba(59,130,246,.2);
 }
 .tpl-version-badge--dark {
-  background: rgba(253, 252, 250, .08); color: rgba(253, 252, 250, .7);
-  border: 1px solid rgba(253, 252, 250, .06);
+  background: rgba(255,255,255,.08); color: rgba(255,255,255,.6);
+  border-color: rgba(255,255,255,.08);
 }
 .tpl-version-badge--gold {
-  background: linear-gradient(135deg, rgba(196,162,69,.12), rgba(196,162,69,.06));
-  color: var(--tpl-indigo-300);
-  border: 1px solid rgba(196, 162, 69, .18);
-  text-shadow: 0 0 8px rgba(196, 162, 69, .20);
+  background: var(--tpl-amber-50); color: var(--tpl-amber-700);
+  border-color: rgba(245,158,11,.2);
 }

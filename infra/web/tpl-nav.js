@@ -1,22 +1,17 @@
 /**
- * TPL Platform — Navigation Module v5.0  «Aurora»
+ * TPL Platform — Navigation Module v6.0  «Architect»
  *
- * Horizon-style top navbar featuring:
- *   • Ultra-thin frosted glass surface (52px)
- *   • Prismatic bottom edge with subtle luminance
- *   • Compact status indicator chip
- *   • Identity capsule with role badge
- *   • Notification bell + logout actions
- *   • Auth bootstrap (auto /api/me)
+ * Clean top navbar featuring:
+ *   • Search bar with icon
+ *   • Theme toggle (light/dark)
+ *   • Notification bell
+ *   • User identity dropdown
+ *   • Breadcrumb context
+ *   • Auth bootstrap (/api/me)
  *   • Footer auto-render
  *
- * Usage:
- *   <nav id="tplNavbar"></nav>
- *   <footer id="tplFooter"></footer>
- *   <script src="/tpl-nav.js"></script>
- *
  * Public API (window.TPLNav):
- *   .currentUser   – user obj from /api/me (null until ready)
+ *   .currentUser   – user obj from /api/me
  *   .isAdmin       – boolean
  *   .page          – detected page id
  *   .onReady(fn)   – register callback
@@ -38,57 +33,96 @@
     return 'dashboard';
   })();
 
+  const PAGE_TITLES = {
+    'dashboard':     'Dashboard',
+    'ota':           'Aggiornamenti OTA',
+    'diagnostics':   'Diagnostica',
+    'advanced':      'Advanced Tools',
+    'admin-modules': 'Distribuzione Moduli',
+  };
+
+  /* ── Theme Management ───────────────────────────────────── */
+  const THEME_KEY = 'tpl-theme';
+  const getPreferredTheme = () => {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored) return stored;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  };
+  const applyTheme = (theme) => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem(THEME_KEY, theme);
+    // Update icon
+    const icon = document.getElementById('themeToggleIcon');
+    if (icon) icon.className = theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
+  };
+  applyTheme(getPreferredTheme());
+
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!localStorage.getItem(THEME_KEY)) {
+      applyTheme(e.matches ? 'dark' : 'light');
+    }
+  });
+
   /* ── Navbar (auto-render into empty #tplNavbar) ─────────── */
   const navEl = document.getElementById('tplNavbar');
   const _autoNav = !!(navEl && navEl.childElementCount === 0);
 
   if (_autoNav) {
-    navEl.className = 'app-header navbar navbar-expand';
+    navEl.className = 'nb-navbar';
+    navEl.setAttribute('role', 'banner');
+    const currentTheme = getPreferredTheme();
+    const themeIcon = currentTheme === 'dark' ? 'bi-sun' : 'bi-moon-stars';
+
     navEl.innerHTML = `
-      <div class="container-fluid">
-
-        <!-- Left cluster -->
-        <div class="nb-left">
-          <button class="nb-toggle" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
-            <span class="nb-toggle-bar"></span>
-            <span class="nb-toggle-bar"></span>
-            <span class="nb-toggle-bar"></span>
-          </button>
-
-          <div class="nb-status" id="nbStatus" title="System status">
-            <span class="nb-status-dot nb-status-dot--ok"></span>
-            <span class="nb-status-label">Online</span>
-          </div>
+      <div class="nb-navbar-left">
+        <button class="nb-burger" id="sidebarToggle" type="button" aria-label="Apri menu laterale">
+          <i class="bi bi-list"></i>
+        </button>
+        <div class="nb-breadcrumb">
+          <span>TPL</span>
+          <span class="nb-breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+          <span class="nb-breadcrumb-current" id="nbPageTitle">${PAGE_TITLES[PAGE] || 'Dashboard'}</span>
         </div>
-
-        <!-- Right cluster -->
-        <div class="nb-right">
-          <div class="nb-identity" id="tplIdentityBox">
-            <span class="nb-identity-icon"><i class="bi bi-hourglass-split"></i></span>
-            <span class="nb-identity-text">caricamento\u2026</span>
-          </div>
-
-          <button class="nb-icon-btn nb-notifications" id="nbNotifications" type="button" title="Notifiche" aria-label="Notifications">
-            <i class="bi bi-bell"></i>
-            <span class="nb-notif-badge" style="display:none">0</span>
-          </button>
-
-          <button class="nb-icon-btn nb-logout" id="tplLogoutBtn" type="button" title="Logout" aria-label="Logout">
-            <i class="bi bi-box-arrow-right"></i>
-          </button>
-        </div>
-
       </div>
 
-      <!-- Prismatic bottom edge -->
-      <div class="nb-edge-line"></div>
+      <div class="nb-navbar-right">
+        <div class="nb-search" role="search">
+          <i class="bi bi-search nb-search-icon"></i>
+          <input type="search" placeholder="Cerca..." aria-label="Cerca nella piattaforma" />
+        </div>
+
+        <button class="nb-icon-btn" id="themeToggle" type="button" title="Cambia tema" aria-label="Cambia tema chiaro/scuro">
+          <i class="bi ${themeIcon}" id="themeToggleIcon"></i>
+        </button>
+
+        <button class="nb-icon-btn" id="nbNotifications" type="button" title="Notifiche" aria-label="Notifiche">
+          <i class="bi bi-bell"></i>
+          <span class="nb-badge" id="nbNotifBadge" style="display:none"></span>
+        </button>
+
+        <div class="nb-divider"></div>
+
+        <button class="nb-user-btn" id="tplIdentityBox" type="button" aria-label="Menu utente">
+          <span class="nb-user-avatar" id="nbUserAvatar"><i class="bi bi-person-fill"></i></span>
+          <span class="nb-user-name" id="nbUserName">Caricamento...</span>
+        </button>
+
+        <button class="nb-icon-btn" id="tplLogoutBtn" type="button" title="Logout" aria-label="Logout">
+          <i class="bi bi-box-arrow-right"></i>
+        </button>
+      </div>
     `;
 
-    /* Sidebar toggle */
-    const toggleBtn = document.getElementById('sidebarToggle');
-    toggleBtn?.addEventListener('click', (e) => {
+    /* Theme toggle */
+    document.getElementById('themeToggle')?.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    /* Sidebar toggle (burger on mobile) */
+    document.getElementById('sidebarToggle')?.addEventListener('click', (e) => {
       e.preventDefault();
-      toggleBtn.classList.toggle('is-open');
       if (window.TPLSidebar) TPLSidebar.toggle();
     });
 
@@ -103,12 +137,10 @@
   /* ── Footer (auto-render into empty #tplFooter) ─────────── */
   const footerEl = document.getElementById('tplFooter');
   if (footerEl && footerEl.childElementCount === 0) {
-    footerEl.className = 'app-footer';
+    footerEl.className = 'tpl-footer';
     footerEl.innerHTML = `
-      <div class="nb-footer-inner">
-        <span class="nb-footer-copy">&copy; TPL Fortress</span>
-        <span class="tpl-version-badge tpl-version-badge--dark" id="tplVersionBadge">v\u2014</span>
-      </div>
+      <span>&copy; ${new Date().getFullYear()} TPL Fortress Platform</span>
+      <span class="tpl-version-badge" id="tplVersionBadge">v\u2014</span>
     `;
   }
 
@@ -133,23 +165,16 @@
         TPLSidebar.setUser(_user.sub || _user.username || '\u2014', _admin ? 'admin' : 'user');
       }
 
-      /* Identity capsule */
-      const box = document.getElementById('tplIdentityBox');
-      if (box) {
-        const r = _admin ? 'admin' : 'user';
-        const roleClass = _admin ? 'nb-role--admin' : 'nb-role--user';
-        box.innerHTML = `
-          <span class="nb-identity-icon"><i class="bi bi-person-check-fill"></i></span>
-          <span class="nb-identity-text">${_user.sub || '\u2014'}</span>
-          <span class="nb-role-badge ${roleClass}">${r}</span>
-        `;
-      }
+      /* Navbar user display */
+      const nameEl = document.getElementById('nbUserName');
+      if (nameEl) nameEl.textContent = _user.sub || _user.username || '\u2014';
 
-      /* System status indicator */
-      const dot = document.querySelector('.nb-status-dot');
-      const label = document.querySelector('.nb-status-label');
-      if (dot) { dot.classList.add('nb-status-dot--ok'); }
-      if (label) { label.textContent = 'Online'; }
+      const avatarEl = document.getElementById('nbUserAvatar');
+      if (avatarEl && (_user.sub || _user.username)) {
+        const name = _user.sub || _user.username;
+        const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+        avatarEl.textContent = initials;
+      }
 
       /* i18n + version badge */
       try { if (TPL.applyI18n) await TPL.applyI18n(); } catch (_) { /* noop */ }
@@ -160,10 +185,6 @@
       window.dispatchEvent(new CustomEvent('tpl:auth-ready', { detail: _user }));
     } catch (e) {
       console.warn('[TPL Nav] auth failed:', e.message);
-      const dot = document.querySelector('.nb-status-dot');
-      const label = document.querySelector('.nb-status-label');
-      if (dot) { dot.className = 'nb-status-dot nb-status-dot--error'; }
-      if (label) { label.textContent = 'Offline'; }
       location.href = '/';
     }
   };
@@ -180,7 +201,6 @@
     },
   });
 
-  /* ── Auto-start ─────────────────────────────────────────── */
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _bootstrap);
   } else {

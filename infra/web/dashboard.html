@@ -5,61 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TPL · Dashboard</title>
   <!-- Bootstrap 5 -->
-  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=5.1.1" rel="stylesheet">
+  <link href="/vendor/bootstrap/css/bootstrap.min.css?v=6.0" rel="stylesheet">
   <!-- Bootstrap Icons -->
-  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=5.1.1" rel="stylesheet">
+  <link href="/vendor/bootstrap-icons/font/bootstrap-icons.min.css?v=6.0" rel="stylesheet">
   <!-- TPL Design System -->
-  <link href="/design-tokens.css?v=5.1.1" rel="stylesheet">
-  <link href="/styles.css?v=5.1.1" rel="stylesheet">
+  <link href="/design-tokens.css?v=6.0" rel="stylesheet">
+  <link href="/styles.css?v=6.0" rel="stylesheet">
 </head>
 <body class="tpl-app-body">
   <div class="app-wrapper">
 
-    <!-- ── Top Navbar ─────────────────────────────────────────── -->
-    <nav class="app-header navbar navbar-expand">
-      <div class="container-fluid">
-        <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link" id="sidebarToggle" href="#" role="button" aria-label="Toggle sidebar"><i class="bi bi-list"></i></a>
-          </li>
-          <li class="nav-item d-none d-md-block">
-            <a class="nav-link" href="#" id="reloadBtn"><i class="bi bi-arrow-clockwise"></i> <span data-i18n="btn.refresh_view">Refresh</span></a>
-          </li>
-        </ul>
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item">
-            <span class="nav-link text-muted small" id="identityBox">loading…</span>
-          </li>
-          <li class="nav-item">
-            <select id="langSelect" class="form-select form-select-sm lang-select-w">
-              <option value="it">IT</option>
-              <option value="en">EN</option>
-            </select>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-danger" href="#" id="logoutBtn" role="button"><i class="bi bi-box-arrow-right"></i> <span data-i18n="btn.logout">Logout</span></a>
-          </li>
-        </ul>
-      </div>
-    </nav>
+    <!-- ── Top Navbar (auto-rendered by tpl-nav.js) ──────────── -->
+    <nav id="tplNavbar"></nav>
 
     <!-- ── Sidebar (rendered by sidebar.js) ───────────────────── -->
     <div id="sidebarMount"></div>
 
+    <!-- Compat elements for dashboard-system.js -->
+    <span id="identityBox" class="sr-only" aria-hidden="true"></span>
+    <a id="logoutBtn" class="sr-only" aria-hidden="true"></a>
+    <a id="reloadBtn" class="sr-only" aria-hidden="true"></a>
+    <select id="langSelect" class="sr-only" aria-hidden="true">
+      <option value="it">IT</option>
+      <option value="en">EN</option>
+    </select>
+
     <!-- ── Main Content ───────────────────────────────────────── -->
     <main class="app-main">
       <div class="app-content-header">
-        <div class="container-fluid">
-          <div class="row">
-            <div class="col-sm-6"><h3 class="mb-0" id="contentTitle"><i class="bi bi-speedometer2 me-2"></i>Overview</h3></div>
-            <div class="col-sm-6">
-              <ol class="breadcrumb float-sm-end">
-                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item active" id="breadcrumbCurrent">Overview</li>
-              </ol>
-            </div>
-          </div>
-        </div>
+        <h1 id="contentTitle">Overview</h1>
+        <p id="breadcrumbCurrent">Dashboard</p>
       </div>
       <div class="app-content">
         <div class="container-fluid">
@@ -1813,11 +1788,11 @@
   </div></div></div>
 
   <!-- JS -->
-  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=5.1.1"></script>
-  <script src="/app.js?v=5.1.1"></script>
-  <script src="/sidebar.js?v=5.1.1"></script>
-  <script src="/tpl-nav.js?v=5.1.1"></script>
-  <script src="/dashboard-router.js?v=5.1.1"></script>
-  <script src="/dashboard-system.js?v=5.1.1"></script>
+  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js?v=6.0"></script>
+  <script src="/app.js?v=6.0"></script>
+  <script src="/sidebar.js?v=6.0"></script>
+  <script src="/tpl-nav.js?v=6.0"></script>
+  <script src="/dashboard-router.js?v=6.0"></script>
+  <script src="/dashboard-system.js?v=6.0"></script>
 </body>
 </html>
