@@ -40,16 +40,17 @@
   let _loginBusy       = false;
 
   // ── Toast helpers ─────────────────────────────────────────────
+  const _msgCls = { danger: 'tpl-auth-error', warning: 'tpl-auth-error', info: 'tpl-auth-info', success: 'tpl-auth-info' };
   const msg = (text, cls = 'info') => {
     if (!o) return;
-    o.className = `ov-toast ov-toast--${cls}`;
+    o.className = _msgCls[cls] || 'tpl-auth-info';
     o.textContent = text;
     o.style.display = 'block';
   };
 
   const pwm = (text, cls = 'info') => {
     if (!pwMsg) return;
-    pwMsg.className = `ov-toast ov-toast--${cls} mt-3`;
+    pwMsg.className = (_msgCls[cls] || 'tpl-auth-info') + ' mt-3';
     pwMsg.textContent = text;
     pwMsg.style.display = 'block';
   };

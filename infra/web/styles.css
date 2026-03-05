@@ -2255,6 +2255,46 @@ textarea.tpl-input {
   margin-bottom: var(--tpl-sp-4);
 }
 
+/* Loading state for login button */
+.tpl-auth-submit.ov-login-btn--loading {
+  position: relative;
+  color: transparent;
+  pointer-events: none;
+}
+.tpl-auth-submit.ov-login-btn--loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: tpl-spin .6s linear infinite;
+}
+@keyframes tpl-spin { to { transform: rotate(360deg); } }
+
+/* Insecure connection badge */
+.ov-security-badge--insecure { color: var(--tpl-danger-600) !important; }
+
+/* Password rule validation */
+.ov-pw-rule-ok { color: var(--tpl-success-600); }
+.ov-pw-rule-ok i { color: var(--tpl-success-600); }
+
+/* Password strength bar */
+.ov-pw-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--tpl-border);
+  overflow: hidden;
+}
+.ov-pw-bar > div {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .3s ease, background .3s ease;
+}
+
 
 /* ══════════════════════════════════════════════════════════════════════
    §14  THEME TOGGLE

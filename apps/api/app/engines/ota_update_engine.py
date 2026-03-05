@@ -2253,13 +2253,27 @@ class OTARemoteChecker:
             return {"status": "error", "message": f"Impossibile contattare GitHub: {e}"}
 
         local_version = self.registry._get_current_version()
+        local_build = _load_version_info().get("build", 0)
         remote_version = remote_ver_data.get("version", "0.0.0")
+        remote_build = remote_ver_data.get("build", 0)
+        local_tuple = _version_tuple(local_version)
+        remote_tuple = _version_tuple(remote_version)
 
-        if _version_tuple(remote_version) <= _version_tuple(local_version):
+        # Build-aware comparison: semver first, then build number
+        if remote_tuple > local_tuple:
+            upgrade_needed = True
+        elif remote_tuple == local_tuple and remote_build > local_build:
+            upgrade_needed = True
+        else:
+            upgrade_needed = False
+
+        if not upgrade_needed:
             return {
                 "status": "up_to_date",
                 "local_version": local_version,
+                "local_build": local_build,
                 "remote_version": remote_version,
+                "remote_build": remote_build,
                 "message": "La versione locale è già aggiornata.",
             }
 
@@ -3236,6 +3250,32 @@ def register(app: FastAPI):
         trust = sec.get_trust_info()
         vinfo = _load_version_info()
         cur_ver = vinfo["version"]
+        cur_build = vinfo["build"]
+
+        # Enrich with remote repo VERSION.json data via OTARemoteChecker
+        # so that /ota/status always shows the true remote version, even
+        # when no GitHub Release has been published for it.
+        remote_repo_version = state.get("latest_version")
+        remote_repo_build = 0
+        try:
+            rc: OTARemoteChecker = app.state.ota_remote_checker
+            rc_cfg = rc.get_config()
+            last_remote = rc_cfg.get("last_remote_version")
+            if last_remote and (
+                not remote_repo_version
+                or _version_compare(last_remote, remote_repo_version, build_aware=True) > 0
+            ):
+                remote_repo_version = last_remote
+        except Exception:
+            pass
+
+        # Re-evaluate update_available using the best known remote version
+        update_available = state.get("update_available", False)
+        if remote_repo_version and not update_available:
+            rv_tuple = _version_tuple(remote_repo_version)
+            lv_tuple = _version_tuple(cur_ver)
+            if rv_tuple > lv_tuple:
+                update_available = True
 
         return {
             "current_version": cur_ver,
@@ -3244,8 +3284,8 @@ def register(app: FastAPI):
             "codename": vinfo["codename"],
             "channel": vinfo["channel"],
             "released_at": vinfo["released_at"],
-            "latest_version": state.get("latest_version"),
-            "update_available": state.get("update_available", False),
+            "latest_version": remote_repo_version,
+            "update_available": update_available,
             "last_check": state.get("last_check", 0),
             "last_check_iso": state.get("last_check_iso", ""),
             "auto_check": config.get("auto_check", True),
@@ -3280,7 +3320,12 @@ def register(app: FastAPI):
 
     @app.post("/ota/check")
     async def ota_check(request: Request, _u=Depends(require_admin)):
-        """Manually trigger an update check against GitHub."""
+        """Manually trigger an update check against GitHub.
+
+        Uses both GitHub Releases API and remote VERSION.json (via
+        OTARemoteChecker) so that even unreleased versions pushed to
+        the repository are detected correctly.
+        """
         config = _load_config()
         state = _load_state()
 
@@ -3294,14 +3339,17 @@ def register(app: FastAPI):
         latest_version = None
         newer_releases = []
 
+        vinfo = _load_version_info()
+        cur_ver = vinfo["version"]
+        cur_build = vinfo["build"]
+
         if releases:
             latest = releases[0]
             latest_version = latest["version"]
             dismissed = state.get("dismissed", [])
 
-            cur_ver = _get_platform_version()
             for r in releases:
-                cmp = _version_compare(cur_ver, r["version"])
+                cmp = _version_compare(cur_ver, r["version"], build_aware=True)
                 if cmp < 0:
                     newer_releases.append({
                         "tag": r["tag"],
@@ -3314,6 +3362,39 @@ def register(app: FastAPI):
             update_available = any(
                 not nr["dismissed"] for nr in newer_releases
             )
+
+        # ── Fallback: check remote VERSION.json via OTARemoteChecker ──
+        # If releases don't show a newer version, the repo may have pushed
+        # a new version without creating a GitHub Release.  Use the remote
+        # checker to detect the actual repository version.
+        remote_version_info = {}
+        try:
+            rc: OTARemoteChecker = app.state.ota_remote_checker
+            remote_result = rc.check()
+            remote_ver = remote_result.get("remote_version")
+            remote_build = remote_result.get("remote_build", 0)
+            if remote_ver:
+                remote_version_info = {
+                    "remote_repo_version": remote_ver,
+                    "remote_repo_build": remote_build,
+                    "remote_repo_codename": remote_result.get("remote_codename", ""),
+                    "remote_repo_channel": remote_result.get("remote_channel", "stable"),
+                }
+                # Use the higher version between releases and repo VERSION.json
+                if not latest_version or _version_compare(
+                    remote_ver, latest_version, build_aware=True
+                ) > 0:
+                    latest_version = remote_ver
+                # Detect upgrade from repo VERSION.json
+                if not update_available:
+                    rv_tuple = _version_tuple(remote_ver)
+                    lv_tuple = _version_tuple(cur_ver)
+                    if rv_tuple > lv_tuple:
+                        update_available = True
+                    elif rv_tuple == lv_tuple and remote_build > cur_build:
+                        update_available = True
+        except Exception as e:
+            logger.warning(f"OTA check: remote VERSION.json fallback failed: {e}")
 
         state["update_available"] = update_available
         state["latest_version"] = latest_version
@@ -3349,6 +3430,7 @@ def register(app: FastAPI):
             "checked_at": state["last_check"],
             "rate_limit_remaining": state.get("rate_limit_remaining", 60),
             "repo_status": state.get("repo_status", "ok"),
+            **remote_version_info,
             "note": "Repository non trovato o non ancora pubblicato. Assicurarsi che il repository sia pubblico e contenga rilasci." if state.get("repo_status") == "not_found" else None,
         }
 
